@@ -20,8 +20,8 @@ defs = Definitions(
         #   https://docs.dagster.io/guides/dagster/using-environment-variables-and-secrets
         "io_manager": bigquery_pandas_io_manager.configured(
             {
-                "credentials": {"env": "BIGQUERY_SERVICE_ACCOUNT_CREDENTIALS"},
-                "project_id": {"env": "BIGQUERY_PROJECT_ID"},
+                "credentials": {"env": "AAVE_ETL_PROD_BIGQUERY_SERVICE_ACCOUNT_CREDENTIALS"},
+                "project_id": {"env": "AAVE_ETL_PROD_BIGQUERY_PROJECT_ID"},
             }
         ),
     },
