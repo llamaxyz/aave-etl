@@ -1,0 +1,9 @@
+eth-ape==0.5.8
+ape-alchemy
+ape-arbitrum
+ape-etherscan
+ape-fantom
+ape-optimism
+ape-polygon
+ape-harmony @ git+https://github.com/scottincrypto/ape-harmony.git
+ape-avalanche @ git+https://github.com/scottincrypto/ape-avalanche.git@update-for-ape-0.5
