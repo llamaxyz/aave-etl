@@ -5,5 +5,7 @@ ape-etherscan
 ape-fantom
 ape-optimism
 ape-polygon
-ape-harmony @ git+https://github.com/scottincrypto/ape-harmony.git
-ape-avalanche @ git+https://github.com/scottincrypto/ape-avalanche.git@update-for-ape-0.5
+# ape-harmony @ git+https://github.com/scottincrypto/ape-harmony.git
+# ape-avalanche @ git+https://github.com/scottincrypto/ape-avalanche.git@update-for-ape-0.5
+ape-harmony @ https://github.com/scottincrypto/ape-harmony/archive/main.zip
+ape-avalanche @ https://github.com/scottincrypto/ape-avalanche/archive/refs/heads/update-for-ape-0.5.zip
