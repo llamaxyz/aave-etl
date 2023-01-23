@@ -11,7 +11,8 @@ concurrency:
 env:
   DAGSTER_CLOUD_URL: "http://llama.dagster.cloud"
   DAGSTER_CLOUD_API_TOKEN: ${{ secrets.DAGSTER_CLOUD_API_TOKEN }}
-  # ENABLE_FAST_DEPLOYS: 'true'
+  ENABLE_FAST_DEPLOYS: 'true'
+  PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION: "python"
 
 jobs:
   dagster_cloud_default_deploy:
