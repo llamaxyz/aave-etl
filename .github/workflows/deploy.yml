@@ -17,8 +17,7 @@ env:
 jobs:
   dagster_cloud_default_deploy:
     name: Dagster Serverless Deploy
-    # runs-on: ubuntu-20.04
-    runs-on: python:3.10-slim
+    runs-on: ubuntu-20.04
     outputs:
       build_info: ${{ steps.parse-workspace.outputs.build_info }}
 
@@ -49,8 +48,7 @@ jobs:
 
   dagster_cloud_docker_deploy:
     name: Dagster Serverless Docker Deploy
-    # runs-on: ubuntu-20.04
-    runs-on: python:3.10-slim
+    runs-on: ubuntu-20.04
     if: needs.dagster_cloud_default_deploy.outputs.build_info
     needs: dagster_cloud_default_deploy
     strategy:
@@ -69,8 +67,7 @@ jobs:
           location: ${{ toJson(matrix.location) }}
           # Uncomment to pass through Github Action secrets as a JSON string of key-value pairs
           # env_vars: ${{ toJson(secrets) }}
-          # env_vars: {"PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION": "python"}
+          base_image: "python:3.10-slim"
           organization_id: ${{ secrets.ORGANIZATION_ID }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION: "python"
