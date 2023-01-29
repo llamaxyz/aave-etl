@@ -36,19 +36,8 @@ setup(
         "google-auth",
         "icecream", #dev debug tool
         "requests",
-        # "subgrounds",  # API for accessing subgraphs easily
-        # "eth-ape==0.5.4", 
-        # custom version of ape used to work around protobuf dependencies, relax after https://github.com/dagster-io/dagster/issues/10627 is resolved
-        # "eth-ape @ git+https://github.com/scottincrypto/ape.git@pin_protobuf_3.20.1",
-        # "ape-alchemy",
-        # "ape-arbitrum",
-        # "ape-etherscan",
-        # "ape-fantom",
-        # "ape-optimism",
-        # "ape-polygon",
-        # "ape-harmony @ git+https://github.com/scottincrypto/ape-harmony.git",
-        # "ape-avalanche @ git+https://github.com/scottincrypto/ape-avalanche.git@update-for-ape-0.5",
-        # "protobuf==4.21.12",
+        "web3==6.0.0b6" # pin to 6.0.0b6 to avoid protobuf update in next release which clashes with dagster
+        "subgrounds",  # API for accessing subgraphs easily
     ],
     extras_require={"dev": ["dagit", "pytest"]},
 )

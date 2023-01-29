@@ -4,6 +4,6 @@ pip3 install --upgrade pip
 
 # git is required for installing pip packages from github repos
 # gcc is required to install pyethash (ape dependency)
-apt update
-apt-get -y install git gcc
+# apt update
+# apt-get -y install git gcc
 

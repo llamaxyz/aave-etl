@@ -4,8 +4,7 @@ from datetime import datetime, timedelta, timezone  # , date, time, timedelta, t
 import numpy as np
 import pandas as pd
 import requests
-from ape import Contract, networks
-from ape.types import ContractType
+from web3 import Web3
 from dagster import (AssetIn,  # SourceAsset,; Output,
                      DailyPartitionsDefinition, ExperimentalWarning,
                      MetadataValue, #MultiPartitionKey,
@@ -177,7 +176,7 @@ def market_tokens_by_day(context, block_numbers_by_day) -> pd.DataFrame: #pylint
 def aave_oracle_prices_by_day(context, market_tokens_by_day) -> pd.DataFrame:  # type: ignore pylint: disable=W0621
     """Table of the token and aave oracle price for each market at each block height
 
-    Uses ape to access an RPC node and call the oracle contract directly
+    Uses web3.py to access an RPC node and call the oracle contract directly
 
     Args:
         context: dagster context object
@@ -185,9 +184,6 @@ def aave_oracle_prices_by_day(context, market_tokens_by_day) -> pd.DataFrame:  #
 
     Returns:
         A dataframe market, token and the underlying reserve oracle price at the block height
-
-    Raises:
-        NotImplementedError: for markets on a network without ape support
 
     """
     #pylint: disable=E1137,E1101
@@ -200,64 +196,56 @@ def aave_oracle_prices_by_day(context, market_tokens_by_day) -> pd.DataFrame:  #
 
     chain = CONFIG_MARKETS[market]['chain']
 
-    if CONFIG_CHAINS[chain]['ape_ok'] is False:
-        raise NotImplementedError(f"ape support not implemented for chain: {chain}")
-
-
     block_height = int(market_tokens_by_day.block_height.values[0])
     # token_source = CONFIG_MARKETS[market]['token_source']
     context.log.info(f"market: {market}")
     context.log.info(f"date: {date}")
     context.log.info(f"block_height: {block_height}")
 
-    # pass in the reserves as a list to the ape contract
-
-
-    # get the abi for the oracle contract from etherscan/polygonscan
-    #  not using ape magic for this as harmony doesn't have a proper block explorer
-    aave_version = CONFIG_MARKETS[market]['version']
-    abi_url = CONFIG_ABI[aave_version]['abi_url_base'] + CONFIG_ABI[aave_version]['oracle_implementation']
-    abi = json.loads(requests.get(abi_url, timeout=300).json()['result'])
-
-    # collect the reserve tokens into a list for the ape contract call
-    reserves = list(market_tokens_by_day['reserve'].values)
-
     # Get the eth price from the chainlink oracle if the Aave oracle price is denominated in eth
     if CONFIG_MARKETS[market]['oracle_base_currency'] == 'eth':
-        with networks.parse_network_choice(CONFIG_CHAINS['ethereum']['ape_network_choice']) as ape_context:
-            # get the price from the contract
-            eth_address = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
-            usd_address = '0x0000000000000000000000000000000000000348'
-            chainlink_feed_registry = '0x47Fb2585D2C56Fe188D0E6ec628a38b74fCeeeDf'
-            feed_registry = Contract(chainlink_feed_registry)
-            eth_usd_price = feed_registry.latestAnswer(eth_address, usd_address, block_identifier = block_height) / 10**8
+        w3 = Web3(Web3.HTTPProvider(CONFIG_CHAINS['ethereum']['web3_rpc_url']))
+        eth_address = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
+        usd_address = '0x0000000000000000000000000000000000000348'
+        chainlink_feed_registry = '0x47Fb2585D2C56Fe188D0E6ec628a38b74fCeeeDf'
+        feed_registry_abi_url = f"https://api.etherscan.io/api?module=contract&action=getabi&apikey={ETHERSCAN_API_KEY}&address={chainlink_feed_registry}"
+        feed_registry_abi = json.loads(requests.get(feed_registry_abi_url, timeout=300).json()['result'])
+        feed_registry = w3.eth.contract(address=chainlink_feed_registry, abi=feed_registry_abi)
+        eth_usd_price = feed_registry.functions.latestAnswer(eth_address, usd_address).call(block_identifier = block_height) / 10**8
     else:
         eth_usd_price = 0
 
-    #initialise ape
-    with networks.parse_network_choice(CONFIG_CHAINS[chain]['ape_network_choice']) as ape_context:
+    # get the abi for the oracle contract from etherscan/polygonscan
+    aave_version = CONFIG_MARKETS[market]['version']
+    oracle_abi_url = CONFIG_ABI[aave_version]['abi_url_base'] + CONFIG_ABI[aave_version]['oracle_implementation']
+    oracle_abi = json.loads(requests.get(oracle_abi_url, timeout=300).json()['result'])
 
-        oracle_contract_type = ContractType(abi=abi, contractName='AaveOracle')  # type: ignore
-        oracle_contract_address = CONFIG_MARKETS[market]['oracle']
-        oracle = Contract(address=oracle_contract_address, contract_type=oracle_contract_type)
-        
+    # collect the reserve tokens into a list for the web3 contract call
+    reserves = list(market_tokens_by_day['reserve'].values)
+    reserves = [Web3.toChecksumAddress(reserve) for reserve in reserves]
+    # ic(reserves)
 
-        if CONFIG_MARKETS[market]['oracle_base_currency'] == 'usd':
-            try:
-                base_currency_unit = oracle.BASE_CURRENCY_UNIT()
-            except AttributeError:
-                # some markets don't have this function - it fails on call (rwa)
-                base_currency_unit = 100000000
-            price_multiplier = 1 / base_currency_unit
-        elif CONFIG_MARKETS[market]['oracle_base_currency'] == 'wei':
-            price_multiplier = eth_usd_price / 1e18
-        else:
-            price_multiplier = 1
+    #initialise web3 and the oracle contract
+    w3 = Web3(Web3.HTTPProvider(CONFIG_CHAINS[chain]['web3_rpc_url']))
+    oracle_address = Web3.toChecksumAddress(CONFIG_MARKETS[market]['oracle'])
+    oracle = w3.eth.contract(address=oracle_address, abi=oracle_abi)
 
-        # ic(price_multiplier)
-        response = oracle.getAssetsPrices(reserves, block_identifier = block_height)
-        # ic(response)
+    # get the price multiplier for the oracle price
+    if CONFIG_MARKETS[market]['oracle_base_currency'] == 'usd':
+        try:
+            base_currency_unit = oracle.functions.BASE_CURRENCY_UNIT().call(block_identifier = block_height)
+        except AttributeError:
+            # some markets don't have this function - it fails on call (rwa)
+            base_currency_unit = 100000000
+        price_multiplier = 1 / base_currency_unit
+    elif CONFIG_MARKETS[market]['oracle_base_currency'] == 'wei':
+        price_multiplier = eth_usd_price / 1e18
+    else:
+        price_multiplier = 1
 
+    # ic(price_multiplier)
+    response = oracle.functions.getAssetsPrices(reserves).call(block_identifier = block_height)
+    # ic(response)
 
     # create a dataframe with the price
     return_val = market_tokens_by_day[['reserve','symbol','market','block_height','block_day']].copy()
@@ -427,7 +415,7 @@ def collector_atoken_balances_by_day(context, market_tokens_by_day, block_number
     """
     Table of the aave market token balances in the collector contracts for each market
 
-    Uses RPC calls to balanceOf() via ape
+    Uses RPC calls to balanceOf() via web3.py
 
     Args:
         context: dagster context object
@@ -622,9 +610,8 @@ def v3_accrued_fees_by_day(context, market_tokens_by_day) -> pd.DataFrame: # typ
 
     if CONFIG_MARKETS[market]['version'] == 3:
 
-        # initialise Ape
         # a minimal ABI supporting getReserveData only
-        abi = [
+        provider_abi = [
                 {
                     "inputs":[
                         {
@@ -701,32 +688,30 @@ def v3_accrued_fees_by_day(context, market_tokens_by_day) -> pd.DataFrame: # typ
                 },
             ]
         
-        provider_address = CONFIG_MARKETS[market]['protocol_data_provider']
-        #initialise ape 
-        with networks.parse_network_choice(CONFIG_CHAINS[chain]['ape_network_choice']) as ape_context:
-
-            provider_contract_type = ContractType(abi=abi, contractName = 'AaveProtocolDataProvider') # type: ignore
-            provider = Contract(address=provider_address, contract_type=provider_contract_type) # type: ignore
-            
-            for row in market_tokens_by_day.itertuples():
-                reserve_data = provider.getReserveData(row.reserve, block_identifier=int(block_height))
-                # ic(row.symbol)
-                # ic(reserve_data)
-                accrued_fees = reserve_data['accruedToTreasuryScaled'] / pow(10, row.decimals)
-                # ic(accrued_fees)
-                output_row = {
-                    'market': market,
-                    'reserve': row.reserve,
-                    'symbol': row.symbol,
-                    'atoken': row.atoken,
-                    'atoken_symbol': row.atoken_symbol,
-                    'block_height': block_height,
-                    'block_day': partition_datetime.replace(tzinfo=timezone.utc),
-                    'accrued_fees': accrued_fees
-                }
-                fees_row = pd.DataFrame(output_row, index=[0])
-                context.log.info(f"accrued_fees: {row.symbol} on {market}")
-                fees = pd.concat([fees, fees_row]).reset_index(drop=True)
+        provider_address = Web3.toChecksumAddress(CONFIG_MARKETS[market]['protocol_data_provider'])
+        #initialise Web3 and provider contract
+        w3 = Web3(Web3.HTTPProvider(CONFIG_CHAINS[chain]['web3_rpc_url']))
+        provider = w3.eth.contract(address=provider_address, abi=provider_abi)
+        
+        for row in market_tokens_by_day.itertuples():
+            reserve_data = provider.functions.getReserveData(Web3.toChecksumAddress(row.reserve)).call(block_identifier=int(block_height))
+            # ic(row.symbol)
+            # ic(reserve_data)
+            accrued_fees = reserve_data[1] / pow(10, row.decimals)
+            # ic(accrued_fees)
+            output_row = {
+                'market': market,
+                'reserve': row.reserve,
+                'symbol': row.symbol,
+                'atoken': row.atoken,
+                'atoken_symbol': row.atoken_symbol,
+                'block_height': block_height,
+                'block_day': partition_datetime.replace(tzinfo=timezone.utc),
+                'accrued_fees': accrued_fees
+            }
+            fees_row = pd.DataFrame(output_row, index=[0])
+            context.log.info(f"accrued_fees: {row.symbol} on {market}")
+            fees = pd.concat([fees, fees_row]).reset_index(drop=True)
 
     context.add_output_metadata(
         {

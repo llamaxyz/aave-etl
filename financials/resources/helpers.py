@@ -1,20 +1,13 @@
-import json
-import sys
-# import time
-# import pandas_gbq
-from datetime import datetime
 from typing import Optional  # , date, time, timedelta, timezone
 
-# import numpy as np
 import pandas as pd
 import requests
 from dagster import op
 from icecream import ic
 from subgrounds.subgrounds import Subgrounds
 from io import StringIO
-from ape import Contract, networks
-from ape.types import ContractType
-# from ethpm_types import ContractType
+from web3 import Web3
+
 
 from financials.financials_config import * #pylint: disable=wildcard-import, unused-wildcard-import
 
@@ -248,7 +241,7 @@ def get_erc20_balance_of(
                 block_height: int = 0
                 ) -> float:
     """
-    Uses ape to get the balance of an ERC20 token for a given address
+    Uses web3.py to get the balance of an ERC20 token for a given address
 
     Assumes an ERC20 compliant token with a balanceOf function
 
@@ -264,7 +257,7 @@ def get_erc20_balance_of(
 
     """    
     # a minimal ERC20 ABI supporting balanceOf only
-    abi = [
+    erc20_abi = [
             {
                 "constant": "true",
                 "inputs": [
@@ -286,23 +279,20 @@ def get_erc20_balance_of(
             }
         ]
     
+    #initialise Web3 and token contract
+    w3 = Web3(Web3.HTTPProvider(CONFIG_CHAINS[chain]['web3_rpc_url']))
+    token_contract = w3.eth.contract(address=Web3.toChecksumAddress(token), abi=erc20_abi)
 
-    #initialise ape 
-    with networks.parse_network_choice(CONFIG_CHAINS[chain]['ape_network_choice']) as ape_context:
-
-        token_contract_type = ContractType(abi=abi, contractName = 'erc20') # type: ignore
-        token_contract = Contract(address=token, contract_type=token_contract_type) # type: ignore
-
-        if block_height > 0:
-            balance_raw = token_contract.balanceOf(address, block_identifier=int(block_height))
-        else:
-            balance_raw = token_contract.balanceOf(address)
+    if block_height > 0:
+        balance_raw = token_contract.functions.balanceOf(Web3.toChecksumAddress(address)).call(block_identifier=int(block_height))
+    else:
+        balance_raw = token_contract.functions.balanceOf(Web3.toChecksumAddress(address)).call()
 
     balance = balance_raw / pow(10, token_decimals)
 
     return balance
 
-
+    
 def get_events_by_topic_hash_from_covalent(start_block: int,
                              end_block: int,
                              chain_id: int,
@@ -368,14 +358,14 @@ if __name__ == "__main__":
     # print(out.to_dict())
     # ic(out)
 
-    # balance = get_erc20_balance_of('0x464C71f6c2F760DdA6093dCB91C24c39e5d6e18c', '0xbcca60bb61934080951369a648fb03df4f96263c', 6, 'ethereum', block_height=16057596)
+    balance = get_erc20_balance_of('0x464C71f6c2F760DdA6093dCB91C24c39e5d6e18c', '0xbcca60bb61934080951369a648fb03df4f96263c', 6, 'ethereum')#, block_height=16057596)
 
     # balance = get_erc20_balance_of('0x8a020d92d6b119978582be4d3edfdc9f7b28bf31', '0x191c10aa4af7c30e871e70c95db0e4eb77237530', 6, 'harmony', block_height=34443481)
-    # ic(balance)
-    mtt = get_events_by_topic_hash_from_covalent(15154950, 15154960, 43114, '0x794a61358D6845594F94dc1DB02A252b5b4814aD', '0xbfa21aa5d5f9a1f0120a95e7c0749f389863cbdbfff531aa7339077a5bc919de')
+    ic(balance)
+    # mtt = get_events_by_topic_hash_from_covalent(15154950, 15154960, 43114, '0x794a61358D6845594F94dc1DB02A252b5b4814aD', '0xbfa21aa5d5f9a1f0120a95e7c0749f389863cbdbfff531aa7339077a5bc919de')
 
-    ic(mtt)
+    # ic(mtt)
 
-    mtt.to_csv('mtt.csv')
+    # mtt.to_csv('mtt.csv')
 
-    print(mtt.head(1).to_dict())
+    # print(mtt.head(1).to_dict())

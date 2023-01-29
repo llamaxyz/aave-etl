@@ -8,6 +8,10 @@ FINANCIAL_PARTITION_START_DATE = '2023-01-19'
 ETHERSCAN_API_KEY =  os.environ['ETHERSCAN_API_KEY']
 POLYGONSCAN_API_KEY =  os.environ['POLYGONSCAN_API_KEY']
 COVALENT_KEY = os.environ['COVALENT_KEY']
+WEB3_ALCHEMY_API_KEY = os.environ['WEB3_ALCHEMY_API_KEY']
+POLYGON_ALCHEMY_KEY = os.environ['POLYGON_ALCHEMY_KEY']
+OPTIMISM_ALCHEMY_KEY = os.environ['OPTIMISM_ALCHEMY_KEY']
+ARBITRUM_ALCHEMY_KEY = os.environ['ARBITRUM_ALCHEMY_KEY']
 
 # the config dict for tables specific to a blockchain
 CONFIG_CHAINS = {
@@ -16,49 +20,56 @@ CONFIG_CHAINS = {
         "defillama_chain": "ethereum",
         "ape_ok": True,
         "ape_network_choice": "ethereum:mainnet:alchemy",
-        "wrapped_ether": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+        "wrapped_ether": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+        "web3_rpc_url": f"https://eth-mainnet.g.alchemy.com/v2/{WEB3_ALCHEMY_API_KEY}"
     },
     "polygon": {
         "chain_id": 137,
         "defillama_chain": "polygon",
         "ape_ok": True,
         "ape_network_choice": "polygon:mainnet:alchemy",
-        "wrapped_ether": "0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619"
+        "wrapped_ether": "0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619",
+        "web3_rpc_url": f"https://polygon-mainnet.g.alchemy.com/v2/{POLYGON_ALCHEMY_KEY}"
     },
     "avalanche": {
         "chain_id": 43114,
         "defillama_chain": "avax",
         "ape_ok": True, 
         "ape_network_choice": "avalanche:mainnet:https://rpc.ankr.com/avalanche",
-        "wrapped_ether": "0x49D5c2BdFfac6CE2BFdB6640F4F80f226bc10bAB"
+        "wrapped_ether": "0x49D5c2BdFfac6CE2BFdB6640F4F80f226bc10bAB",
+        "web3_rpc_url": "https://rpc.ankr.com/avalanche"
     },
     "optimism": {
         "chain_id": 10,
         "defillama_chain": "optimism",
         "ape_ok": True,
         "ape_network_choice": "optimism:mainnet:alchemy",
-        "wrapped_ether": "0x4200000000000000000000000000000000000006"
+        "wrapped_ether": "0x4200000000000000000000000000000000000006",
+        "web3_rpc_url": f"https://opt-mainnet.g.alchemy.com/v2/{OPTIMISM_ALCHEMY_KEY}"
     },
     "arbitrum": {
         "chain_id": 42161,
         "defillama_chain": "arbitrum",
         "ape_ok": True,
         "ape_network_choice": "arbitrum:mainnet:alchemy",
-        "wrapped_ether": "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1"
+        "wrapped_ether": "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
+        "web3_rpc_url": f"https://arb-mainnet.g.alchemy.com/v2/{ARBITRUM_ALCHEMY_KEY}"
     },
     "fantom": {
         "chain_id": 250,
         "defillama_chain": "fantom",
         "ape_ok": True, 
         "ape_network_choice": "fantom:opera:https://rpc.ankr.com/fantom",
-        "wrapped_ether": "0x74b23882a30290451A17c44f4F05243b6b58C76d"
+        "wrapped_ether": "0x74b23882a30290451A17c44f4F05243b6b58C76d",
+        "web3_rpc_url": "https://rpc.ankr.com/fantom"
     },
     "harmony": {
         "chain_id": 1666600000,
         "defillama_chain": "harmony",
         "ape_ok": True, 
         "ape_network_choice": "harmony:mainnet:https://a.api.s0.t.hmny.io",
-        "wrapped_ether": "0x6983D1E6DEf3690C4d616b13597A09e6193EA013"
+        "wrapped_ether": "0x6983D1E6DEf3690C4d616b13597A09e6193EA013",
+        "web3_rpc_url": "https://a.api.s0.t.hmny.io"
     }
 }
 
@@ -309,7 +320,7 @@ CONFIG_ABI = {
     3: {
         "abi_url_base": f"https://api.polygonscan.com/api?module=contract&action=getabi&apikey={POLYGONSCAN_API_KEY}&address=",
         "oracle_implementation": "0xb023e699f5a33916ea823a16485e259257ca8bd1"
-    }
+    },
 }
 
 CONFIG_TOKENS = {

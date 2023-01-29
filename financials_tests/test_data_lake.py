@@ -762,7 +762,7 @@ if __name__ == "__main__":
     # ic(list(CONFIG_CHAINS.keys()))
     # ic(get_block_number_at_datetime('ethereum', datetime(2022, 11, 26, 0, 0, 0)))
     # ic(get_v2_market_tokens_at_block('ethereum_v2', 16000338, CONFIG_V2_MARKETS).shape)
-    test_aave_oracle_prices_by_day()
+    # test_aave_oracle_prices_by_day()
     # test_eth_oracle_prices_by_day()
     # test_get_market_tokens_at_block_messari()
     # test_block_numbers_by_day()
@@ -772,7 +772,7 @@ if __name__ == "__main__":
     # test_non_atoken_transfers_by_day()
     # test_collector_atoken_balances_by_day()
     # test_non_atoken_balances_table()
-    # test_v3_accrued_fees_by_day()
+    test_v3_accrued_fees_by_day()
     # test_v3_minted_to_treasury_by_day()
 
     # pass
