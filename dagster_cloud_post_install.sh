@@ -1,2 +1,2 @@
 # export PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
-set | grep PROTOCOL
+# set | grep PROTOCOL
