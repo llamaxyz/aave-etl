@@ -50,22 +50,24 @@ def get_market_tokens_at_block_messari(
         markets.outputToken.id,
         markets.outputToken.symbol
     ])
-    subgraph_data.columns = [col.removeprefix( # type: ignore
-            'markets_').lower() for col in subgraph_data.columns] # type: ignore
-    subgraph_data.rename(columns={  # type: ignore
-        'inputtoken_id': 'reserve',
-        'inputtoken_name': 'name',
-        'inputtoken_symbol': 'symbol',
-        'inputtoken_decimals': 'decimals',
-        'outputtoken_id': 'atoken',
-        'outputtoken_symbol': 'atoken_symbol'
-    },
-        inplace=True
-    )
-    subgraph_data['pool'] = version_config[market]['pool'] # type: ignore
-    subgraph_data['market'] = market # type: ignore
-    subgraph_data['atoken_decimals'] = subgraph_data.decimals # type: ignore
-    subgraph_data['block_height'] = block_height # type: ignore
+    
+    if not subgraph_data.empty:
+        subgraph_data.columns = [col.removeprefix( # type: ignore
+                'markets_').lower() for col in subgraph_data.columns] # type: ignore
+        subgraph_data.rename(columns={  # type: ignore
+            'inputtoken_id': 'reserve',
+            'inputtoken_name': 'name',
+            'inputtoken_symbol': 'symbol',
+            'inputtoken_decimals': 'decimals',
+            'outputtoken_id': 'atoken',
+            'outputtoken_symbol': 'atoken_symbol'
+        },
+            inplace=True
+        )
+        subgraph_data['pool'] = version_config[market]['pool'] # type: ignore
+        subgraph_data['market'] = market # type: ignore
+        subgraph_data['atoken_decimals'] = subgraph_data.decimals # type: ignore
+        subgraph_data['block_height'] = block_height # type: ignore
 
     #pylint: enable=E1137, E1101
     return subgraph_data  # type: ignore
@@ -124,20 +126,22 @@ def get_market_tokens_at_block_aave(
             pools.reserves.aToken.id
         ])
 
-    subgraph_data.columns = [col.removeprefix( # type: ignore
-        'pools_reserves_').lower() for col in subgraph_data.columns] # type: ignore
-    subgraph_data['pool'] = markets_config[market]['pool'] # type: ignore
-    subgraph_data['market'] = market # type: ignore
-    subgraph_data['atoken_decimals'] = subgraph_data.decimals # type: ignore
-    subgraph_data['block_height'] = block_height # type: ignore
-    subgraph_data.rename(columns={  # type: ignore
-        'pools_lendingpool': 'lending_pool',
-        'underlyingasset': 'reserve',
-        'atoken_id': 'atoken'
-    },
-        inplace=True
-    )
-    subgraph_data['atoken_symbol'] = markets_config[market]['atoken_prefix'] + subgraph_data.symbol  # type: ignore
+    if not subgraph_data.empty:
+        subgraph_data.columns = [col.removeprefix( # type: ignore
+            'pools_reserves_').lower() for col in subgraph_data.columns] # type: ignore
+        subgraph_data['pool'] = markets_config[market]['pool'] # type: ignore
+        subgraph_data['market'] = market # type: ignore
+        subgraph_data['atoken_decimals'] = subgraph_data.decimals # type: ignore
+        subgraph_data['block_height'] = block_height # type: ignore
+        subgraph_data.rename(columns={  # type: ignore
+            'pools_lendingpool': 'lending_pool',
+            'underlyingasset': 'reserve',
+            'atoken_id': 'atoken'
+        },
+            inplace=True
+        )
+        subgraph_data['atoken_symbol'] = markets_config[market]['atoken_prefix'] + subgraph_data.symbol  # type: ignore
+
     #pylint: enable=E1137,E1101
     return subgraph_data  # type: ignore
 

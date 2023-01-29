@@ -144,6 +144,24 @@ CONFIG_MARKETS = {
         "atoken_prefix": "a",
         "oracle_base_currency": 'usd'
     },
+    "ethereum_v3": {
+        "chain": "ethereum",
+        "version": 3,
+        "pool": "0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2",
+        "collector": "0x464C71f6c2F760DdA6093dCB91C24c39e5d6e18c",
+        "protocol_data_provider": "0x7B4EB56E7CD4b454BA8ff71E4518426369a138a3",
+        "lending_pool_address_provider": '0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e',
+        "oracle": "0x54586bE62E3c3580375aE3723C145253060Ca0C2",
+        "incentives_controller": "0x8164Cc65827dcFe994AB23944CBC90e0aa80bFcb",
+        # "rewards_token": "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270",
+        # "rewards_token_symbol": "WMATIC",
+        # "reward_token_decimals": 18,
+        "subgraph": 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3',
+        "messari_subgraph": "https://api.thegraph.com/subgraphs/name/messari/aave-v3-ethereum",
+        "token_source": "messari",
+        "atoken_prefix": "aEth",
+        "oracle_base_currency": 'usd'
+    },
     "polygon_v2": {
         "chain": "polygon",
         "version": 2,

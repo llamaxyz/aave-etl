@@ -107,19 +107,20 @@ def aave_oracle_prices_table(context, aave_oracle_prices_by_day) -> pd.DataFrame
     date, market = context.partition_key.split("|")
     context.log.info(f"market: {market}")
     context.log.info(f"date: {date}")
-
+    
     prices = aave_oracle_prices_by_day.copy()
 
-    # set the types explicitly
-    prices.reserve = prices.reserve.astype(pd.StringDtype()) # type: ignore
-    prices.symbol = prices.symbol.astype(pd.StringDtype()) # type: ignore
-    prices.market = prices.market.astype(pd.StringDtype()) # type: ignore
-    prices.block_height = prices.block_height.astype('int64')
-    prices.block_day = prices.block_day.dt.tz_localize('UTC')
-    prices.usd_price = prices.usd_price.astype('float64')
+    if not prices.empty:
+        # set the types explicitly
+        prices.reserve = prices.reserve.astype(pd.StringDtype()) # type: ignore
+        prices.symbol = prices.symbol.astype(pd.StringDtype()) # type: ignore
+        prices.market = prices.market.astype(pd.StringDtype()) # type: ignore
+        prices.block_height = prices.block_height.astype('int64')
+        prices.block_day = prices.block_day.dt.tz_localize('UTC')
+        prices.usd_price = prices.usd_price.astype('float64')
 
-    # force checksum addresses to lowercase
-    prices.reserve = prices.reserve.str.lower()
+        # force checksum addresses to lowercase
+        prices.reserve = prices.reserve.str.lower()
 
     context.add_output_metadata(
         {
@@ -267,18 +268,19 @@ def collector_atoken_balances_table(context, collector_atoken_balances_by_day) -
 
     bals = collector_atoken_balances_by_day
 
-    # set the types explicitly
-    bals.collector = bals.collector.astype(pd.StringDtype()) # type: ignore
-    bals.market = bals.market.astype(pd.StringDtype()) # type: ignore
-    bals.token = bals.token.astype(pd.StringDtype()) # type: ignore
-    bals.symbol = bals.symbol.astype(pd.StringDtype()) # type: ignore
-    bals.block_height = bals.block_height.astype('int64')
-    bals.block_day = pd.to_datetime(bals.block_day, utc=True)
-    bals.balance = bals.balance.astype('float64')
+    if not bals.empty:
+        # set the types explicitly
+        bals.collector = bals.collector.astype(pd.StringDtype()) # type: ignore
+        bals.market = bals.market.astype(pd.StringDtype()) # type: ignore
+        bals.token = bals.token.astype(pd.StringDtype()) # type: ignore
+        bals.symbol = bals.symbol.astype(pd.StringDtype()) # type: ignore
+        bals.block_height = bals.block_height.astype('int64')
+        bals.block_day = pd.to_datetime(bals.block_day, utc=True)
+        bals.balance = bals.balance.astype('float64')
 
-    # force checksum addresses to lowercase
-    bals.collector = bals.collector.str.lower()
-    bals.token = bals.token.str.lower()
+        # force checksum addresses to lowercase
+        bals.collector = bals.collector.str.lower()
+        bals.token = bals.token.str.lower()
 
     context.add_output_metadata(
         {

@@ -153,10 +153,10 @@ def market_tokens_by_day(context, block_numbers_by_day) -> pd.DataFrame: #pylint
     else:
         tokens = get_market_tokens_at_block_messari(market, block_height, CONFIG_MARKETS)
 
-    tokens['block_day'] = block_day
-
-    # overwrite ETH with WETH address
-    tokens.loc[tokens.reserve == '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee', 'reserve'] = '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2'
+    if not tokens.empty:
+        tokens['block_day'] = block_day
+        # overwrite ETH with WETH address
+        tokens.loc[tokens.reserve == '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee', 'reserve'] = '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2'
 
     context.add_output_metadata(
         {
@@ -196,60 +196,63 @@ def aave_oracle_prices_by_day(context, market_tokens_by_day) -> pd.DataFrame:  #
 
     chain = CONFIG_MARKETS[market]['chain']
 
-    block_height = int(market_tokens_by_day.block_height.values[0])
-    # token_source = CONFIG_MARKETS[market]['token_source']
-    context.log.info(f"market: {market}")
-    context.log.info(f"date: {date}")
-    context.log.info(f"block_height: {block_height}")
-
-    # Get the eth price from the chainlink oracle if the Aave oracle price is denominated in eth
-    if CONFIG_MARKETS[market]['oracle_base_currency'] == 'eth':
-        w3 = Web3(Web3.HTTPProvider(CONFIG_CHAINS['ethereum']['web3_rpc_url']))
-        eth_address = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
-        usd_address = '0x0000000000000000000000000000000000000348'
-        chainlink_feed_registry = '0x47Fb2585D2C56Fe188D0E6ec628a38b74fCeeeDf'
-        feed_registry_abi_url = f"https://api.etherscan.io/api?module=contract&action=getabi&apikey={ETHERSCAN_API_KEY}&address={chainlink_feed_registry}"
-        feed_registry_abi = json.loads(requests.get(feed_registry_abi_url, timeout=300).json()['result'])
-        feed_registry = w3.eth.contract(address=chainlink_feed_registry, abi=feed_registry_abi)
-        eth_usd_price = feed_registry.functions.latestAnswer(eth_address, usd_address).call(block_identifier = block_height) / 10**8
+    if market_tokens_by_day.empty:
+        return_val = pd.DataFrame()
     else:
-        eth_usd_price = 0
+        block_height = int(market_tokens_by_day.block_height.values[0])
+        context.log.info(f"market: {market}")
+        context.log.info(f"date: {date}")
+        context.log.info(f"block_height: {block_height}")
 
-    # get the abi for the oracle contract from etherscan/polygonscan
-    aave_version = CONFIG_MARKETS[market]['version']
-    oracle_abi_url = CONFIG_ABI[aave_version]['abi_url_base'] + CONFIG_ABI[aave_version]['oracle_implementation']
-    oracle_abi = json.loads(requests.get(oracle_abi_url, timeout=300).json()['result'])
+        # Get the eth price from the chainlink oracle if the Aave oracle price is denominated in eth
+        if CONFIG_MARKETS[market]['oracle_base_currency'] == 'eth':
+            w3 = Web3(Web3.HTTPProvider(CONFIG_CHAINS['ethereum']['web3_rpc_url']))
+            eth_address = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
+            usd_address = '0x0000000000000000000000000000000000000348'
+            chainlink_feed_registry = '0x47Fb2585D2C56Fe188D0E6ec628a38b74fCeeeDf'
+            feed_registry_abi_url = f"https://api.etherscan.io/api?module=contract&action=getabi&apikey={ETHERSCAN_API_KEY}&address={chainlink_feed_registry}"
+            feed_registry_abi = json.loads(requests.get(feed_registry_abi_url, timeout=300).json()['result'])
+            feed_registry = w3.eth.contract(address=chainlink_feed_registry, abi=feed_registry_abi)
+            eth_usd_price = feed_registry.functions.latestAnswer(eth_address, usd_address).call(block_identifier = block_height) / 10**8
+        else:
+            eth_usd_price = 0
 
-    # collect the reserve tokens into a list for the web3 contract call
-    reserves = list(market_tokens_by_day['reserve'].values)
-    reserves = [Web3.toChecksumAddress(reserve) for reserve in reserves]
-    # ic(reserves)
+        # get the abi for the oracle contract from etherscan/polygonscan
+        aave_version = CONFIG_MARKETS[market]['version']
+        oracle_abi_url = CONFIG_ABI[aave_version]['abi_url_base'] + CONFIG_ABI[aave_version]['oracle_implementation']
+        oracle_abi = json.loads(requests.get(oracle_abi_url, timeout=300).json()['result'])
 
-    #initialise web3 and the oracle contract
-    w3 = Web3(Web3.HTTPProvider(CONFIG_CHAINS[chain]['web3_rpc_url']))
-    oracle_address = Web3.toChecksumAddress(CONFIG_MARKETS[market]['oracle'])
-    oracle = w3.eth.contract(address=oracle_address, abi=oracle_abi)
+        # collect the reserve tokens into a list for the web3 contract call
+        reserves = list(market_tokens_by_day['reserve'].values)
+        reserves = [Web3.toChecksumAddress(reserve) for reserve in reserves]
+        # ic(reserves)
 
-    # get the price multiplier for the oracle price
-    if CONFIG_MARKETS[market]['oracle_base_currency'] == 'usd':
-        try:
-            base_currency_unit = oracle.functions.BASE_CURRENCY_UNIT().call(block_identifier = block_height)
-        except AttributeError:
-            # some markets don't have this function - it fails on call (rwa)
-            base_currency_unit = 100000000
-        price_multiplier = 1 / base_currency_unit
-    elif CONFIG_MARKETS[market]['oracle_base_currency'] == 'wei':
-        price_multiplier = eth_usd_price / 1e18
-    else:
-        price_multiplier = 1
+        #initialise web3 and the oracle contract
+        w3 = Web3(Web3.HTTPProvider(CONFIG_CHAINS[chain]['web3_rpc_url']))
+        oracle_address = Web3.toChecksumAddress(CONFIG_MARKETS[market]['oracle'])
+        oracle = w3.eth.contract(address=oracle_address, abi=oracle_abi)
 
-    # ic(price_multiplier)
-    response = oracle.functions.getAssetsPrices(reserves).call(block_identifier = block_height)
-    # ic(response)
+        # get the price multiplier for the oracle price
+        if CONFIG_MARKETS[market]['oracle_base_currency'] == 'usd':
+            try:
+                base_currency_unit = oracle.functions.BASE_CURRENCY_UNIT().call(block_identifier = block_height)
+            except AttributeError:
+                # some markets don't have this function - it fails on call (rwa)
+                base_currency_unit = 100000000
+            price_multiplier = 1 / base_currency_unit
+        elif CONFIG_MARKETS[market]['oracle_base_currency'] == 'wei':
+            price_multiplier = eth_usd_price / 1e18
+        else:
+            price_multiplier = 1
 
-    # create a dataframe with the price
-    return_val = market_tokens_by_day[['reserve','symbol','market','block_height','block_day']].copy()
-    return_val['usd_price'] = pd.Series(response, name='usd_price') * price_multiplier # type: ignore
+        # ic(price_multiplier)
+        response = oracle.functions.getAssetsPrices(reserves).call(block_identifier = block_height)
+        # ic(response)
+
+        # create a dataframe with the price
+        return_val = market_tokens_by_day[['reserve','symbol','market','block_height','block_day']].copy()
+        return_val['usd_price'] = pd.Series(response, name='usd_price') * price_multiplier # type: ignore
+
     context.add_output_metadata(
         {
             "num_records": len(return_val),
@@ -598,120 +601,123 @@ def v3_accrued_fees_by_day(context, market_tokens_by_day) -> pd.DataFrame: # typ
     # market = context.partition_key.keys_by_dimension['market']
     # date = context.partition_key.keys_by_dimension['date']
     date, market = context.partition_key.split("|")
-    block_height = market_tokens_by_day.block_height.values[0]
-    chain = CONFIG_MARKETS[market]['chain']
-    partition_datetime = datetime.strptime(date, '%Y-%m-%d')
+    if market_tokens_by_day.empty:
+        fees = pd.DataFrame()
+    else:
+        block_height = market_tokens_by_day.block_height.values[0]
+        chain = CONFIG_MARKETS[market]['chain']
+        partition_datetime = datetime.strptime(date, '%Y-%m-%d')
 
-    context.log.info(f"market: {market}")
-    context.log.info(f"date: {date}")
-    context.log.info(f"block_height: {block_height}")
+        context.log.info(f"market: {market}")
+        context.log.info(f"date: {date}")
+        context.log.info(f"block_height: {block_height}")
 
-    fees = pd.DataFrame()
+        fees = pd.DataFrame()
 
-    if CONFIG_MARKETS[market]['version'] == 3:
+        if CONFIG_MARKETS[market]['version'] == 3:
 
-        # a minimal ABI supporting getReserveData only
-        provider_abi = [
-                {
-                    "inputs":[
-                        {
-                            "internalType":"address",
-                            "name":"asset",
-                            "type":"address"
-                        }
-                    ],
-                    "name":"getReserveData",
-                    "outputs":[
-                        {
-                            "internalType":"uint256",
-                            "name":"unbacked",
-                            "type":"uint256"
-                        },
-                        {
-                            "internalType":"uint256",
-                            "name":"accruedToTreasuryScaled",
-                            "type":"uint256"
-                        },
-                        {
-                            "internalType":"uint256",
-                            "name":"totalAToken",
-                            "type":"uint256"
-                        },
-                        {
-                            "internalType":"uint256",
-                            "name":"totalStableDebt",
-                            "type":"uint256"
-                        },
-                        {
-                            "internalType":"uint256",
-                            "name":"totalVariableDebt",
-                            "type":"uint256"
-                        },
-                        {
-                            "internalType":"uint256",
-                            "name":"liquidityRate",
-                            "type":"uint256"
-                        },
-                        {
-                            "internalType":"uint256",
-                            "name":"variableBorrowRate",
-                            "type":"uint256"
-                        },
-                        {
-                            "internalType":"uint256",
-                            "name":"stableBorrowRate",
-                            "type":"uint256"
-                        },
-                        {
-                            "internalType":"uint256",
-                            "name":"averageStableBorrowRate",
-                            "type":"uint256"
-                        },
-                        {
-                            "internalType":"uint256",
-                            "name":"liquidityIndex",
-                            "type":"uint256"
-                        },
-                        {
-                            "internalType":"uint256",
-                            "name":"variableBorrowIndex",
-                            "type":"uint256"
-                        },
-                        {
-                            "internalType":"uint40",
-                            "name":"lastUpdateTimestamp",
-                            "type":"uint40"
-                        }
-                    ],
-                    "stateMutability":"view",
-                    "type":"function"
-                },
-            ]
-        
-        provider_address = Web3.toChecksumAddress(CONFIG_MARKETS[market]['protocol_data_provider'])
-        #initialise Web3 and provider contract
-        w3 = Web3(Web3.HTTPProvider(CONFIG_CHAINS[chain]['web3_rpc_url']))
-        provider = w3.eth.contract(address=provider_address, abi=provider_abi)
-        
-        for row in market_tokens_by_day.itertuples():
-            reserve_data = provider.functions.getReserveData(Web3.toChecksumAddress(row.reserve)).call(block_identifier=int(block_height))
-            # ic(row.symbol)
-            # ic(reserve_data)
-            accrued_fees = reserve_data[1] / pow(10, row.decimals)
-            # ic(accrued_fees)
-            output_row = {
-                'market': market,
-                'reserve': row.reserve,
-                'symbol': row.symbol,
-                'atoken': row.atoken,
-                'atoken_symbol': row.atoken_symbol,
-                'block_height': block_height,
-                'block_day': partition_datetime.replace(tzinfo=timezone.utc),
-                'accrued_fees': accrued_fees
-            }
-            fees_row = pd.DataFrame(output_row, index=[0])
-            context.log.info(f"accrued_fees: {row.symbol} on {market}")
-            fees = pd.concat([fees, fees_row]).reset_index(drop=True)
+            # a minimal ABI supporting getReserveData only
+            provider_abi = [
+                    {
+                        "inputs":[
+                            {
+                                "internalType":"address",
+                                "name":"asset",
+                                "type":"address"
+                            }
+                        ],
+                        "name":"getReserveData",
+                        "outputs":[
+                            {
+                                "internalType":"uint256",
+                                "name":"unbacked",
+                                "type":"uint256"
+                            },
+                            {
+                                "internalType":"uint256",
+                                "name":"accruedToTreasuryScaled",
+                                "type":"uint256"
+                            },
+                            {
+                                "internalType":"uint256",
+                                "name":"totalAToken",
+                                "type":"uint256"
+                            },
+                            {
+                                "internalType":"uint256",
+                                "name":"totalStableDebt",
+                                "type":"uint256"
+                            },
+                            {
+                                "internalType":"uint256",
+                                "name":"totalVariableDebt",
+                                "type":"uint256"
+                            },
+                            {
+                                "internalType":"uint256",
+                                "name":"liquidityRate",
+                                "type":"uint256"
+                            },
+                            {
+                                "internalType":"uint256",
+                                "name":"variableBorrowRate",
+                                "type":"uint256"
+                            },
+                            {
+                                "internalType":"uint256",
+                                "name":"stableBorrowRate",
+                                "type":"uint256"
+                            },
+                            {
+                                "internalType":"uint256",
+                                "name":"averageStableBorrowRate",
+                                "type":"uint256"
+                            },
+                            {
+                                "internalType":"uint256",
+                                "name":"liquidityIndex",
+                                "type":"uint256"
+                            },
+                            {
+                                "internalType":"uint256",
+                                "name":"variableBorrowIndex",
+                                "type":"uint256"
+                            },
+                            {
+                                "internalType":"uint40",
+                                "name":"lastUpdateTimestamp",
+                                "type":"uint40"
+                            }
+                        ],
+                        "stateMutability":"view",
+                        "type":"function"
+                    },
+                ]
+            
+            provider_address = Web3.toChecksumAddress(CONFIG_MARKETS[market]['protocol_data_provider'])
+            #initialise Web3 and provider contract
+            w3 = Web3(Web3.HTTPProvider(CONFIG_CHAINS[chain]['web3_rpc_url']))
+            provider = w3.eth.contract(address=provider_address, abi=provider_abi)
+            
+            for row in market_tokens_by_day.itertuples():
+                reserve_data = provider.functions.getReserveData(Web3.toChecksumAddress(row.reserve)).call(block_identifier=int(block_height))
+                # ic(row.symbol)
+                # ic(reserve_data)
+                accrued_fees = reserve_data[1] / pow(10, row.decimals)
+                # ic(accrued_fees)
+                output_row = {
+                    'market': market,
+                    'reserve': row.reserve,
+                    'symbol': row.symbol,
+                    'atoken': row.atoken,
+                    'atoken_symbol': row.atoken_symbol,
+                    'block_height': block_height,
+                    'block_day': partition_datetime.replace(tzinfo=timezone.utc),
+                    'accrued_fees': accrued_fees
+                }
+                fees_row = pd.DataFrame(output_row, index=[0])
+                context.log.info(f"accrued_fees: {row.symbol} on {market}")
+                fees = pd.concat([fees, fees_row]).reset_index(drop=True)
 
     context.add_output_metadata(
         {
