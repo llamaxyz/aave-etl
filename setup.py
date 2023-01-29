@@ -36,7 +36,7 @@ setup(
         "google-auth",
         "icecream", #dev debug tool
         "requests",
-        "web3==6.0.0b6" # pin to 6.0.0b6 to avoid protobuf update in next release which clashes with dagster
+        "web3==6.0.0b6", # pin to 6.0.0b6 to avoid protobuf update in next release which clashes with dagster
         "subgrounds",  # API for accessing subgraphs easily
     ],
     extras_require={"dev": ["dagit", "pytest"]},
