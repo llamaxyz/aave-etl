@@ -443,3 +443,53 @@ def v3_minted_to_treasury_table(context, v3_minted_to_treasury_by_day) -> pd.Dat
     )
 
     return minted
+
+@asset(
+    # partitions_def=v3_market_day_multipartition,
+    partitions_def=market_day_multipartition,
+    compute_kind="python",
+    group_name='data_warehouse'
+)
+def treasury_accrued_incentives_table(context, treasury_accrued_incentives_by_day) -> pd.DataFrame:
+    """
+    Table of the treasury_accrued_incentives_by_day data
+    This table will be materialised to database
+    This table has types set explicitly and addresses set to lowercase to ensure DB compatibility
+    
+    Args:
+        context: dagster context object
+        treasury_accrued_incentives_by_day: the output of treasury_accrued_incentives_by_day
+    Returns:
+        A dataframe with the treasury_accrued_incentives_by_day data for each market
+    """
+    # market = context.partition_key.keys_by_dimension['market']
+    # date = context.partition_key.keys_by_dimension['date']
+    date, market = context.partition_key.split("|")
+    context.log.info(f"market: {market}")
+    context.log.info(f"date: {date}")
+
+    rewards = treasury_accrued_incentives_by_day
+
+    if not rewards.empty:
+        # set the types explicitly
+        rewards.network = rewards.network.astype(pd.StringDtype()) # type: ignore
+        rewards.market = rewards.market.astype(pd.StringDtype()) # type: ignore
+        rewards.collector_contract = rewards.collector_contract.astype(pd.StringDtype()) # type: ignore
+        rewards.block_height = rewards.block_height.astype('int')
+        rewards.block_day = pd.to_datetime(rewards.block_day, utc=True)
+        rewards.collector_contract = rewards.collector_contract.astype(pd.StringDtype()) # type: ignore
+        rewards.rewards_token_address = rewards.rewards_token_address.astype(pd.StringDtype()) # type: ignore
+        rewards.accrued_rewards = rewards.accrued_rewards.astype('float')
+
+        # force checksum addresses to lowercase
+        rewards.collector_contract = rewards.collector_contract.str.lower()
+        rewards.rewards_token_address = rewards.rewards_token_address.str.lower()
+    
+    context.add_output_metadata(
+        {
+            "num_records": len(rewards),
+            "preview": MetadataValue.md(rewards.head().to_markdown()),
+        }
+    )
+
+    return rewards

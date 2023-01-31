@@ -16,7 +16,8 @@ from financials.assets.data_warehouse import (
                                     collector_atoken_balances_table,
                                     non_atoken_balances_table,
                                     v3_accrued_fees_table,
-                                    v3_minted_to_treasury_table
+                                    v3_minted_to_treasury_table,
+                                    treasury_accrued_incentives_table
                                     )
 from financials.financials_config import *  # pylint: disable=wildcard-import, unused-wildcard-import
 
@@ -850,6 +851,70 @@ def test_v3_minted_to_treasury_table():
     ic(result)
     assert_frame_equal(result, expected, check_exact=True)  # type: ignore
 
+
+def test_v3_minted_to_treasury_table():
+    """
+    Tests the aave v3 minted_to_treasury table asset
+    """
+    """
+    Tests the treasury_accrued_incentives asset on both aave_v3 and aave_v2 (including null returns)
+
+    """
+
+    avax_v3_key = MultiPartitionKey(
+        {
+            "date": '2022-12-15',
+            "market": 'avax_v3'
+        }
+    )  # type: ignore
+
+    eth_arc_key = MultiPartitionKey(
+        {
+            "date": '2023-01-29',
+            "market": 'aave_arc'
+        }
+    )  # type: ignore
+
+    context_avax_v3 = build_op_context(partition_key=avax_v3_key)
+    context_eth_arc = build_op_context(partition_key=eth_arc_key)
+
+    treasury_accrued_incentives_by_day_v3 = pd.DataFrame(
+        [
+            {
+                'network': 'avalanche',
+                'market': 'avax_v3',
+                'collector_contract': '0x5ba7fd868c40c16f7aDfAe6CF87121E13FC2F7a0'.lower(),
+                'block_height': 23644293,
+                'block_day': datetime(2022,12,15,0,0,0),
+                'rewards_token_address': '0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7'.lower(),
+                'rewards_token_symbol': 'WAVAX',
+                'accrued_rewards': 584.4829744983532,
+            }
+        ]
+    )
+
+    rewards_v3_expected = treasury_accrued_incentives_by_day_v3
+
+    rewards_v3_expected.network = rewards_v3_expected.network.astype(pd.StringDtype()) # type: ignore
+    rewards_v3_expected.market = rewards_v3_expected.market.astype(pd.StringDtype()) # type: ignore
+    rewards_v3_expected.collector_contract = rewards_v3_expected.collector_contract.astype(pd.StringDtype()) # type: ignore
+    rewards_v3_expected.block_height = rewards_v3_expected.block_height.astype('int')
+    rewards_v3_expected.block_day = pd.to_datetime(rewards_v3_expected.block_day, utc=True)
+    rewards_v3_expected.collector_contract = rewards_v3_expected.collector_contract.astype(pd.StringDtype()) # type: ignore
+    rewards_v3_expected.rewards_token_address = rewards_v3_expected.rewards_token_address.astype(pd.StringDtype()) # type: ignore
+    rewards_v3_expected.accrued_rewards = rewards_v3_expected.accrued_rewards.astype('float')
+
+    treasury_accrued_incentives_by_day_arc = pd.DataFrame()
+    rewards_arc_expected = pd.DataFrame()
+
+    rewards_v3_result = treasury_accrued_incentives_table(context_avax_v3, treasury_accrued_incentives_by_day_v3)
+    rewards_arc_result = treasury_accrued_incentives_table(context_eth_arc, treasury_accrued_incentives_by_day_arc)
+
+    assert_frame_equal(rewards_v3_expected, rewards_v3_result, check_exact=True)  # type: ignore
+    assert_frame_equal(rewards_arc_expected, rewards_arc_result, check_exact=True)  # type: ignore
+
+
+
 if __name__ == "__main__":
     # ic(list(CONFIG_CHAINS.keys()))
     # ic(get_block_number_at_datetime('ethereum', datetime(2022, 11, 26, 0, 0, 0)))
@@ -864,6 +929,7 @@ if __name__ == "__main__":
     # test_collector_atoken_balances_by_day()
     # test_v3_minted_to_treasury_table()
     # test_non_atoken_transfers_table()
-    test_non_atoken_balances_table()
+    # test_non_atoken_balances_table()
+    test_v3_minted_to_treasury_table()
 
 

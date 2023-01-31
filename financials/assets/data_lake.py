@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import requests
 from web3 import Web3
+from web3.exceptions import BadFunctionCallOutput
 from dagster import (AssetIn,  # SourceAsset,; Output,
                      DailyPartitionsDefinition, ExperimentalWarning,
                      MetadataValue, #MultiPartitionKey,
@@ -893,3 +894,180 @@ def v3_minted_to_treasury_by_day(context, block_numbers_by_day, market_tokens_by
         )
 
     return(minted_to_treasury)
+
+
+@asset(
+    # partitions_def=v3_market_day_multipartition,
+    partitions_def=market_day_multipartition,
+    compute_kind="python",
+    group_name='data_lake',
+    io_manager_key = 'data_lake_io_manager'
+
+)
+def treasury_accrued_incentives_by_day(context, block_numbers_by_day) -> pd.DataFrame:
+    """
+    Gets accrued LM incentives that are owed to the treasury from holding aTokens
+
+    Uses an RPC call to the IncentivesController contract to get the accrued amount
+
+    On Aave V3, it enumerates the available rewards and then calls getRewardsBalance on each token
+
+    Args:
+        context: dagster context object
+        block_numbers_by_day: block numbers at the start and end of the day for the chain
+
+    Returns:
+        A dataframe with the reward token balances of each rewards token on the treasury contract
+
+    """
+
+    date, market = context.partition_key.split("|")
+    chain = CONFIG_MARKETS[market]['chain']
+    partition_datetime = datetime.strptime(date, '%Y-%m-%d')
+
+    context.log.info(f"market: {market}")
+    context.log.info(f"date: {date}")
+
+    # minimal abis supporting just the required functions
+    v3_rewards_abi = [
+        {
+            "inputs":[
+                
+            ],
+            "name":"getRewardsList",
+            "outputs":[
+                {
+                    "internalType":"address[]",
+                    "name":"",
+                    "type":"address[]"
+                }
+            ],
+            "stateMutability":"view",
+            "type":"function"
+        },
+        {
+            "inputs":[
+                {
+                    "internalType":"address",
+                    "name":"user",
+                    "type":"address"
+                },
+                {
+                    "internalType":"address",
+                    "name":"reward",
+                    "type":"address"
+                }
+            ],
+            "name":"getUserAccruedRewards",
+            "outputs":[
+                {
+                    "internalType":"uint256",
+                    "name":"",
+                    "type":"uint256"
+                }
+            ],
+            "stateMutability":"view",
+            "type":"function"
+        }
+    ]
+
+    v2_rewards_abi = [
+        {
+            "inputs":[
+                {
+                    "internalType":"address",
+                    "name":"_user",
+                    "type":"address"
+                }
+            ],
+            "name":"getUserUnclaimedRewards",
+            "outputs":[
+                {
+                    "internalType":"uint256",
+                    "name":"",
+                    "type":"uint256"
+                }
+            ],
+            "stateMutability":"view",
+            "type":"function"
+        }
+    ]
+
+    if CONFIG_MARKETS[market]['incentives_controller'] is None:
+        rewards = pd.DataFrame()
+    else:
+        # initialise web3
+        web3 = Web3(Web3.HTTPProvider(CONFIG_CHAINS[chain]['web3_rpc_url']))
+        collector_contract = Web3.toChecksumAddress(CONFIG_MARKETS[market]['collector'])
+        block_height = int(block_numbers_by_day['block_height'].values[0])
+        incentives_controller_address = Web3.toChecksumAddress(CONFIG_MARKETS[market]['incentives_controller'])
+
+        
+
+        if CONFIG_MARKETS[market]['version'] == 3:
+            # get the list of rewards tokens
+            incentives_controller = web3.eth.contract(address=incentives_controller_address, abi=v3_rewards_abi)
+            try:
+                rewards_list = incentives_controller.functions.getRewardsList().call(block_identifier=block_height)
+            except BadFunctionCallOutput:
+                # if there are no rewards, the call will fail
+                rewards_list = []
+            
+            rewards = pd.DataFrame()
+            for rewards_token in rewards_list:
+                # get the symbol and decimals of the rewards token
+                rewards_token_contract = web3.eth.contract(address=rewards_token, abi=ERC20_ABI)
+                rewards_token_symbol = rewards_token_contract.functions.symbol().call(block_identifier=block_height)
+                rewards_token_decimals = rewards_token_contract.functions.decimals().call(block_identifier=block_height)
+                # get the balance of the rewards token for the collector contract
+                rewards_token_balance = incentives_controller.functions.getUserAccruedRewards(
+                    collector_contract, 
+                    rewards_token
+                ).call(block_identifier=block_height) / pow(10, rewards_token_decimals)
+                rewards_token_element = pd.DataFrame(
+                    [
+                        {
+                            'network': chain,
+                            'market': market,
+                            'collector_contract': collector_contract.lower(),
+                            'block_height': block_height,
+                            'block_day': block_numbers_by_day['block_day'].values[0],
+                            'rewards_token_address': rewards_token.lower(),
+                            'rewards_token_symbol': rewards_token_symbol,
+                            'accrued_rewards': rewards_token_balance,
+                        }
+                    ]
+                )
+                rewards = pd.concat([rewards, rewards_token_element], axis=0)
+
+        elif CONFIG_MARKETS[market]['version'] == 2:
+            incentives_controller = web3.eth.contract(address=incentives_controller_address, abi=v2_rewards_abi)
+            rewards_token_decimals = CONFIG_MARKETS[market]['rewards_token_decimals']
+            rewards_token_balance = incentives_controller.functions.getUserUnclaimedRewards(
+                    collector_contract, 
+                ).call(block_identifier=block_height) / pow(10, rewards_token_decimals)
+            rewards = pd.DataFrame(
+                    [
+                        {
+                            'network': chain,
+                            'market': market,
+                            'collector_contract': collector_contract.lower(),
+                            'block_height': block_height,
+                            'block_day': block_numbers_by_day['block_day'].values[0],
+                            'rewards_token_address': CONFIG_MARKETS[market]['rewards_token'].lower(),
+                            'rewards_token_symbol': CONFIG_MARKETS[market]['rewards_token_symbol'],
+                            'accrued_rewards': rewards_token_balance,
+                        }
+                    ]
+                )
+        else:
+            rewards = pd.DataFrame()
+
+    context.add_output_metadata(
+        {
+            "num_records": len(rewards),
+            "preview": MetadataValue.md(rewards.head().to_markdown()),
+        }
+    )
+
+    return rewards

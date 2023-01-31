@@ -18,7 +18,8 @@ from financials.assets.data_lake import (aave_oracle_prices_by_day,
                                     non_atoken_transfers_by_day,
                                     non_atoken_balances_by_day,
                                     v3_accrued_fees_by_day,
-                                    v3_minted_to_treasury_by_day
+                                    v3_minted_to_treasury_by_day,
+                                    treasury_accrued_incentives_by_day,
                                     )
 # from financials.assets import data_lake
 # from financials.
@@ -756,6 +757,122 @@ def test_v3_minted_to_treasury_by_day():
     ic(result)
     assert_frame_equal(result, expected, check_exact=True, check_like=True)  # type: ignore
 
+def test_treasury_accrued_incentives():
+    """
+    Tests the treasury_accrued_incentives asset on both aave_v3 and aave_v2 (including null returns)
+
+    """
+
+    avax_v2_key = MultiPartitionKey(
+        {
+            "date": '2022-12-15',
+            "market": 'avax_v2'
+        }
+    )  # type: ignore
+
+    avax_v3_key = MultiPartitionKey(
+        {
+            "date": '2022-12-15',
+            "market": 'avax_v3'
+        }
+    )  # type: ignore
+
+    eth_arc_key = MultiPartitionKey(
+        {
+            "date": '2023-01-29',
+            "market": 'aave_arc'
+        }
+    )  # type: ignore
+
+    
+    eth_v3_key = MultiPartitionKey(
+        {
+            "date": '2023-01-29',
+            "market": 'ethereum_v3'
+        }
+    )  # type: ignore
+
+    context_avax_v2 = build_op_context(partition_key=avax_v2_key)
+    context_avax_v3 = build_op_context(partition_key=avax_v3_key)
+    context_eth_arc = build_op_context(partition_key=eth_arc_key)
+    context_eth_v3 = build_op_context(partition_key=eth_v3_key)
+
+
+    block_numbers_by_day_sample_output_avax = pd.DataFrame(
+        [
+            {
+                'block_day': datetime(2022,12,15,0,0,0),
+                'block_time': datetime(2022,12,15,0,0,0),
+                'block_height': 23644293,
+                'end_block': 23686857,
+                'chain': 'avalanche',
+                'market': 'avax_v2',
+            }
+        ]
+    )
+    
+    block_numbers_by_day_sample_output_eth = pd.DataFrame(
+        [
+            {
+                'block_day': datetime(2023,1,29,0,0,0),
+                'block_time': datetime(2023,1,29,0,0,0),
+                'block_height': 16186378,
+                'end_block': 16193533,
+                'chain': 'ethereum',
+                'market': 'ethereum_v2',
+            }
+        ]
+    )
+    
+    treasury_accrued_incentives_avax_v2_expected = pd.DataFrame(
+        [
+            {
+                'network': 'avalanche',
+                'market': 'avax_v2',
+                'collector_contract': '0x467b92aF281d14cB6809913AD016a607b5ba8A36'.lower(),
+                'block_height': 23644293,
+                'block_day': datetime(2022,12,15,0,0,0),
+                'rewards_token_address': '0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7'.lower(),
+                'rewards_token_symbol': 'WAVAX',
+                'accrued_rewards': 724.8002888143623,
+            }
+        ]
+    )
+
+    treasury_accrued_incentives_avax_v3_expected = pd.DataFrame(
+        [
+            {
+                'network': 'avalanche',
+                'market': 'avax_v3',
+                'collector_contract': '0x5ba7fd868c40c16f7aDfAe6CF87121E13FC2F7a0'.lower(),
+                'block_height': 23644293,
+                'block_day': datetime(2022,12,15,0,0,0),
+                'rewards_token_address': '0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7'.lower(),
+                'rewards_token_symbol': 'WAVAX',
+                'accrued_rewards': 584.4829744983532,
+            }
+        ]
+    )
+
+    treasury_accrued_incentives_eth_v3_expected  = pd.DataFrame()
+    treasury_accrued_incentives_eth_arc_expected = pd.DataFrame()
+
+    # test v2 with an expected result
+    treasury_accrued_incentives_avax_v2_result = treasury_accrued_incentives_by_day(context_avax_v2, block_numbers_by_day_sample_output_avax)
+    # test v3 with an expected result
+    treasury_accrued_incentives_avax_v3_result = treasury_accrued_incentives_by_day(context_avax_v3, block_numbers_by_day_sample_output_avax)
+    # test v3 with an expected null response
+    treasury_accrued_incentives_eth_v3_result  = treasury_accrued_incentives_by_day(context_eth_v3, block_numbers_by_day_sample_output_eth)
+    # test v1/v2 with an expected null response
+    treasury_accrued_incentives_eth_arc_result = treasury_accrued_incentives_by_day(context_eth_arc, block_numbers_by_day_sample_output_eth)
+
+    assert treasury_accrued_incentives_avax_v2_result.equals(treasury_accrued_incentives_avax_v2_expected)
+    assert treasury_accrued_incentives_avax_v3_result.equals(treasury_accrued_incentives_avax_v3_expected)
+    assert treasury_accrued_incentives_eth_v3_result.equals(treasury_accrued_incentives_eth_v3_expected)
+    assert treasury_accrued_incentives_eth_arc_result.equals(treasury_accrued_incentives_eth_arc_expected)
+
+
+
 
 
 if __name__ == "__main__":
@@ -772,8 +889,9 @@ if __name__ == "__main__":
     # test_non_atoken_transfers_by_day()
     # test_collector_atoken_balances_by_day()
     # test_non_atoken_balances_table()
-    test_v3_accrued_fees_by_day()
+    # test_v3_accrued_fees_by_day()
     # test_v3_minted_to_treasury_by_day()
+    test_treasury_accrued_incentives()
 
     # pass
 

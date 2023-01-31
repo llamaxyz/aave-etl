@@ -260,32 +260,10 @@ def get_erc20_balance_of(
 
 
     """    
-    # a minimal ERC20 ABI supporting balanceOf only
-    erc20_abi = [
-            {
-                "constant": "true",
-                "inputs": [
-                {
-                    "name": "owner",
-                    "type": "address"
-                }
-                ],
-                "name": "balanceOf",
-                "outputs": [
-                {
-                    "name": "balance",
-                    "type": "uint256"
-                }
-                ],
-                "payable": "false",
-                "stateMutability": "view",
-                "type": "function"
-            }
-        ]
-    
+       
     #initialise Web3 and token contract
     w3 = Web3(Web3.HTTPProvider(CONFIG_CHAINS[chain]['web3_rpc_url']))
-    token_contract = w3.eth.contract(address=Web3.toChecksumAddress(token), abi=erc20_abi)
+    token_contract = w3.eth.contract(address=Web3.toChecksumAddress(token), abi=ERC20_ABI)
 
     if block_height > 0:
         balance_raw = token_contract.functions.balanceOf(Web3.toChecksumAddress(address)).call(block_identifier=int(block_height))

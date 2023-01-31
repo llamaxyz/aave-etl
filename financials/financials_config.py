@@ -13,6 +13,59 @@ POLYGON_ALCHEMY_KEY = os.environ['POLYGON_ALCHEMY_KEY']
 OPTIMISM_ALCHEMY_KEY = os.environ['OPTIMISM_ALCHEMY_KEY']
 ARBITRUM_ALCHEMY_KEY = os.environ['ARBITRUM_ALCHEMY_KEY']
 
+ # a minimal ERC20 ABI supporting balanceOf and decimals
+ERC20_ABI = [
+        {
+            "constant": "true",
+            "inputs": [
+            {
+                "name": "owner",
+                "type": "address"
+            }
+            ],
+            "name": "balanceOf",
+            "outputs": [
+            {
+                "name": "balance",
+                "type": "uint256"
+            }
+            ],
+            "payable": "false",
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs":[
+                
+            ],
+            "name":"decimals",
+            "outputs":[
+                {
+                    "internalType":"uint8",
+                    "name":"",
+                    "type":"uint8"
+                }
+            ],
+            "stateMutability":"view",
+            "type":"function"
+        },
+        {
+            "inputs":[
+                
+            ],
+            "name":"symbol",
+            "outputs":[
+                {
+                    "internalType":"string",
+                    "name":"",
+                    "type":"string"
+                }
+            ],
+            "stateMutability":"view",
+            "type":"function"
+        }
+    ]
+
 # the config dict for tables specific to a blockchain
 CONFIG_CHAINS = {
     "ethereum": {
@@ -85,7 +138,7 @@ CONFIG_MARKETS = {
         "incentives_controller": "0xd784927Ff2f95ba542BfC824c8a8a98F3495f6b5",
         "rewards_token": "0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9",
         "rewards_token_symbol": "stkAAVE",
-        "reward_token_decimals": 18,
+        "rewards_token_decimals": 18,
         "subgraph": 'https://api.thegraph.com/subgraphs/name/aave/protocol-v2',
         "messari_subgraph": "https://api.thegraph.com/subgraphs/name/messari/aave-v2-ethereum",
         "token_source": "messari",
@@ -102,7 +155,7 @@ CONFIG_MARKETS = {
         "incentives_controller": None,
         "rewards_token": None,
         "rewards_token_symbol": None,
-        "reward_token_decimals": None,
+        "rewards_token_decimals": None,
         "subgraph": 'https://api.thegraph.com/subgraphs/name/aave/protocol-v2',
         "messari_subgraph": "https://api.thegraph.com/subgraphs/name/messari/aave-amm-ethereum",
         "token_source": "messari",
@@ -120,7 +173,7 @@ CONFIG_MARKETS = {
         "incentives_controller": None,
         "rewards_token": None,
         "rewards_token_symbol": None,
-        "reward_token_decimals": None,
+        "rewards_token_decimals": None,
         "subgraph": None, #'https://api.thegraph.com/subgraphs/name/aave/aave-arc', buggy
         "messari_subgraph": "https://api.thegraph.com/subgraphs/name/messari/aave-arc-ethereum",
         "token_source": "messari",
@@ -137,7 +190,7 @@ CONFIG_MARKETS = {
         "incentives_controller": "0x77B59b07b87689a6D27adE063FB1D08C7Fe52F0b",
         "rewards_token": "0xc221b7E65FfC80DE234bbB6667aBDd46593D34F0",
         "rewards_token_symbol": "wCFG",
-        "reward_token_decimals": 18,
+        "rewards_token_decimals": 18,
         "subgraph": None,
         "messari_subgraph": "https://api.thegraph.com/subgraphs/name/messari/aave-rwa-ethereum",
         "token_source": "messari",
@@ -153,9 +206,9 @@ CONFIG_MARKETS = {
         "lending_pool_address_provider": '0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e',
         "oracle": "0x54586bE62E3c3580375aE3723C145253060Ca0C2",
         "incentives_controller": "0x8164Cc65827dcFe994AB23944CBC90e0aa80bFcb",
-        # "rewards_token": "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270",
-        # "rewards_token_symbol": "WMATIC",
-        # "reward_token_decimals": 18,
+        "rewards_token": None,
+        "rewards_token_symbol": None,
+        "rewards_token_decimals": None,
         "subgraph": 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3',
         "messari_subgraph": "https://api.thegraph.com/subgraphs/name/messari/aave-v3-ethereum",
         "token_source": "messari",
@@ -172,7 +225,7 @@ CONFIG_MARKETS = {
         "incentives_controller": "0x357D51124f59836DeD84c8a1730D72B749d8BC23",
         "rewards_token": "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270",
         "rewards_token_symbol": "WMATIC",
-        "reward_token_decimals": 18,
+        "rewards_token_decimals": 18,
         "subgraph": 'https://api.thegraph.com/subgraphs/name/aave/aave-v2-matic',
         "messari_subgraph": None, #"https://thegraph.com/hosted-service/subgraph/messari/aave-v2-polygon" not indexed yet,
         "token_source": "aave",
@@ -189,7 +242,7 @@ CONFIG_MARKETS = {
         "incentives_controller": "0x01D83Fe6A10D2f2B7AF17034343746188272cAc9",
         "rewards_token": "0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7",
         "rewards_token_symbol": "WAVAX",
-        "reward_token_decimals": 18,
+        "rewards_token_decimals": 18,
         "subgraph": 'https://api.thegraph.com/subgraphs/name/aave/protocol-v2-avalanche',
         "messari_subgraph": "https://api.thegraph.com/subgraphs/name/messari/aave-v2-avalanche",
         "token_source": "messari",
@@ -205,9 +258,9 @@ CONFIG_MARKETS = {
         "lending_pool_address_provider": '0xa97684ead0e402dc232d5a977953df7ecbab3cdb',
         "oracle": "0xb023e699f5a33916ea823a16485e259257ca8bd1",
         "incentives_controller": "0x929ec64c34a17401f460460d4b9390518e5b473e",
-        # "rewards_token": "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270",
-        # "rewards_token_symbol": "WMATIC",
-        # "reward_token_decimals": 18,
+        "rewards_token": None,
+        "rewards_token_symbol": None,
+        "rewards_token_decimals": None,
         "subgraph": 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3-polygon',
         "messari_subgraph": "https://api.thegraph.com/subgraphs/name/messari/aave-v3-polygon",
         "token_source": "messari",
@@ -223,9 +276,9 @@ CONFIG_MARKETS = {
         "lending_pool_address_provider": '0xa97684ead0e402dc232d5a977953df7ecbab3cdb',
         "oracle": "0xebd36016b3ed09d4693ed4251c67bd858c3c7c9c",
         "incentives_controller": "0x929ec64c34a17401f460460d4b9390518e5b473e",
-        # "rewards_token": "0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7",
-        # "rewards_token_symbol": "WAVAX",
-        # "reward_token_decimals": 18,
+        "rewards_token": None,
+        "rewards_token_symbol": None,
+        "rewards_token_decimals": None,
         "subgraph": 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3-avalanche',
         "messari_subgraph": "https://api.thegraph.com/subgraphs/name/messari/aave-v3-avalanche",
         "token_source": "messari",
@@ -241,9 +294,9 @@ CONFIG_MARKETS = {
         "lending_pool_address_provider": '0xa97684ead0e402dc232d5a977953df7ecbab3cdb',
         "oracle": "0xd81eb3728a631871a7ebbad631b5f424909f0c77",
         "incentives_controller": "0x929ec64c34a17401f460460d4b9390518e5b473e",
-        # "rewards_token": "0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7",
-        # "rewards_token_symbol": "WAVAX",
-        # "reward_token_decimals": 18,
+        "rewards_token": None,
+        "rewards_token_symbol": None,
+        "rewards_token_decimals": None,
         "subgraph": 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3-optimism',
         "messari_subgraph": "https://api.thegraph.com/subgraphs/name/messari/aave-v3-optimism",
         "token_source": "aave", # messari not indexed yet
@@ -259,9 +312,9 @@ CONFIG_MARKETS = {
         "lending_pool_address_provider": '0xa97684ead0e402dc232d5a977953df7ecbab3cdb',
         "oracle": "0xb56c2f0b653b2e0b10c9b928c8580ac5df02c7c7",
         "incentives_controller": "0x929ec64c34a17401f460460d4b9390518e5b473e",
-        # "rewards_token": "0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7",
-        # "rewards_token_symbol": "WAVAX",
-        # "reward_token_decimals": 18,
+        "rewards_token": None,
+        "rewards_token_symbol": None,
+        "rewards_token_decimals": None,
         "subgraph": 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3-arbitrum',
         "messari_subgraph": "https://api.thegraph.com/subgraphs/name/messari/aave-v3-arbitrum",
         "token_source": "messari",
@@ -277,9 +330,9 @@ CONFIG_MARKETS = {
         "lending_pool_address_provider": '0xa97684ead0e402dc232d5a977953df7ecbab3cdb',
         "oracle": "0xfd6f3c1845604c8ae6c6e402ad17fb9885160754",
         "incentives_controller": "0x929ec64c34a17401f460460d4b9390518e5b473e",
-        # "rewards_token": "0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7",
-        # "rewards_token_symbol": "WAVAX",
-        # "reward_token_decimals": 18,
+        "rewards_token": None,
+        "rewards_token_symbol": None,
+        "rewards_token_decimals": None,
         "subgraph": 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3-fantom',
         "messari_subgraph": "https://api.thegraph.com/subgraphs/name/messari/aave-v3-fantom",
         "token_source": "messari",
@@ -295,9 +348,9 @@ CONFIG_MARKETS = {
         "lending_pool_address_provider": '0xa97684ead0e402dc232d5a977953df7ecbab3cdb',
         "oracle": "0x3c90887ede8d65ccb2777a5d577beab2548280ad",
         "incentives_controller": "0x929ec64c34a17401f460460d4b9390518e5b473e",
-        # "rewards_token": "0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7",
-        # "rewards_token_symbol": "WAVAX",
-        # "reward_token_decimals": 18,
+        "rewards_token": None,
+        "rewards_token_symbol": None,
+        "rewards_token_decimals": None,
         "subgraph": 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3-harmony',
         "messari_subgraph": "https://api.thegraph.com/subgraphs/name/messari/aave-v3-harmony",
         "token_source": "messari",
@@ -315,9 +368,9 @@ CONFIG_MARKETS = {
         "protocol_data_provider": None,
         "oracle": "0x76b47460d7f7c5222cfb6b6a75615ab10895dde4",
         "incentives_controller": None,
-        # "rewards_token": "0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7",
-        # "rewards_token_symbol": "WAVAX",
-        # "reward_token_decimals": 18,
+        "rewards_token": None,
+        "rewards_token_symbol": None,
+        "rewards_token_decimals": None,
         "subgraph": 'https://api.thegraph.com/subgraphs/name/aave/protocol-multy-raw',
         "messari_subgraph": None,
         "token_source": "aave",
