@@ -12,6 +12,7 @@ WEB3_ALCHEMY_API_KEY = os.environ['WEB3_ALCHEMY_API_KEY']
 POLYGON_ALCHEMY_KEY = os.environ['POLYGON_ALCHEMY_KEY']
 OPTIMISM_ALCHEMY_KEY = os.environ['OPTIMISM_ALCHEMY_KEY']
 ARBITRUM_ALCHEMY_KEY = os.environ['ARBITRUM_ALCHEMY_KEY']
+FLIPSIDE_API_KEY = os.environ['FLIPSIDE_API_KEY']
 
  # a minimal ERC20 ABI supporting balanceOf and decimals
 ERC20_ABI = [
@@ -59,6 +60,20 @@ ERC20_ABI = [
                     "internalType":"string",
                     "name":"",
                     "type":"string"
+                }
+            ],
+            "stateMutability":"view",
+            "type":"function"
+        },
+        {
+            "inputs":[
+                
+            ],
+            "name":"totalSupply",
+            "outputs":[
+                {
+                    "name":"",
+                    "type":"uint256"
                 }
             ],
             "stateMutability":"view",

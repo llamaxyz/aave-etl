@@ -493,3 +493,53 @@ def treasury_accrued_incentives_table(context, treasury_accrued_incentives_by_da
     )
 
     return rewards
+
+@asset(
+    # partitions_def=v3_market_day_multipartition,
+    partitions_def=market_day_multipartition,
+    compute_kind="python",
+    group_name='data_warehouse'
+)
+def user_lm_rewards_table(context, treasury_accrued_incentives_by_day) -> pd.DataFrame:
+    """
+    Table of the treasury_accrued_incentives data
+    This table will be materialised to database
+    This table has types set explicitly and addresses set to lowercase to ensure DB compatibility
+    
+    Args:
+        context: dagster context object
+        treasury_accrued_incentives_by_day: the output of treasury_accrued_incentives_by_day
+    Returns:
+        A dataframe with the treasury_accrued_incentives_by_day data for each market
+    """
+    # market = context.partition_key.keys_by_dimension['market']
+    # date = context.partition_key.keys_by_dimension['date']
+    date, market = context.partition_key.split("|")
+    context.log.info(f"market: {market}")
+    context.log.info(f"date: {date}")
+
+    rewards = treasury_accrued_incentives_by_day
+
+    if not rewards.empty:
+        # set the types explicitly
+        rewards.block_day = pd.to_datetime(rewards.block_day, utc=True)
+        rewards.chain = rewards.chain.astype(pd.StringDtype()) # type: ignore
+        rewards.market = rewards.market.astype(pd.StringDtype()) # type: ignore
+        rewards.reward_vault = rewards.reward_vault.astype(pd.StringDtype()) # type: ignore
+        rewards.token_address = rewards.token_address.astype(pd.StringDtype()) # type: ignore
+        rewards.balancer_claims = rewards.balancer_claims.astype('float')
+        rewards.incentives_claims = rewards.incentives_claims.astype('float')
+        rewards.stkaave_claims = rewards.stkaave_claims.astype('float')
+
+        # force checksum addresses to lowercase
+        rewards.token_address = rewards.token_address.str.lower()
+
+    
+    context.add_output_metadata(
+        {
+            "num_records": len(rewards),
+            "preview": MetadataValue.md(rewards.head().to_markdown()),
+        }
+    )
+
+    return rewards

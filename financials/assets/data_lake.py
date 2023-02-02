@@ -20,6 +20,7 @@ from icecream import ic
 # from subgrounds.subgrounds import Subgrounds
 from eth_abi.abi import decode
 from eth_utils.conversions import to_bytes
+from shroomdk import ShroomDK
 
 from financials.financials_config import * #pylint: disable=wildcard-import, unused-wildcard-import
 
@@ -800,7 +801,7 @@ def v3_minted_to_treasury_by_day(context, block_numbers_by_day, market_tokens_by
                 axis=1)
             # pylint: enable=E1136
 
-            # Join the token table on the reserve address
+            # Join the token table on the reserve address   
             minted_to_treasury = minted_to_treasury.merge(
                 market_tokens_by_day,
                 how='inner',
@@ -902,7 +903,6 @@ def v3_minted_to_treasury_by_day(context, block_numbers_by_day, market_tokens_by
     compute_kind="python",
     group_name='data_lake',
     io_manager_key = 'data_lake_io_manager'
-
 )
 def treasury_accrued_incentives_by_day(context, block_numbers_by_day) -> pd.DataFrame:
     """
@@ -1071,3 +1071,113 @@ def treasury_accrued_incentives_by_day(context, block_numbers_by_day) -> pd.Data
     )
 
     return rewards
+
+@asset(
+    # partitions_def=v3_market_day_multipartition,
+    partitions_def=market_day_multipartition,
+    compute_kind="python",
+    group_name='data_lake',
+    io_manager_key = 'data_lake_io_manager'
+)
+def user_lm_rewards_claimed(context, block_numbers_by_day):
+    """
+    Gets the total rewards claimed by users for:
+        - The LM distribution contract (incentives controller)
+        - The Safety Module 80:20 balancer pool deposits
+        - The Safety Module stkAAVE deposits
+
+    Uses an SQL query to sum the event values for each of the above contracts
+
+    Args:
+        context: dagster context object
+        block_numbers_by_day: block numbers at the start and end of the day for the chain
+
+    Returns:
+        A dataframe with the rewards claimed by users foe each of the above contracts
+        On markets that are not Aave V2 mainnet, this returns an empty dataframe
+
+    """
+
+    date, market = context.partition_key.split("|")
+    chain = CONFIG_MARKETS[market]['chain']
+    partition_datetime = datetime.strptime(date, '%Y-%m-%d')
+
+    context.log.info(f"market: {market}")
+    context.log.info(f"date: {date}")
+
+    start_block = block_numbers_by_day.block_height.values[0]
+    end_block = block_numbers_by_day.end_block.values[0]
+
+    if market == 'ethereum_v2':
+        # define the Flipside query
+        sql = f"""
+            with claims as (
+            select 
+            '{partition_datetime}' as block_day
+            , contract_address
+            , case 
+                when contract_address = '0xd784927ff2f95ba542bfc824c8a8a98f3495f6b5' then 'incentives_controller'
+                when contract_address = '0xa1116930326d21fb917d5a27f1e9943a9595fb47' then 'balancer_pool'
+                when contract_address = '0x4da27a545c0c5b758a6ba100e3a049001de870f5' then 'stkAAVE'
+                end as contract_name
+            , case 
+                when contract_address = '0xd784927ff2f95ba542bfc824c8a8a98f3495f6b5' then 'incentives_controller'
+                when contract_address = '0xa1116930326d21fb917d5a27f1e9943a9595fb47' then 'ecosystem_reserve'
+                when contract_address = '0x4da27a545c0c5b758a6ba100e3a049001de870f5' then 'ecosystem_reserve'
+                end as from_address
+            , sum(event_inputs:amount) / 1e18 as amount
+            from ethereum.core.fact_event_logs
+            where event_name = 'RewardsClaimed'
+            and block_number >= {start_block}
+            and block_number < {end_block}
+            and contract_address in ('0xd784927ff2f95ba542bfc824c8a8a98f3495f6b5', 
+                                     '0xa1116930326d21fb917d5a27f1e9943a9595fb47', 
+                                     '0x4da27a545c0c5b758a6ba100e3a049001de870f5')
+            and tx_status = 'SUCCESS'
+            group by block_day, contract_address, contract_name
+            )
+
+            , staging as (
+            select 
+                block_day
+                , from_address
+                , case when contract_name = 'balancer_pool' then amount else 0 end as balancer_claims
+                , case when contract_name = 'incentives_controller' then amount else 0 end as incentives_claims 
+                , case when contract_name = 'stkAAVE' then amount else 0 end as stkaave_claims 
+                from claims 
+            )
+
+            select 
+                block_day
+                , 'ethereum' as chain
+                , '{market}' as market
+                , from_address as reward_vault
+                , lower('0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9') as token_address
+                , sum(balancer_claims) as balancer_claims
+                , sum(incentives_claims) as incentives_claims
+                , sum(stkaave_claims) as stkaave_claims
+                from staging
+                group by block_day, from_address 
+                order by block_day, from_address
+            """
+
+        # initialise the query
+        sdk = ShroomDK(FLIPSIDE_API_KEY)
+        query_result = sdk.query(sql)
+        
+        rewards_claimed = pd.DataFrame(data=query_result.rows, columns=[x.lower() for x in query_result.columns])
+        rewards_claimed.block_day = pd.to_datetime(rewards_claimed.block_day, utc=True)
+
+
+
+    else:
+        rewards_claimed = pd.DataFrame()
+
+    context.add_output_metadata(
+        {
+            "num_records": len(rewards_claimed),
+            "preview": MetadataValue.md(rewards_claimed.head().to_markdown()),
+        }
+    )
+
+    return rewards_claimed

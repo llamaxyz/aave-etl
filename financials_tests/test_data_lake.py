@@ -20,6 +20,7 @@ from financials.assets.data_lake import (aave_oracle_prices_by_day,
                                     v3_accrued_fees_by_day,
                                     v3_minted_to_treasury_by_day,
                                     treasury_accrued_incentives_by_day,
+                                    user_lm_rewards_claimed
                                     )
 # from financials.assets import data_lake
 # from financials.
@@ -872,6 +873,76 @@ def test_treasury_accrued_incentives():
     assert treasury_accrued_incentives_eth_arc_result.equals(treasury_accrued_incentives_eth_arc_expected)
 
 
+def test_user_lm_rewards_claimed():
+    """
+    Tests the user lm rewards claimed asset
+    """
+    pkey_eth = MultiPartitionKey(
+        {
+            "date": '2022-11-26',
+            "market": 'ethereum_v2'
+        }
+    )  # type: ignore
+
+    pkey_arb = MultiPartitionKey(
+        {
+            "date": '2022-11-26',
+            "market": 'arbitrum_v3'
+        }
+    )  # type: ignore
+
+    context_eth = build_op_context(partition_key=pkey_eth)
+    context_arb = build_op_context(partition_key=pkey_arb)
+
+    block_numbers_by_day_sample_output = pd.DataFrame(
+        [
+            {
+                'block_day': datetime(2022,11,26,0,0,0),
+                'block_time': datetime(2022,11,26,0,0,0),
+                'block_height': 16050438,
+                'end_block': 16057596,
+                'chain': 'ethereum',
+                'market': 'ethereum_v2',
+            }
+        ]
+    )
+
+    expected_eth = pd.DataFrame(
+        [
+            {
+                'block_day': datetime(2022,11,26,0,0,0, tzinfo=timezone.utc),
+                'chain': 'ethereum',
+                'market': 'ethereum_v2',
+                'reward_vault': 'ecosystem_reserve',
+                'token_address': '0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9'.lower(),
+                'balancer_claims': 1178.178995987,
+                'incentives_claims': 0,
+                'stkaave_claims': 103.964332841,
+            },
+            {
+                'block_day': datetime(2022,11,26,0,0,0, tzinfo=timezone.utc),
+                'chain': 'ethereum',
+                'market': 'ethereum_v2',
+                'reward_vault': 'incentives_controller',
+                'token_address': '0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9'.lower(),
+                'balancer_claims': 0,
+                'incentives_claims': 83.24038401,
+                'stkaave_claims': 0,
+            }
+        ]
+    )
+    ic(expected_eth)
+    # the function should handle markets that are not aave_v2 on mainnet gracefully
+    expected_non_eth = pd.DataFrame()
+    
+
+    result_eth = user_lm_rewards_claimed(context_eth, block_numbers_by_day_sample_output)
+    result_non_eth = user_lm_rewards_claimed(context_arb, block_numbers_by_day_sample_output)
+    ic(result_eth)
+    
+    assert_frame_equal(result_eth, expected_eth)
+    assert_frame_equal(result_non_eth, expected_non_eth)
+
 
 
 
@@ -891,8 +962,8 @@ if __name__ == "__main__":
     # test_non_atoken_balances_table()
     # test_v3_accrued_fees_by_day()
     # test_v3_minted_to_treasury_by_day()
-    test_treasury_accrued_incentives()
-
+    # test_treasury_accrued_incentives()
+    test_user_lm_rewards_claimed()
     # pass
 
 

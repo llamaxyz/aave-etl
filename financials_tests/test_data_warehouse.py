@@ -17,7 +17,8 @@ from financials.assets.data_warehouse import (
                                     non_atoken_balances_table,
                                     v3_accrued_fees_table,
                                     v3_minted_to_treasury_table,
-                                    treasury_accrued_incentives_table
+                                    treasury_accrued_incentives_table,
+                                    user_lm_rewards_table
                                     )
 from financials.financials_config import *  # pylint: disable=wildcard-import, unused-wildcard-import
 
@@ -852,10 +853,7 @@ def test_v3_minted_to_treasury_table():
     assert_frame_equal(result, expected, check_exact=True)  # type: ignore
 
 
-def test_v3_minted_to_treasury_table():
-    """
-    Tests the aave v3 minted_to_treasury table asset
-    """
+def test_treasury_accrued_incentives_table():
     """
     Tests the treasury_accrued_incentives asset on both aave_v3 and aave_v2 (including null returns)
 
@@ -914,6 +912,71 @@ def test_v3_minted_to_treasury_table():
     assert_frame_equal(rewards_arc_expected, rewards_arc_result, check_exact=True)  # type: ignore
 
 
+def test_user_lm_rewards_claimed_table():
+    """
+    Tests the user_lm_rewards_claimed asset on both aave_v3 and aave_v2 (including null returns)
+
+    """
+
+    pkey_eth = MultiPartitionKey(
+        {
+            "date": '2022-11-26',
+            "market": 'ethereum_v2'
+        }
+    )  # type: ignore
+
+    pkey_arb = MultiPartitionKey(
+        {
+            "date": '2022-11-26',
+            "market": 'arbitrum_v3'
+        }
+    )  # type: ignore
+
+    context_eth = build_op_context(partition_key=pkey_eth)
+    context_arb = build_op_context(partition_key=pkey_arb)
+
+    expected_eth = pd.DataFrame(
+        [
+            {
+                'block_day': datetime(2022,11,26,0,0,0, tzinfo=timezone.utc),
+                'chain': 'ethereum',
+                'market': 'ethereum_v2',
+                'reward_vault': 'ecosystem_reserve',
+                'token_address': '0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9'.lower(),
+                'balancer_claims': 1178.178995987,
+                'incentives_claims': 0,
+                'stkaave_claims': 103.964332841,
+            },
+            {
+                'block_day': datetime(2022,11,26,0,0,0, tzinfo=timezone.utc),
+                'chain': 'ethereum',
+                'market': 'ethereum_v2',
+                'reward_vault': 'incentives_controller',
+                'token_address': '0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9'.lower(),
+                'balancer_claims': 0,
+                'incentives_claims': 83.24038401,
+                'stkaave_claims': 0,
+            }
+        ]
+    )
+    ic(expected_eth)
+    # the function should handle markets that are not aave_v2 on mainnet gracefully
+    expected_non_eth = pd.DataFrame()
+
+    expected_eth.block_day = pd.to_datetime(expected_eth.block_day, utc=True)
+    expected_eth.chain = expected_eth.chain.astype(pd.StringDtype()) # type: ignore
+    expected_eth.reward_vault = expected_eth.reward_vault.astype(pd.StringDtype()) # type: ignore
+    expected_eth.market = expected_eth.market.astype(pd.StringDtype()) # type: ignore
+    expected_eth.token_address = expected_eth.token_address.astype(pd.StringDtype()) # type: ignore
+    expected_eth.balancer_claims = expected_eth.balancer_claims.astype('float')
+    expected_eth.incentives_claims = expected_eth.incentives_claims.astype('float')
+    expected_eth.stkaave_claims = expected_eth.stkaave_claims.astype('float')
+
+    eth_result = user_lm_rewards_table(context_eth, expected_eth)
+    non_eth_result = user_lm_rewards_table(context_arb, pd.DataFrame())
+
+    assert_frame_equal(expected_eth, eth_result, check_exact=True)  # type: ignore
+    assert_frame_equal(expected_non_eth, non_eth_result, check_exact=True)  # type: ignore
 
 if __name__ == "__main__":
     # ic(list(CONFIG_CHAINS.keys()))
@@ -930,6 +993,7 @@ if __name__ == "__main__":
     # test_v3_minted_to_treasury_table()
     # test_non_atoken_transfers_table()
     # test_non_atoken_balances_table()
-    test_v3_minted_to_treasury_table()
-
+    # test_v3_minted_to_treasury_table()
+    # treasury_accrued_incentives_table()
+    test_user_lm_rewards_claimed_table()
 
