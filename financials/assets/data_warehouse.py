@@ -500,7 +500,7 @@ def treasury_accrued_incentives_table(context, treasury_accrued_incentives_by_da
     compute_kind="python",
     group_name='data_warehouse'
 )
-def user_lm_rewards_table(context, treasury_accrued_incentives_by_day) -> pd.DataFrame:
+def user_lm_rewards_table(context, user_lm_rewards_claimed) -> pd.DataFrame:
     """
     Table of the treasury_accrued_incentives data
     This table will be materialised to database
@@ -508,9 +508,9 @@ def user_lm_rewards_table(context, treasury_accrued_incentives_by_day) -> pd.Dat
     
     Args:
         context: dagster context object
-        treasury_accrued_incentives_by_day: the output of treasury_accrued_incentives_by_day
+        user_lm_rewards_claimed: the output of user_lm_rewards_claimed
     Returns:
-        A dataframe with the treasury_accrued_incentives_by_day data for each market
+        A dataframe with the user_lm_rewards_claimed data for each market
     """
     # market = context.partition_key.keys_by_dimension['market']
     # date = context.partition_key.keys_by_dimension['date']
@@ -518,7 +518,7 @@ def user_lm_rewards_table(context, treasury_accrued_incentives_by_day) -> pd.Dat
     context.log.info(f"market: {market}")
     context.log.info(f"date: {date}")
 
-    rewards = treasury_accrued_incentives_by_day
+    rewards = user_lm_rewards_claimed
 
     if not rewards.empty:
         # set the types explicitly
