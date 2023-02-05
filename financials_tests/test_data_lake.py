@@ -26,10 +26,9 @@ from financials.assets.data_lake import (aave_oracle_prices_by_day,
 # from financials.
 from financials.financials_config import *  # pylint: disable=wildcard-import, unused-wildcard-import
 
-# from aave.ops.helpers import (
-#     get_market_tokens_at_block_aave,
-#     get_market_tokens_at_block_messari
-# )
+from financials.resources.helpers import (
+    standardise_types
+)
 
 
 # pylint: enable=import-error
@@ -51,8 +50,8 @@ def test_block_numbers_by_day():
     expected = pd.DataFrame(
         [
             {
-                'block_day': datetime(2022,1,1,0,0,0),
-                'block_time': datetime(2022,1,1,0,0,3),
+                'block_day': datetime(2022,1,1,0,0,0, tzinfo=timezone.utc),
+                'block_time': datetime(2022,1,1,0,0,3, tzinfo=timezone.utc),
                 'block_height': 13916166,
                 'end_block': 13922671,
                 'chain': 'ethereum',
@@ -60,8 +59,15 @@ def test_block_numbers_by_day():
             }
         ]
     )
-    result = block_numbers_by_day(context)
+    expected.block_height = expected.block_height.astype('Int64')
+    expected.end_block = expected.end_block.astype('Int64')
+    expected.chain = expected.chain.astype(pd.StringDtype())
+    expected.market = expected.market.astype(pd.StringDtype())
 
+    result = block_numbers_by_day(context)
+    result.info()
+    ic(result)
+    ic(result.dtypes)
     assert_frame_equal(result, expected, check_exact=True)  # type: ignore
 
 def test_market_tokens_by_day():
@@ -118,6 +124,8 @@ def test_market_tokens_by_day():
             },
         }
     )
+
+    expected = standardise_types(expected)
 
     result = market_tokens_by_day(context, block_numbers_by_day_sample)
     result = result[result.symbol.isin(['WBTC', 'WETH'])]  # type: ignore 
@@ -189,6 +197,8 @@ def test_aave_oracle_prices_by_day():
         }
     )
 
+    expected = standardise_types(expected)
+
     result = aave_oracle_prices_by_day(context, market_tokens_by_day_sample_output)
 
     assert_frame_equal(result, expected, check_like=True, check_exact=True)  # type: ignore
@@ -236,6 +246,8 @@ def test_collector_atoken_transfers_by_day():
         }
     )
 
+    market_tokens_by_day_sample_output = standardise_types(market_tokens_by_day_sample_output)
+
     block_numbers_by_day_sample_output = pd.DataFrame(
         [
             {
@@ -247,6 +259,8 @@ def test_collector_atoken_transfers_by_day():
             }
         ]
     )
+
+    block_numbers_by_day_sample_output = standardise_types(block_numbers_by_day_sample_output)
 
     expected = pd.DataFrame(
         {
@@ -307,6 +321,9 @@ def test_collector_atoken_transfers_by_day():
             }
             }
     )
+
+    expected = standardise_types(expected)
+
     ic(expected)
     result = collector_atoken_transfers_by_day(context, market_tokens_by_day_sample_output, block_numbers_by_day_sample_output)
 
@@ -339,6 +356,8 @@ def test_non_atoken_transfers_by_day():
         ]
     )
 
+    block_numbers_by_day_sample_output = standardise_types(block_numbers_by_day_sample_output)
+
     expected = pd.DataFrame(
         {
             "transfers_transfer_type":{
@@ -362,8 +381,8 @@ def test_non_atoken_transfers_by_day():
                 36:"Aave Token"
             },
             "transfers_contract_decimals":{
-                35:18,
-                36:18
+                35:int(18),
+                36:int(18)
             },
             "transfers_contract_symbol":{
                 35:"AAVE",
@@ -392,17 +411,7 @@ def test_non_atoken_transfers_by_day():
         }
     )
 
-    expected.transfers_from_address = expected.transfers_from_address.str.lower() 
-    expected.transfers_to_address = expected.transfers_to_address.str.lower()
-    expected.transfers_contract_address = expected.transfers_contract_address.str.lower()
-
-    expected.transfers_from_address = expected.transfers_from_address.astype(pd.StringDtype()) # type: ignore
-    expected.transfers_to_address = expected.transfers_to_address.astype(pd.StringDtype()) # type: ignore
-    expected.transfers_contract_address = expected.transfers_contract_address.astype(pd.StringDtype()) # type: ignore
-    expected.transfers_contract_decimals = expected.transfers_contract_decimals.astype('int64') 
-    expected.start_block = expected.start_block.astype('int64')
-    expected.end_block = expected.end_block.astype('int64')
-
+    expected = standardise_types(expected)
 
     ic(expected)
     result = non_atoken_transfers_by_day(context, block_numbers_by_day_sample_output).tail(2) # type: ignore
@@ -453,6 +462,8 @@ def test_collector_atoken_balances_by_day():
         }
     )
 
+    market_tokens_by_day_sample_output = standardise_types(market_tokens_by_day_sample_output)
+
     block_numbers_by_day_sample_output = pd.DataFrame(
         [
             {
@@ -465,6 +476,8 @@ def test_collector_atoken_balances_by_day():
             }
         ]
     )
+
+    block_numbers_by_day_sample_output = standardise_types(block_numbers_by_day_sample_output)
 
     expected = pd.DataFrame(
         {
@@ -498,6 +511,8 @@ def test_collector_atoken_balances_by_day():
             }
         }
     )
+
+    expected = standardise_types(expected)
     ic(expected)
 
     result = collector_atoken_balances_by_day(context, market_tokens_by_day_sample_output, block_numbers_by_day_sample_output)
@@ -530,6 +545,8 @@ def test_non_atoken_balances_by_day():
             }
         ]
     )
+
+    block_numbers_by_day_sample_output = standardise_types(block_numbers_by_day_sample_output)
 
     expected = pd.DataFrame(
         {
@@ -581,6 +598,8 @@ def test_non_atoken_balances_by_day():
         }
     )
 
+    expected = standardise_types(expected)
+
     ic(expected)
     result = non_atoken_balances_by_day(context, block_numbers_by_day_sample_output).head(3) # type: ignore
     ic(result)
@@ -623,6 +642,7 @@ def test_v3_accrued_fees_by_day():
             },
         }
     )
+    market_tokens_by_day_sample_output = standardise_types(market_tokens_by_day_sample_output)
 
     expected = pd.DataFrame(
         {
@@ -652,6 +672,7 @@ def test_v3_accrued_fees_by_day():
             }
         }
     )
+    expected = standardise_types(expected)
     ic(expected)
 
     result = v3_accrued_fees_by_day(context, market_tokens_by_day_sample_output)
@@ -696,6 +717,7 @@ def test_v3_minted_to_treasury_by_day():
             },
         }
     )
+    market_tokens_by_day_sample_output = standardise_types(market_tokens_by_day_sample_output)
 
     block_numbers_by_day_sample_output = pd.DataFrame(
         {
@@ -719,6 +741,7 @@ def test_v3_minted_to_treasury_by_day():
             },
         }
     )
+    block_numbers_by_day_sample_output = standardise_types(block_numbers_by_day_sample_output)
 
     expected = pd.DataFrame(
         {
@@ -751,8 +774,9 @@ def test_v3_minted_to_treasury_by_day():
             }
         }
     )
-    # expected.minted_to_treasury_amount = expected.minted_to_treasury_amount.astype('float64')
-
+    expected = standardise_types(expected)
+    
+    
     result = v3_minted_to_treasury_by_day(context, block_numbers_by_day_sample_output, market_tokens_by_day_sample_output)
     ic(expected)
     ic(result)
@@ -811,6 +835,7 @@ def test_treasury_accrued_incentives():
             }
         ]
     )
+    block_numbers_by_day_sample_output_avax = standardise_types(block_numbers_by_day_sample_output_avax)
     
     block_numbers_by_day_sample_output_eth = pd.DataFrame(
         [
@@ -824,6 +849,7 @@ def test_treasury_accrued_incentives():
             }
         ]
     )
+    block_numbers_by_day_sample_output_eth = standardise_types(block_numbers_by_day_sample_output_eth)
     
     treasury_accrued_incentives_avax_v2_expected = pd.DataFrame(
         [
@@ -839,6 +865,7 @@ def test_treasury_accrued_incentives():
             }
         ]
     )
+    treasury_accrued_incentives_avax_v2_expected = standardise_types(treasury_accrued_incentives_avax_v2_expected)
 
     treasury_accrued_incentives_avax_v3_expected = pd.DataFrame(
         [
@@ -854,6 +881,7 @@ def test_treasury_accrued_incentives():
             }
         ]
     )
+    treasury_accrued_incentives_avax_v3_expected = standardise_types(treasury_accrued_incentives_avax_v3_expected)
 
     treasury_accrued_incentives_eth_v3_expected  = pd.DataFrame()
     treasury_accrued_incentives_eth_arc_expected = pd.DataFrame()
@@ -906,6 +934,7 @@ def test_user_lm_rewards_claimed():
             }
         ]
     )
+    block_numbers_by_day_sample_output = standardise_types(block_numbers_by_day_sample_output)
 
     expected_eth = pd.DataFrame(
         [
@@ -931,6 +960,8 @@ def test_user_lm_rewards_claimed():
             }
         ]
     )
+    expected_eth = standardise_types(expected_eth)
+
     ic(expected_eth)
     # the function should handle markets that are not aave_v2 on mainnet gracefully
     expected_non_eth = pd.DataFrame()

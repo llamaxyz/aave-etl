@@ -29,7 +29,8 @@ from financials.resources.helpers import (
     get_market_tokens_at_block_aave,
     get_token_transfers_from_covalent,
     get_erc20_balance_of,
-    get_events_by_topic_hash_from_covalent
+    get_events_by_topic_hash_from_covalent,
+    standardise_types
 )
 
 # # if not sys.warnoptions:
@@ -111,6 +112,8 @@ def block_numbers_by_day(context) -> pd.DataFrame:
     return_val['chain'] = config_chain
     return_val['market'] = market
 
+    return_val = standardise_types(return_val)
+
     context.add_output_metadata(
         {
             "num_records": len(return_val),
@@ -159,6 +162,8 @@ def market_tokens_by_day(context, block_numbers_by_day) -> pd.DataFrame: #pylint
         tokens['block_day'] = block_day
         # overwrite ETH with WETH address
         tokens.loc[tokens.reserve == '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee', 'reserve'] = '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2'
+
+    tokens = standardise_types(tokens)
 
     context.add_output_metadata(
         {
@@ -215,9 +220,9 @@ def aave_oracle_prices_by_day(context, market_tokens_by_day) -> pd.DataFrame:  #
             feed_registry_abi_url = f"https://api.etherscan.io/api?module=contract&action=getabi&apikey={ETHERSCAN_API_KEY}&address={chainlink_feed_registry}"
             feed_registry_abi = json.loads(requests.get(feed_registry_abi_url, timeout=300).json()['result'])
             feed_registry = w3.eth.contract(address=chainlink_feed_registry, abi=feed_registry_abi)
-            eth_usd_price = feed_registry.functions.latestAnswer(eth_address, usd_address).call(block_identifier = block_height) / 10**8
+            eth_usd_price = float(feed_registry.functions.latestAnswer(eth_address, usd_address).call(block_identifier = block_height) / 10**8)
         else:
-            eth_usd_price = 0
+            eth_usd_price = float(0)
 
         # get the abi for the oracle contract from etherscan/polygonscan
         aave_version = CONFIG_MARKETS[market]['version']
@@ -254,6 +259,8 @@ def aave_oracle_prices_by_day(context, market_tokens_by_day) -> pd.DataFrame:  #
         # create a dataframe with the price
         return_val = market_tokens_by_day[['reserve','symbol','market','block_height','block_day']].copy()
         return_val['usd_price'] = pd.Series(response, name='usd_price') * price_multiplier # type: ignore
+
+        return_val = standardise_types(return_val)
 
     context.add_output_metadata(
         {
@@ -325,6 +332,8 @@ def collector_atoken_transfers_by_day(context, market_tokens_by_day, block_numbe
         context.log.info(f"atoken: {row.atoken_symbol}")
         transfers = pd.concat([transfers, row_transfers]).reset_index(drop=True)
 
+    transfers = standardise_types(transfers)
+
     context.add_output_metadata(
         {
             "num_records": len(transfers),
@@ -389,17 +398,8 @@ def non_atoken_transfers_by_day(context, block_numbers_by_day) -> pd.DataFrame: 
                 
                 context.log.info(f"{wallet}: {token}")
             
-        #fix types here, ints getting mangled to floats somewhere
-        transfers.transfers_from_address = transfers.transfers_from_address.str.lower() 
-        transfers.transfers_to_address = transfers.transfers_to_address.str.lower()
-        transfers.transfers_contract_address = transfers.transfers_contract_address.str.lower()
 
-        transfers.transfers_from_address = transfers.transfers_from_address.astype(pd.StringDtype()) # type: ignore
-        transfers.transfers_to_address = transfers.transfers_to_address.astype(pd.StringDtype()) # type: ignore
-        transfers.transfers_contract_address = transfers.transfers_contract_address.astype(pd.StringDtype()) # type: ignore
-        transfers.transfers_contract_decimals = transfers.transfers_contract_decimals.astype('int64') 
-        transfers.start_block = transfers.start_block.astype('int64')
-        transfers.end_block = transfers.end_block.astype('int64')
+    transfers = standardise_types(transfers)
 
     context.add_output_metadata(
         {
@@ -485,6 +485,8 @@ def collector_atoken_balances_by_day(context, market_tokens_by_day, block_number
         context.log.info(f"atoken: {row.atoken_symbol}")
         balances = pd.concat([balances, balance_row]).reset_index(drop=True)  # type: ignore
 
+    balances = standardise_types(balances)
+
     context.add_output_metadata(
         {
             "num_records": len(balances),
@@ -559,6 +561,7 @@ def non_atoken_balances_by_day(context, block_numbers_by_day) -> pd.DataFrame:  
                 context.log.info(f"balanceOf: {token} on {chain}")
                 balances = pd.concat([balances, balance_row]).reset_index(drop=True)  # type: ignore
 
+    balances = standardise_types(balances)
 
     context.add_output_metadata(
         {
@@ -720,6 +723,8 @@ def v3_accrued_fees_by_day(context, market_tokens_by_day) -> pd.DataFrame: # typ
                 fees_row = pd.DataFrame(output_row, index=[0])
                 context.log.info(f"accrued_fees: {row.symbol} on {market}")
                 fees = pd.concat([fees, fees_row]).reset_index(drop=True)
+
+    fees = standardise_types(fees)
 
     context.add_output_metadata(
         {
@@ -886,6 +891,8 @@ def v3_minted_to_treasury_by_day(context, block_numbers_by_day, market_tokens_by
             minted_to_treasury = pd.DataFrame()
     else:
         minted_to_treasury = pd.DataFrame()
+
+    minted_to_treasury = standardise_types(minted_to_treasury)
 
     context.add_output_metadata(
             {
@@ -1062,6 +1069,8 @@ def treasury_accrued_incentives_by_day(context, block_numbers_by_day) -> pd.Data
                 )
         else:
             rewards = pd.DataFrame()
+    
+    rewards = standardise_types(rewards)
 
     context.add_output_metadata(
         {
@@ -1173,6 +1182,8 @@ def user_lm_rewards_claimed(context, block_numbers_by_day):
     else:
         rewards_claimed = pd.DataFrame()
 
+    rewards_claimed = standardise_types(rewards_claimed)
+    
     context.add_output_metadata(
         {
             "num_records": len(rewards_claimed),

@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 
 import pandas as pd
 import numpy as np
-# from icecream import ic
+from icecream import ic
 from pandas.testing import assert_frame_equal
 # pylint: disable=import-error
 from financials.financials_config import CONFIG_MARKETS 
@@ -10,7 +10,9 @@ from financials.resources.helpers import (get_erc20_balance_of,
                               get_market_tokens_at_block_aave,
                               get_market_tokens_at_block_messari,
                               get_token_transfers_from_covalent,
-                              get_events_by_topic_hash_from_covalent)
+                              get_events_by_topic_hash_from_covalent,
+                              standardise_types
+                              )
  # pylint: enable=import-error
 
 def test_get_market_tokens_at_block_messari():
@@ -316,9 +318,54 @@ def test_get_events_by_topic_hash_from_covalent():
     assert len(result) == expected_length, str(len(result))
     assert_frame_equal(result.head(1), expected, check_exact=True, check_like=True)
 
+def test_standarise_types():
+    """
+    Tests the standarise types function against a reference response
+    """
+
+    input = pd.DataFrame(
+            [
+                {
+                    'block_day': datetime(2022,11,26,0,0,0),
+                    'chain': 'ethereum',
+                    'token_address': '0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9',
+                    'float_field': 1178.178995987,
+                    'int_field': 15154960,
+                }
+            ]
+        )
+
+    expected = pd.DataFrame(
+            [
+                {
+                    'block_day': datetime(2022,11,26,0,0,0, tzinfo=timezone.utc),
+                    'chain': 'ethereum',
+                    'token_address': '0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9'.lower(),
+                    'float_field': 1178.178995987,
+                    'int_field': 15154960,
+                }
+            ]
+        )
+
+    expected.chain = expected.chain.astype(pd.StringDtype())
+    expected.token_address = expected.token_address.astype(pd.StringDtype())
+    expected.float_field = expected.float_field.astype('Float64')
+    expected.int_field = expected.int_field.astype('Int64')
+
+    ic(input)
+    ic(expected)
+    input.info()
+    expected.info()
+
+    result = standardise_types(input)
+
+    assert_frame_equal(result, expected, check_exact=True)
+
+    
 
 if __name__ == "__main__":
     # test_get_market_tokens_at_block_aave()
-    test_get_erc20_balance_of()
+    # test_get_erc20_balance_of()
     # test_get_token_transfers_from_covalent()
     # test_get_events_by_topic_hash_from_covalent()
+    test_standarise_types()

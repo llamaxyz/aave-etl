@@ -227,13 +227,14 @@ def get_token_transfers_from_covalent(start_block: int,
         )
         transfers_subset['start_block'] = start_block
         transfers_subset['end_block'] = end_block
-        transfers_subset.transfers_contract_decimals = transfers_subset.transfers_contract_decimals.astype('int')
-        transfers_subset.start_block = transfers_subset.start_block.astype('int')
-        transfers_subset.end_block = transfers_subset.end_block.astype('int')
+        transfers_subset.transfers_contract_decimals = transfers_subset.transfers_contract_decimals.astype('Int64')
+        transfers_subset.start_block = transfers_subset.start_block.astype('Int64')
+        transfers_subset.end_block = transfers_subset.end_block.astype('Int64')
+        transfers_subset.transfers_contract_decimals = transfers_subset.transfers_contract_decimals.astype('Int64')
         transfers_subset.rename(columns={'transfers_contract_ticker_symbol': 'transfers_contract_symbol'}, inplace=True)
     else:
         transfers_subset = pd.DataFrame()
-    
+
     return transfers_subset
 
 
@@ -330,6 +331,38 @@ def get_events_by_topic_hash_from_covalent(start_block: int,
         # ic(events)
 
     return events
+
+def standardise_types(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Sets the dtypes for a dataframe to match the convention used in the database
+
+    object (string) -> pd.StringDtype()
+    int64 -> pd.Int64Dtype()
+    float64 -> pd.Float64Dtype() 
+    datetimes -> apply tz_localize('UTC')
+    addresses -> force to lowercase
+
+    Args:
+        df (pd.DataFrame): dataframe to set dtypes for
+
+    Returns:
+        pd.DataFrame: identical dataframe with dtypes set
+    """
+
+    for col in df.columns:
+        if df[col].dtype == 'object':
+            df[col] = df[col].astype(pd.StringDtype())
+        elif df[col].dtype == 'int64':
+            df[col] = df[col].astype(pd.Int64Dtype())
+        elif df[col].dtype == 'float64':
+            df[col] = df[col].astype(pd.Float64Dtype())
+        elif df[col].dtype == 'datetime64[ns]':
+            df[col] = df[col].dt.tz_localize('UTC')
+
+        if df[col].dtype == pd.StringDtype() and df[col].str.startswith('0x').any():
+            df[col] = df[col].str.lower()
+        
+    return df
 
 if __name__ == "__main__":
     # wbtc = get_token_transfers_from_covalent(16050438, 16057596, 1, '0x464C71f6c2F760DdA6093dCB91C24c39e5d6e18c', '0xbcca60bb61934080951369a648fb03df4f96263c')
