@@ -158,7 +158,8 @@ CONFIG_MARKETS = {
         "messari_subgraph": "https://api.thegraph.com/subgraphs/name/messari/aave-v2-ethereum",
         "token_source": "messari",
         "atoken_prefix": "a",
-        "oracle_base_currency": 'wei'
+        "oracle_base_currency": 'wei',
+        "block_table_master": True,
     },
     "aave_amm": {
         "chain": "ethereum",
@@ -175,7 +176,8 @@ CONFIG_MARKETS = {
         "messari_subgraph": "https://api.thegraph.com/subgraphs/name/messari/aave-amm-ethereum",
         "token_source": "messari",
         "atoken_prefix": "a",
-        "oracle_base_currency": 'wei'
+        "oracle_base_currency": 'wei',
+        "block_table_master": False,
     },
     "aave_arc": {
         "chain": "ethereum",
@@ -193,7 +195,8 @@ CONFIG_MARKETS = {
         "messari_subgraph": "https://api.thegraph.com/subgraphs/name/messari/aave-arc-ethereum",
         "token_source": "messari",
         "atoken_prefix": "a",
-        "oracle_base_currency": 'wei'
+        "oracle_base_currency": 'wei',
+        "block_table_master": False,
     },
     "aave_rwa": {
         "chain": "ethereum",
@@ -210,7 +213,8 @@ CONFIG_MARKETS = {
         "messari_subgraph": "https://api.thegraph.com/subgraphs/name/messari/aave-rwa-ethereum",
         "token_source": "messari",
         "atoken_prefix": "a",
-        "oracle_base_currency": 'usd'
+        "oracle_base_currency": 'usd',
+        "block_table_master": False,
     },
     "ethereum_v3": {
         "chain": "ethereum",
@@ -228,7 +232,8 @@ CONFIG_MARKETS = {
         "messari_subgraph": "https://api.thegraph.com/subgraphs/name/messari/aave-v3-ethereum",
         "token_source": "messari",
         "atoken_prefix": "aEth",
-        "oracle_base_currency": 'usd'
+        "oracle_base_currency": 'usd',
+        "block_table_master": False,
     },
     "polygon_v2": {
         "chain": "polygon",
@@ -245,7 +250,8 @@ CONFIG_MARKETS = {
         "messari_subgraph": None, #"https://thegraph.com/hosted-service/subgraph/messari/aave-v2-polygon" not indexed yet,
         "token_source": "aave",
         "atoken_prefix": "am",
-        "oracle_base_currency": 'wei'
+        "oracle_base_currency": 'wei',
+        "block_table_master": True,
     },
     "avax_v2": {
         "chain": "avalanche",
@@ -262,7 +268,8 @@ CONFIG_MARKETS = {
         "messari_subgraph": "https://api.thegraph.com/subgraphs/name/messari/aave-v2-avalanche",
         "token_source": "messari",
         "atoken_prefix": "av",
-        "oracle_base_currency": 'usd'
+        "oracle_base_currency": 'usd',
+        "block_table_master": True,
     },
     "polygon_v3": {
         "chain": "polygon",
@@ -280,7 +287,8 @@ CONFIG_MARKETS = {
         "messari_subgraph": "https://api.thegraph.com/subgraphs/name/messari/aave-v3-polygon",
         "token_source": "messari",
         "atoken_prefix": "aPol",
-        "oracle_base_currency": 'usd'
+        "oracle_base_currency": 'usd',
+        "block_table_master": False,
     },
     "avax_v3": {
         "chain": "avalanche",
@@ -298,7 +306,8 @@ CONFIG_MARKETS = {
         "messari_subgraph": "https://api.thegraph.com/subgraphs/name/messari/aave-v3-avalanche",
         "token_source": "messari",
         "atoken_prefix": "aAva",
-        "oracle_base_currency": 'usd'
+        "oracle_base_currency": 'usd',
+        "block_table_master": False,
     },
     "optimism_v3": {
         "chain": "optimism",
@@ -316,7 +325,8 @@ CONFIG_MARKETS = {
         "messari_subgraph": "https://api.thegraph.com/subgraphs/name/messari/aave-v3-optimism",
         "token_source": "aave", # messari not indexed yet
         "atoken_prefix": "aOpt",
-        "oracle_base_currency": 'usd'
+        "oracle_base_currency": 'usd',
+        "block_table_master": True,
     },
     "arbitrum_v3": {
         "chain": "arbitrum",
@@ -334,7 +344,8 @@ CONFIG_MARKETS = {
         "messari_subgraph": "https://api.thegraph.com/subgraphs/name/messari/aave-v3-arbitrum",
         "token_source": "messari",
         "atoken_prefix": "aArb",
-        "oracle_base_currency": 'usd'
+        "oracle_base_currency": 'usd',
+        "block_table_master": True,
     },
     "fantom_v3": {
         "chain": "fantom",
@@ -352,7 +363,8 @@ CONFIG_MARKETS = {
         "messari_subgraph": "https://api.thegraph.com/subgraphs/name/messari/aave-v3-fantom",
         "token_source": "messari",
         "atoken_prefix": "aFan",
-        "oracle_base_currency": 'usd'
+        "oracle_base_currency": 'usd',
+        "block_table_master": True,
     },
     "harmony_v3": {
         "chain": "harmony",
@@ -370,7 +382,8 @@ CONFIG_MARKETS = {
         "messari_subgraph": "https://api.thegraph.com/subgraphs/name/messari/aave-v3-harmony",
         "token_source": "messari",
         "atoken_prefix": "aHar",
-        "oracle_base_currency": 'usd'
+        "oracle_base_currency": 'usd',
+        "block_table_master": True,
     },
     "ethereum_v1": {
         "chain": "ethereum",
@@ -390,7 +403,8 @@ CONFIG_MARKETS = {
         "messari_subgraph": None,
         "token_source": "aave",
         "atoken_prefix": "a",
-        "oracle_base_currency": 'wei'
+        "oracle_base_currency": 'wei',
+        "block_table_master": False,
     },
 }
 
