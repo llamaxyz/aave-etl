@@ -79,8 +79,10 @@ def blocks_by_day(context, block_numbers_by_day) -> pd.DataFrame:
 def atoken_measures_by_day(
             context,
             collector_atoken_balances_by_day,
+            collector_atoken_transfers_by_day,
             v3_accrued_fees_by_day,
-            v3_minted_to_treasury_by_day
+            v3_minted_to_treasury_by_day,
+            internal_external_addresses
             ) -> pd.DataFrame:
     """
     Joins all measures relevant to an atoken into one table
@@ -88,8 +90,10 @@ def atoken_measures_by_day(
     Args:
         context: dagster context object
         collector_atoken_balances_by_day: the output of collector_atoken_balances_by_day
+        collector_atoken_transfers_by_day: the output of collector_atoken_transfers_by_day
         v3_accrued_fees_by_day: the output of v3_accrued_fees_by_day
         v3_minted_to_treasury_by_day: the output of v3_minted_to_treasury_by_day
+        internal_external_addresses: the output of internal_external_addresses
 
     Returns:
         A dataframe with a row for each atoken on the day, and the output of all the measures
@@ -99,6 +103,7 @@ def atoken_measures_by_day(
     date, market = context.partition_key.split("|")
     context.log.info(f"market: {market}")
     context.log.info(f"date: {date}")
+    chain = CONFIG_MARKETS[market]['chain']
 
     return_val = collector_atoken_balances_by_day
     if not v3_accrued_fees_by_day.empty:
@@ -112,13 +117,42 @@ def atoken_measures_by_day(
     else:
         return_val['accrued_fees'] = float(0)
 
+    # transfers need to be classified as internal/external and aggregated to day level
+    transfers = collector_atoken_transfers_by_day.copy()
+    transfers.columns = transfers.columns.str.replace('transfers_','')
+    ic(transfers)
+    transfers = transfers[[
+            'transfer_type',
+            'from_address',
+            'to_address',
+            'contract_address',
+            'block_day',
+            'amount_transferred'
+    ]]
+    transfers_in = transfers.loc[transfers['transfer_type']=='IN']
+    transfers_out = transfers.loc[transfers['transfer_type']=='OUT']
+    ic(transfers_in)
+    ic(transfers_out)
+    transfer_class = internal_external_addresses.loc[internal_external_addresses['chain']==chain]
+    transfer_class = transfer_class[['contract_address','internal_external']].copy()
+    if not transfers_in.empty:
+        transfer_class_in = transfer_class.rename(columns={'contract_address':'to_address'})
+        transfers_in = transfers_in.merge(transfer_class_in, how='left')
+        # todo up to here
+        # todo assign external to nulls
+        # todo create in_external and in_internal etc using if logic np.where
+        # todo repeat for external
+        # concat the dfs 
+        # todo select less columns
+        # todo aggregate on contract_address
+        # todo join to main table
+
+
     if not v3_minted_to_treasury_by_day.empty:
         v3_minted_to_treasury_by_day = v3_minted_to_treasury_by_day[['market','atoken','atoken_symbol','block_height','block_day','minted_to_treasury_amount','minted_amount']].copy()
         v3_minted_to_treasury_by_day.rename(columns={'atoken':'token','atoken_symbol':'symbol'}, inplace=True)
         return_val = return_val.merge(v3_minted_to_treasury_by_day,
                                     how='left',
-                                    #   left_on=['market','token','symbol','block_height','block_day'],
-                                    #   right_on=['market','atoken','atoken_symbol','block_height','block_day']
                                     )
     else:
         return_val['minted_to_treasury_amount'] = float(0)
@@ -135,6 +169,15 @@ def atoken_measures_by_day(
         }
     )
     return return_val
+
+if __name__ == "__main__":
+    # test_blocks_by_day()
+    # test_atoken_measures_by_day()
+    import pandas as pd
+    poly = pd.read_pickle('/workspaces/aave-etl/storage/collector_atoken_transfers_by_day/2023-01-19|polygon_v3')
+    wbtc = poly.loc[poly.transfers_contract_symbol == 'aPolWBTC']
+    ic(wbtc)
+    print(wbtc.to_dict())
 
 
 #
