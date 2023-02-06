@@ -60,7 +60,8 @@ if dagster_deployment == 'local_filesystem':
     }
 elif dagster_deployment == 'local_cloud':
     # dev on local machine, files stored in GCS dev bucket and BQ dev tables
-    gcs_credentials = service_account.Credentials.from_service_account_info(json.loads(os.environ['AAVE_ETL_DEV_BIGQUERY_SERVICE_ACCOUNT_CREDENTIALS']))
+    service_account_creds = os.environ['AAVE_ETL_DEV_BIGQUERY_SERVICE_ACCOUNT_CREDENTIALS']
+    gcs_credentials = service_account.Credentials.from_service_account_info(json.loads(service_account_creds))
     storage_client = storage.Client(credentials=gcs_credentials)
     resource_defs = {
         "data_lake_io_manager": gcs_pickle_io_manager.configured(
@@ -73,7 +74,8 @@ elif dagster_deployment == 'local_cloud':
     }
 elif dagster_deployment == 'prod':
     # running on dagster cloud in prod GCS bucket and BQ env
-    gcs_credentials = service_account.Credentials.from_service_account_info(json.loads(os.environ['AAVE_ETL_PROD_BIGQUERY_SERVICE_ACCOUNT_CREDENTIALS']))
+    service_account_creds = os.environ['AAVE_ETL_PROD_BIGQUERY_SERVICE_ACCOUNT_CREDENTIALS']
+    gcs_credentials = service_account.Credentials.from_service_account_info(json.loads(service_account_creds))
     storage_client = storage.Client(credentials=gcs_credentials)
     resource_defs = {
         "data_lake_io_manager": gcs_pickle_io_manager.configured(

@@ -20,7 +20,8 @@ from financials.assets.data_lake import (aave_oracle_prices_by_day,
                                     v3_accrued_fees_by_day,
                                     v3_minted_to_treasury_by_day,
                                     treasury_accrued_incentives_by_day,
-                                    user_lm_rewards_claimed
+                                    user_lm_rewards_claimed,
+                                    internal_external_addresses
                                     )
 # from financials.assets import data_lake
 # from financials.
@@ -971,10 +972,33 @@ def test_user_lm_rewards_claimed():
     result_non_eth = user_lm_rewards_claimed(context_arb, block_numbers_by_day_sample_output)
     ic(result_eth)
     
-    assert_frame_equal(result_eth, expected_eth)
-    assert_frame_equal(result_non_eth, expected_non_eth)
+    assert_frame_equal(result_eth, expected_eth, check_exact=True)
+    assert_frame_equal(result_non_eth, expected_non_eth, check_exact=True)
 
 
+def test_internal_external_addresses():
+    """
+    Tests the loading of the internal external addresses asset
+    """
+
+    context = build_op_context()
+
+    expected = pd.DataFrame(
+        [
+            {
+                "network": "arbitrum",
+                "description": "V3 collector",
+                "address": "0x053d55f9b5af8694c503eb288a1b7e552f590710",
+                "internal_external": "aave_internal"
+            }
+        ]
+    )
+    expected = standardise_types(expected)
+
+    result = internal_external_addresses(context)
+    # ic(result)
+
+    assert_frame_equal(result.head(1), expected, check_exact=True)
 
 
 if __name__ == "__main__":
@@ -994,7 +1018,8 @@ if __name__ == "__main__":
     # test_v3_accrued_fees_by_day()
     # test_v3_minted_to_treasury_by_day()
     # test_treasury_accrued_incentives()
-    test_user_lm_rewards_claimed()
+    # test_user_lm_rewards_claimed()
+    test_internal_external_addresses()
     # pass
 
 

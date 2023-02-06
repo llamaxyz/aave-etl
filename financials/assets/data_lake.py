@@ -1192,3 +1192,49 @@ def user_lm_rewards_claimed(context, block_numbers_by_day):
     )
 
     return rewards_claimed
+
+@asset(
+    compute_kind="python",
+    group_name='data_lake',
+    io_manager_key = 'data_lake_io_manager',
+    code_version="1"
+)
+def internal_external_addresses(context) -> pd.DataFrame:
+    """
+    Returns a dataframe of internal and external addresses for Aave
+    Used in the classification of transactions in the data warehouse
+    Data is loaded from the public Google Cloud Storage bucket so
+    no authentication is required
+    
+    Args:
+        context: Dagster context object
+    Returns:
+        A dataframe with the internal and external addresses for Aave
+    Raises:
+        EnvironmentError: if the DAGSTER_DEPLOYMENT environment variable is not set correctly
+
+    """
+
+    from financials import dagster_deployment
+
+    if dagster_deployment in ('local_filesystem','local_cloud'):
+        url = 'https://storage.googleapis.com/llama_aave_dev_public/aave_internal_external_addresses.csv'
+    elif dagster_deployment == 'prod':
+        url = 'https://storage.googleapis.com/llama_aave_prod_public/aave_internal_external_addresses.csv'
+    else:
+        errmsg = "Environment variable DAGSTER_DEPLOYMENT must be set to either 'local_filesystem', 'local_cloud', or 'prod'"
+        raise EnvironmentError(errmsg)
+
+
+    internal_external = pd.read_csv(url, engine='python', quoting=3)
+    internal_external = standardise_types(internal_external)
+
+    context.add_output_metadata(
+        {
+            "num_records": len(internal_external),
+            "preview": MetadataValue.md(internal_external.to_markdown()),
+        }
+    )
+
+    return internal_external
+
