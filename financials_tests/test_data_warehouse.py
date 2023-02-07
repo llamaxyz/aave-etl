@@ -147,22 +147,89 @@ def test_atoken_measures_by_day():
 
     collector_atoken_transfers_by_day_sample_output = pd.DataFrame(
         {
-            'transfers_transfer_type': {0: 'IN', 1: 'IN'},
-            'transfers_from_address': {0: '0x0000000000000000000000000000000000000000', 1: '0x29a088f8b4c33e149e67a0431e377ab84505c243'}, 
-            'transfers_to_address': {0: '0xe8599f3cc5d38a9ad6f3684cd5cea72f10dbc383', 1: '0xe8599f3cc5d38a9ad6f3684cd5cea72f10dbc383'},
-            'transfers_contract_address': {0: '0x078f358208685046a11c85e8ad32895ded33a249', 1: '0x078f358208685046a11c85e8ad32895ded33a249'},
-            'transfers_contract_name': {0: 'Aave Polygon WBTC', 1: 'Aave Polygon WBTC'},
-            'transfers_contract_decimals': {0: 8, 1: 8},
-            'transfers_contract_symbol': {0: 'aPolWBTC', 1: 'aPolWBTC'},
-            'block_day': {0: datetime(2023,1,19,0,0,0), 1: datetime(2023,1,19,0,0,0)},
-            'amount_transferred': {0: 0.0010951, 1: 2.72e-06},
-            'start_block': {0: 38249632, 1: 38249632},
-            'end_block': {0: 38288978, 1: 38288978}
+            "transfers_transfer_type":{
+                0:"IN", # in_external
+                1:"IN", # in_internal
+                2:"OUT", # out_external
+                3:"OUT", # out_internal
+            },
+            "transfers_from_address":{
+                0:"0x0000000000000000000000000000000000000000",
+                1:"0x7734280A4337F37Fbf4651073Db7c28C80B339e9",
+                2:"0xe8599f3cc5d38a9ad6f3684cd5cea72f10dbc383",
+                3:"0xe8599f3cc5d38a9ad6f3684cd5cea72f10dbc383"
+            },
+            "transfers_to_address":{
+                0:"0xe8599f3cc5d38a9ad6f3684cd5cea72f10dbc383",
+                1:"0xe8599f3cc5d38a9ad6f3684cd5cea72f10dbc383",
+                2:"0xe8599f3cc5d38a9ad6f3684cd5cea72fexternal",
+                3:"0x7734280A4337F37Fbf4651073Db7c28C80B339e9"
+            },
+            "transfers_contract_address":{
+                0:"0x078f358208685046a11c85e8ad32895ded33a249",
+                1:"0x078f358208685046a11c85e8ad32895ded33a249",
+                2:"0x078f358208685046a11c85e8ad32895ded33a249",
+                3:"0x078f358208685046a11c85e8ad32895ded33a249"
+            },
+            "transfers_contract_name":{
+                0:"Aave Polygon WBTC",
+                1:"Aave Polygon WBTC",
+                2:"Aave Polygon WBTC",
+                3:"Aave Polygon WBTC"
+            },
+            "transfers_contract_decimals":{
+                0:8,
+                1:8,
+                2:8,
+                3:8
+            },
+            "transfers_contract_symbol":{
+                0:"aPolWBTC",
+                1:"aPolWBTC",
+                2:"aPolWBTC",
+                3:"aPolWBTC"
+            },
+            "block_day":{
+                0:datetime(2023,1,19,0,0,0),
+                1:datetime(2023,1,19,0,0,0),
+                2:datetime(2023,1,19,0,0,0),
+                3:datetime(2023,1,19,0,0,0),
+            },
+            "amount_transferred":{
+                0:0.1,
+                1:0.2,
+                2:0.3,
+                3:0.4
+            },
+            "start_block":{
+                0:38249632,
+                1:38249632,
+                2:38249632,
+                3:38249632
+            },
+            "end_block":{
+                0:38288978,
+                1:38288978,
+                2:38288978,
+                3:38288978
+            },
+            "market":{
+                0:"polygon_v3",
+                1:"polygon_v3",
+                2:"polygon_v3",
+                3:"polygon_v3"
+            },
+            "collector":{
+                0:"0xe8599f3cc5d38a9ad6f3684cd5cea72f10dbc383",
+                1:"0xe8599f3cc5d38a9ad6f3684cd5cea72f10dbc383",
+                2:"0xe8599f3cc5d38a9ad6f3684cd5cea72f10dbc383",
+                3:"0xe8599f3cc5d38a9ad6f3684cd5cea72f10dbc383"
             }
+        }
     )
     
+    collector_atoken_transfers_by_day_sample_output = standardise_types(collector_atoken_transfers_by_day_sample_output)
     collector_atoken_transfers_by_day_sample_output_eth = pd.DataFrame()
-    collector_atoken_transfers_by_day_sample_output_eth = standardise_types(collector_atoken_transfers_by_day_sample_output_eth)
 
     v3_accrued_fees_by_day_sample_output = pd.DataFrame(
         [
@@ -204,6 +271,12 @@ def test_atoken_measures_by_day():
                 'description': 'V3 collector',
                 'contract_address': '0xe8599f3cc5d38a9ad6f3684cd5cea72f10dbc383',
                 'internal_external': 'aave_internal',
+            },
+            {
+                'chain': 'polygon',
+                'description': 'V2 collector',
+                'contract_address': '0x7734280a4337f37fbf4651073db7c28c80b339e9',
+                'internal_external': 'aave_internal',
             }
         ]
     ) 
@@ -220,12 +293,12 @@ def test_atoken_measures_by_day():
                 'block_day': datetime(2023,1,19,0,0,0),
                 'balance': 0.438996,
                 'accrued_fees': 0.00071708,
+                'tokens_in_external': 0.1,
+                'tokens_in_internal': 0.2,
+                'tokens_out_external': 0.3,
+                'tokens_out_internal': 0.4,
                 'minted_to_treasury_amount': 0.00109192,
                 'minted_amount': 0.0010951,
-                'tokens_in_external': 0.0010978199999999998,
-                'tokens_in_internal': float(0),
-                'tokens_out_external': float(0),
-                'tokens_out_internal': float(0),
             }
         ]
     )
@@ -242,12 +315,12 @@ def test_atoken_measures_by_day():
                 'block_day': datetime(2023,1,30,0,0,0),
                 'balance': 97.5636,
                 'accrued_fees': float(0),
-                'minted_to_treasury_amount': float(0),
-                'minted_amount': float(0),
                 'tokens_in_external': float(0),
                 'tokens_in_internal': float(0),
                 'tokens_out_external': float(0),
                 'tokens_out_internal': float(0),
+                'minted_to_treasury_amount': float(0),
+                'minted_amount': float(0),
             }
         ]
     )
@@ -261,19 +334,17 @@ def test_atoken_measures_by_day():
                     v3_minted_to_treasury_by_day_sample_output,
                     internal_external_addresses_sample
                     )
-    # result_eth = atoken_measures_by_day(
-                    # context_eth,
-                    # collector_atoken_balances_by_day_sample_output_eth,
-                    # collector_atoken_transfers_by_day_sample_output_eth,
-                    # pd.DataFrame(),
-                    # pd.DataFrame(),
-                    # internal_external_addresses_sample
-                    # )
+    result_eth = atoken_measures_by_day(
+                    context_eth,
+                    collector_atoken_balances_by_day_sample_output_eth,
+                    collector_atoken_transfers_by_day_sample_output_eth,
+                    pd.DataFrame(),
+                    pd.DataFrame(),
+                    internal_external_addresses_sample
+                    )
 
-    ic(expected_pol)
-    ic(result_pol)
     assert_frame_equal(result_pol, expected_pol, check_exact=True)
-    # assert_frame_equal(result_eth, expected_eth, check_exact=True)
+    assert_frame_equal(result_eth, expected_eth, check_exact=True)
 
 # pylint: enable=import-error
 

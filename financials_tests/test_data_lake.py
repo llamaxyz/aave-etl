@@ -319,8 +319,18 @@ def test_collector_atoken_transfers_by_day():
                 0:16057596,
                 1:16057596,
                 2:16057596
+            },
+            "market":{
+                0:"ethereum_v2",
+                1:"ethereum_v2",
+                2:"ethereum_v2"
+            },
+            "collector":{
+                0:"0x464C71f6c2F760DdA6093dCB91C24c39e5d6e18c",
+                1:"0x464C71f6c2F760DdA6093dCB91C24c39e5d6e18c",
+                2:"0x464C71f6c2F760DdA6093dCB91C24c39e5d6e18c"
             }
-            }
+        }
     )
 
     expected = standardise_types(expected)
@@ -1019,7 +1029,8 @@ if __name__ == "__main__":
     # test_v3_minted_to_treasury_by_day()
     # test_treasury_accrued_incentives()
     # test_user_lm_rewards_claimed()
-    test_internal_external_addresses()
+    # test_internal_external_addresses()
+    test_collector_atoken_transfers_by_day()
     # pass
 
 

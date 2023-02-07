@@ -332,6 +332,10 @@ def collector_atoken_transfers_by_day(context, market_tokens_by_day, block_numbe
         context.log.info(f"atoken: {row.atoken_symbol}")
         transfers = pd.concat([transfers, row_transfers]).reset_index(drop=True)
 
+    if not transfers.empty:
+        transfers['market'] = market
+        transfers['collector'] = collector
+
     transfers = standardise_types(transfers)
 
     context.add_output_metadata(

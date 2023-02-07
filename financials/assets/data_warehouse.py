@@ -1,5 +1,6 @@
 import sys
 import pandas as pd
+import numpy as np
 from dagster import (#AssetIn,  # SourceAsset,; Output,
                     #  DailyPartitionsDefinition, 
                      ExperimentalWarning,
@@ -106,61 +107,87 @@ def atoken_measures_by_day(
     chain = CONFIG_MARKETS[market]['chain']
 
     return_val = collector_atoken_balances_by_day
-    if not v3_accrued_fees_by_day.empty:
-        v3_accrued_fees_by_day = v3_accrued_fees_by_day[['market','atoken','atoken_symbol','block_height','block_day','accrued_fees']].copy()
-        v3_accrued_fees_by_day.rename(columns={'atoken':'token','atoken_symbol':'symbol'}, inplace=True)
-        return_val = return_val.merge(v3_accrued_fees_by_day,
-                                    how='left',
-                                    #   left_on=['market','token','symbol','block_height','block_day'],
-                                    #   right_on=['market','atoken','atoken_symbol','block_height','block_day']
-                                    )
+    if not return_val.empty:
+        if not v3_accrued_fees_by_day.empty:
+            v3_accrued_fees_by_day = v3_accrued_fees_by_day[['market','atoken','atoken_symbol','block_height','block_day','accrued_fees']].copy()
+            v3_accrued_fees_by_day.rename(columns={'atoken':'token','atoken_symbol':'symbol'}, inplace=True)
+            return_val = return_val.merge(v3_accrued_fees_by_day,
+                                        how='left',
+                                        #   left_on=['market','token','symbol','block_height','block_day'],
+                                        #   right_on=['market','atoken','atoken_symbol','block_height','block_day']
+                                        )
+        else:
+            return_val['accrued_fees'] = float(0)
+
+        if not collector_atoken_transfers_by_day.empty:
+            # transfers need to be classified as internal/external and aggregated to day level
+            transfers = collector_atoken_transfers_by_day.copy()
+            transfers.columns = transfers.columns.str.replace('transfers_','')
+
+            transfers = transfers[[
+                    'market',
+                    'collector',
+                    'transfer_type',
+                    'from_address',
+                    'to_address',
+                    'contract_address',
+                    'contract_symbol',
+                    'block_day',
+                    'amount_transferred'
+            ]]
+            transfers.rename(columns={'contract_address':'token','contract_symbol':'symbol'}, inplace=True)
+
+            # classify transfers as internal or external
+            transfers_in = transfers.loc[transfers['transfer_type']=='IN']
+            transfers_out = transfers.loc[transfers['transfer_type']=='OUT']
+            transfer_class = internal_external_addresses.loc[internal_external_addresses['chain']==chain]
+            transfer_class = transfer_class[['contract_address','internal_external']].copy()
+
+            if not transfers_in.empty:
+                    transfer_class_in = transfer_class.rename(columns={'contract_address':'from_address'})
+                    transfers_in = transfers_in.merge(transfer_class_in, how='left')
+            
+            if not transfers_out.empty:
+                    transfer_class_out = transfer_class.rename(columns={'contract_address':'to_address'})
+                    transfers_out = transfers_out.merge(transfer_class_out, how='left')
+
+            transfers = pd.concat([transfers_in, transfers_out])
+            transfers.internal_external.fillna('aave_external', inplace=True)
+            
+            # create columns for internal and external transfers
+            transfers['tokens_in_external'] = np.where((transfers['internal_external']=='aave_external') & (transfers['transfer_type'] == 'IN'), transfers['amount_transferred'], float(0))
+            transfers['tokens_in_internal'] = np.where((transfers['internal_external']=='aave_internal') & (transfers['transfer_type'] == 'IN'), transfers['amount_transferred'], float(0))
+            transfers['tokens_out_external'] = np.where((transfers['internal_external']=='aave_external') & (transfers['transfer_type'] == 'OUT'), transfers['amount_transferred'], float(0))
+            transfers['tokens_out_internal'] = np.where((transfers['internal_external']=='aave_internal') & (transfers['transfer_type'] == 'OUT'), transfers['amount_transferred'], float(0))
+                       
+
+            # aggregate transfers to collector
+            transfers = transfers[['market','collector','block_day','tokens_in_external','tokens_in_internal','tokens_out_external','tokens_out_internal']]
+            transfers = transfers.groupby(['market','collector','block_day']).sum().reset_index() 
+
+            # join transfers to main table
+            return_val = return_val.merge(transfers, how='left')
+
+        else:
+            return_val['tokens_in_external'] = float(0)
+            return_val['tokens_in_internal'] = float(0)
+            return_val['tokens_out_external'] = float(0)
+            return_val['tokens_out_internal'] = float(0)
+
+
+        if not v3_minted_to_treasury_by_day.empty:
+            v3_minted_to_treasury_by_day = v3_minted_to_treasury_by_day[['market','atoken','atoken_symbol','block_height','block_day','minted_to_treasury_amount','minted_amount']].copy()
+            v3_minted_to_treasury_by_day.rename(columns={'atoken':'token','atoken_symbol':'symbol'}, inplace=True)
+            return_val = return_val.merge(v3_minted_to_treasury_by_day, how='left')
+        else:
+            return_val['minted_to_treasury_amount'] = float(0)
+            return_val['minted_amount'] = float(0)
+        
+        return_val = return_val.fillna(float(0))
+        return_val = standardise_types(return_val)
+        
     else:
-        return_val['accrued_fees'] = float(0)
-
-    # transfers need to be classified as internal/external and aggregated to day level
-    transfers = collector_atoken_transfers_by_day.copy()
-    transfers.columns = transfers.columns.str.replace('transfers_','')
-    ic(transfers)
-    transfers = transfers[[
-            'transfer_type',
-            'from_address',
-            'to_address',
-            'contract_address',
-            'block_day',
-            'amount_transferred'
-    ]]
-    transfers_in = transfers.loc[transfers['transfer_type']=='IN']
-    transfers_out = transfers.loc[transfers['transfer_type']=='OUT']
-    ic(transfers_in)
-    ic(transfers_out)
-    transfer_class = internal_external_addresses.loc[internal_external_addresses['chain']==chain]
-    transfer_class = transfer_class[['contract_address','internal_external']].copy()
-    if not transfers_in.empty:
-        transfer_class_in = transfer_class.rename(columns={'contract_address':'to_address'})
-        transfers_in = transfers_in.merge(transfer_class_in, how='left')
-        # todo up to here
-        # todo assign external to nulls
-        # todo create in_external and in_internal etc using if logic np.where
-        # todo repeat for external
-        # concat the dfs 
-        # todo select less columns
-        # todo aggregate on contract_address
-        # todo join to main table
-
-
-    if not v3_minted_to_treasury_by_day.empty:
-        v3_minted_to_treasury_by_day = v3_minted_to_treasury_by_day[['market','atoken','atoken_symbol','block_height','block_day','minted_to_treasury_amount','minted_amount']].copy()
-        v3_minted_to_treasury_by_day.rename(columns={'atoken':'token','atoken_symbol':'symbol'}, inplace=True)
-        return_val = return_val.merge(v3_minted_to_treasury_by_day,
-                                    how='left',
-                                    )
-    else:
-        return_val['minted_to_treasury_amount'] = float(0)
-        return_val['minted_amount'] = float(0)
-    
-    return_val = return_val.fillna(float(0))
-    
-    return_val = standardise_types(return_val)
+        return_val = pd.DataFrame()
     
     context.add_output_metadata(
         {
