@@ -285,7 +285,7 @@ CONFIG_MARKETS = {
         "rewards_token_decimals": None,
         "subgraph": 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3-polygon',
         "messari_subgraph": "https://api.thegraph.com/subgraphs/name/messari/aave-v3-polygon",
-        "token_source": "messari",
+        "token_source": "aave", # messari not working via subgrounds at 2023-02-27
         "atoken_prefix": "aPol",
         "oracle_base_currency": 'usd',
         "block_table_master": False,
@@ -304,7 +304,7 @@ CONFIG_MARKETS = {
         "rewards_token_decimals": None,
         "subgraph": 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3-avalanche',
         "messari_subgraph": "https://api.thegraph.com/subgraphs/name/messari/aave-v3-avalanche",
-        "token_source": "messari",
+        "token_source": "aave", # messari not working via subgrounds at 2023-02-27
         "atoken_prefix": "aAva",
         "oracle_base_currency": 'usd',
         "block_table_master": False,
@@ -342,7 +342,7 @@ CONFIG_MARKETS = {
         "rewards_token_decimals": None,
         "subgraph": 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3-arbitrum',
         "messari_subgraph": "https://api.thegraph.com/subgraphs/name/messari/aave-v3-arbitrum",
-        "token_source": "messari",
+        "token_source": "aave", # messari not working via subgrounds at 2023-02-27
         "atoken_prefix": "aArb",
         "oracle_base_currency": 'usd',
         "block_table_master": True,
@@ -361,7 +361,7 @@ CONFIG_MARKETS = {
         "rewards_token_decimals": None,
         "subgraph": 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3-fantom',
         "messari_subgraph": "https://api.thegraph.com/subgraphs/name/messari/aave-v3-fantom",
-        "token_source": "messari",
+        "token_source": "aave", # messari not working via subgrounds at 2023-02-27
         "atoken_prefix": "aFan",
         "oracle_base_currency": 'usd',
         "block_table_master": True,
@@ -380,7 +380,7 @@ CONFIG_MARKETS = {
         "rewards_token_decimals": None,
         "subgraph": 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3-harmony',
         "messari_subgraph": "https://api.thegraph.com/subgraphs/name/messari/aave-v3-harmony",
-        "token_source": "messari",
+        "token_source": "aave", # messari not working via subgrounds at 2023-02-27
         "atoken_prefix": "aHar",
         "oracle_base_currency": 'usd',
         "block_table_master": True,
