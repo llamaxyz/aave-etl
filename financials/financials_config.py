@@ -447,7 +447,11 @@ CONFIG_TOKENS = {
             "address": "0x464c71f6c2f760dda6093dcb91c24c39e5d6e18c",
             "tokens": {
                 "BAL": {
-                    "address": "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
+                    "address": "0xba100000625a3754423978a60c9317c58a424e3D",
+                    "decimals": 18,
+                },
+                "CRV": {
+                    "address": "0xD533a949740bb3306d119CC777fa900bA034cd52",
                     "decimals": 18,
                 }
             }
