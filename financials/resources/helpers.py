@@ -232,6 +232,7 @@ def get_token_transfers_from_covalent(start_block: int,
         transfers_subset.end_block = transfers_subset.end_block.astype('Int64')
         transfers_subset.transfers_contract_decimals = transfers_subset.transfers_contract_decimals.astype('Int64')
         transfers_subset.rename(columns={'transfers_contract_ticker_symbol': 'transfers_contract_symbol'}, inplace=True)
+        transfers_subset = standardise_types(transfers_subset)
     else:
         transfers_subset = pd.DataFrame()
 

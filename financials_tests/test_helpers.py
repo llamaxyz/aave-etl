@@ -223,6 +223,7 @@ def test_get_token_transfers_from_covalent():
             }
         }
     )
+    expected = standardise_types(expected)
 
     result = get_token_transfers_from_covalent(16050438, 16057596, 1, '0x464C71f6c2F760DdA6093dCB91C24c39e5d6e18c', '0xbcca60bb61934080951369a648fb03df4f96263c')
     
