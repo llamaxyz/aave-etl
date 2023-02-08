@@ -372,52 +372,52 @@ def test_non_atoken_transfers_by_day():
     expected = pd.DataFrame(
         {
             "transfers_transfer_type":{
-                35:"OUT",
-                36:"OUT"
+                0:"OUT",
+                1:"OUT"
             },
             "transfers_from_address":{
-                35:"0x25f2226b597e8f9514b3f68f00f494cf4f286491",
-                36:"0xd784927ff2f95ba542bfc824c8a8a98f3495f6b5"
+                0:"0x25f2226b597e8f9514b3f68f00f494cf4f286491",
+                1:"0x25f2226b597e8f9514b3f68f00f494cf4f286491"
             },
             "transfers_to_address":{
-                35:"0xfcf150072a21c9a66bf5a103a066746e2f5c7932",
-                36:"0x4da27a545c0c5b758a6ba100e3a049001de870f5"
+                0:"0x026fa50c5f451980ccfa08197207d06e3619a8ad",
+                1:"0x0a7b5aa84434885c103bd70112a97367f396c708"
             },
             "transfers_contract_address":{
-                35:"0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
-                36:"0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9"
+                0:"0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
+                1:"0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9"
             },
             "transfers_contract_name":{
-                35:"Aave Token",
-                36:"Aave Token"
+                0:"Aave Token",
+                1:"Aave Token"
             },
             "transfers_contract_decimals":{
-                35:int(18),
-                36:int(18)
+                0:int(18),
+                1:int(18)
             },
             "transfers_contract_symbol":{
-                35:"AAVE",
-                36:"AAVE"
+                0:"AAVE",
+                1:"AAVE"
             },
             "block_day":{
-                35: datetime(2022,11,26,0,0,0, tzinfo=timezone.utc),
-                36: datetime(2022,11,26,0,0,0, tzinfo=timezone.utc)
+                0: datetime(2022,11,26,0,0,0, tzinfo=timezone.utc),
+                1: datetime(2022,11,26,0,0,0, tzinfo=timezone.utc)
             },
             "amount_transferred":{
-                35:6.633418347529054,
-                36:83.2403840096129
+                0:0.375653,
+                1:19.940931
             },
             "start_block":{
-                35:16050438,
-                36:16050438
+                0:16050438,
+                1:16050438
             },
             "end_block":{
-                35:16057596,
-                36:16057596
+                0:16057596,
+                1:16057596
             },
-            "wallet":{
-                35:"ecosystem_reserve",
-                36:"ethereum_v2_incentives_controller"
+            "collector":{
+                0:"0x25f2226b597e8f9514b3f68f00f494cf4f286491",
+                1:"0x25f2226b597e8f9514b3f68f00f494cf4f286491"
             }
         }
     )
@@ -425,7 +425,7 @@ def test_non_atoken_transfers_by_day():
     expected = standardise_types(expected)
 
     ic(expected)
-    result = non_atoken_transfers_by_day(context, block_numbers_by_day_sample_output).tail(2) # type: ignore
+    result = non_atoken_transfers_by_day(context, block_numbers_by_day_sample_output).head(2) # type: ignore
     ic(result)
     # print(result.tail(2).to_dict())
 
@@ -561,7 +561,7 @@ def test_non_atoken_balances_by_day():
 
     expected = pd.DataFrame(
         {
-            "wallet":{
+            "contract_address":{
                 0:"0x25f2226b597e8f9514b3f68f00f494cf4f286491",
                 1:"0xd784927ff2f95ba542bfc824c8a8a98f3495f6b5",
                 2:"0x464c71f6c2f760dda6093dcb91c24c39e5d6e18c"
@@ -1022,7 +1022,7 @@ if __name__ == "__main__":
     # test_market_tokens_by_day()
     # test_aave_oracle_prices_table()
     # test_market_tokens_table()
-    # test_non_atoken_transfers_by_day()
+    test_non_atoken_transfers_by_day()
     # test_collector_atoken_balances_by_day()
     # test_non_atoken_balances_table()
     # test_v3_accrued_fees_by_day()
@@ -1030,7 +1030,8 @@ if __name__ == "__main__":
     # test_treasury_accrued_incentives()
     # test_user_lm_rewards_claimed()
     # test_internal_external_addresses()
-    test_collector_atoken_transfers_by_day()
+    # test_collector_atoken_transfers_by_day()
+    
     # pass
 
 

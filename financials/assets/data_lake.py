@@ -397,7 +397,8 @@ def non_atoken_transfers_by_day(context, block_numbers_by_day) -> pd.DataFrame: 
                     wallet_address,
                     token_address
                 )
-                row_transfers['wallet'] = wallet
+                row_transfers['market'] = market
+                row_transfers['collector'] = wallet_address
                 transfers = pd.concat([transfers, row_transfers]).reset_index(drop=True)
                 
                 context.log.info(f"{wallet}: {token}")
@@ -551,7 +552,7 @@ def non_atoken_balances_by_day(context, block_numbers_by_day) -> pd.DataFrame:  
                     start_block
                     )
                 output_row = {
-                    'wallet': wallet_address, 
+                    'contract_address': wallet_address, 
                     'chain': chain,
                     'market': market,
                     'token': token_address, 

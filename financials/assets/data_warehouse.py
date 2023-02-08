@@ -197,6 +197,110 @@ def atoken_measures_by_day(
     )
     return return_val
 
+@asset(
+    compute_kind='python',
+    partitions_def=market_day_multipartition,
+    group_name='data_warehouse',
+    code_version="1"
+)
+def non_atoken_measures_by_day(
+            context,
+            non_atoken_balances_by_day,
+            non_atoken_transfers_by_day,
+            internal_external_addresses
+            ) -> pd.DataFrame:
+    """
+    Joins all measures relevant to the non-atokens into one table
+
+    Args:
+        context: dagster context object
+        non_atoken_balances_by_day: the output of non_atoken_balances_by_day
+        non_atoken_transfers_by_day: the output of non_atoken_transfers_by_day
+        internal_external_addresses: the output of internal_external_addresses
+
+    Returns:
+        A dataframe with a row for each non-atoken on the day, and the output of all the measures
+        joined to the token metadata.  Non existing measures are set to 0
+
+    """
+    date, market = context.partition_key.split("|")
+    context.log.info(f"market: {market}")
+    context.log.info(f"date: {date}")
+    chain = CONFIG_MARKETS[market]['chain']
+
+    return_val = non_atoken_balances_by_day
+    if not return_val.empty:
+        
+        if not non_atoken_transfers_by_day.empty:
+            # transfers need to be classified as internal/external and aggregated to day level
+            transfers = non_atoken_transfers_by_day.copy()
+            transfers.columns = transfers.columns.str.replace('transfers_','')
+
+            transfers = transfers[[
+                    'market',
+                    'collector',
+                    'transfer_type',
+                    'from_address',
+                    'to_address',
+                    'contract_address',
+                    'contract_symbol',
+                    'block_day',
+                    'amount_transferred'
+            ]]
+            transfers.rename(columns={'contract_address':'token','contract_symbol':'symbol', "collector":"contract_address"}, inplace=True)
+
+            # classify transfers as internal or external
+            transfers_in = transfers.loc[transfers['transfer_type']=='IN']
+            transfers_out = transfers.loc[transfers['transfer_type']=='OUT']
+            transfer_class = internal_external_addresses.loc[internal_external_addresses['chain']==chain]
+            transfer_class = transfer_class[['contract_address','internal_external']].copy()
+
+            if not transfers_in.empty:
+                    transfer_class_in = transfer_class.rename(columns={'contract_address':'from_address'})
+                    transfers_in = transfers_in.merge(transfer_class_in, how='left')
+            
+            if not transfers_out.empty:
+                    transfer_class_out = transfer_class.rename(columns={'contract_address':'to_address'})
+                    transfers_out = transfers_out.merge(transfer_class_out, how='left')
+
+            transfers = pd.concat([transfers_in, transfers_out])
+            transfers.internal_external.fillna('aave_external', inplace=True)
+            
+            # create columns for internal and external transfers
+            transfers['tokens_in_external'] = np.where((transfers['internal_external']=='aave_external') & (transfers['transfer_type'] == 'IN'), transfers['amount_transferred'], float(0))
+            transfers['tokens_in_internal'] = np.where((transfers['internal_external']=='aave_internal') & (transfers['transfer_type'] == 'IN'), transfers['amount_transferred'], float(0))
+            transfers['tokens_out_external'] = np.where((transfers['internal_external']=='aave_external') & (transfers['transfer_type'] == 'OUT'), transfers['amount_transferred'], float(0))
+            transfers['tokens_out_internal'] = np.where((transfers['internal_external']=='aave_internal') & (transfers['transfer_type'] == 'OUT'), transfers['amount_transferred'], float(0))
+                       
+
+            # aggregate transfers to collector
+            transfers = transfers[['market','contract_address','block_day','tokens_in_external','tokens_in_internal','tokens_out_external','tokens_out_internal']]
+            transfers = transfers.groupby(['market','contract_address','block_day']).sum().reset_index() 
+
+            # join transfers to main table
+            return_val = return_val.merge(transfers, how='left')
+
+        else:
+            return_val['tokens_in_external'] = float(0)
+            return_val['tokens_in_internal'] = float(0)
+            return_val['tokens_out_external'] = float(0)
+            return_val['tokens_out_internal'] = float(0)
+        # ic(return_val)
+        return_val = return_val.fillna(float(0))
+        return_val = standardise_types(return_val)
+        
+    else:
+        return_val = pd.DataFrame()
+    
+    context.add_output_metadata(
+        {
+            "num_records": len(return_val),
+            "preview": MetadataValue.md(return_val.head().to_markdown()),
+        }
+    )
+    return return_val
+
+
 if __name__ == "__main__":
     # test_blocks_by_day()
     # test_atoken_measures_by_day()
@@ -205,6 +309,8 @@ if __name__ == "__main__":
     wbtc = poly.loc[poly.transfers_contract_symbol == 'aPolWBTC']
     ic(wbtc)
     print(wbtc.to_dict())
+
+
 
 
 #
