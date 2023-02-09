@@ -1128,7 +1128,7 @@ def user_lm_rewards_claimed(context, block_numbers_by_day):
             with claims as (
             select 
             '{partition_datetime}' as block_day
-            , contract_address
+            , contract_address as vault_address
             , case 
                 when contract_address = '0xd784927ff2f95ba542bfc824c8a8a98f3495f6b5' then 'incentives_controller'
                 when contract_address = '0xa1116930326d21fb917d5a27f1e9943a9595fb47' then 'balancer_pool'
@@ -1138,7 +1138,7 @@ def user_lm_rewards_claimed(context, block_numbers_by_day):
                 when contract_address = '0xd784927ff2f95ba542bfc824c8a8a98f3495f6b5' then 'incentives_controller'
                 when contract_address = '0xa1116930326d21fb917d5a27f1e9943a9595fb47' then 'ecosystem_reserve'
                 when contract_address = '0x4da27a545c0c5b758a6ba100e3a049001de870f5' then 'ecosystem_reserve'
-                end as from_address
+                end as reward_vault
             , sum(event_inputs:amount) / 1e18 as amount
             from ethereum.core.fact_event_logs
             where event_name = 'RewardsClaimed'
@@ -1154,7 +1154,8 @@ def user_lm_rewards_claimed(context, block_numbers_by_day):
             , staging as (
             select 
                 block_day
-                , from_address
+                , vault_address
+                , reward_vault
                 , case when contract_name = 'balancer_pool' then amount else 0 end as balancer_claims
                 , case when contract_name = 'incentives_controller' then amount else 0 end as incentives_claims 
                 , case when contract_name = 'stkAAVE' then amount else 0 end as stkaave_claims 
@@ -1165,14 +1166,19 @@ def user_lm_rewards_claimed(context, block_numbers_by_day):
                 block_day
                 , 'ethereum' as chain
                 , '{market}' as market
-                , from_address as reward_vault
+                , case 
+                    when reward_vault = 'incentives_controller' then '0xd784927ff2f95ba542bfc824c8a8a98f3495f6b5'
+                    when reward_vault = 'ecosystem_reserve' then '0x464c71f6c2f760dda6093dcb91c24c39e5d6e18c'
+                  end as vault_address
+                , reward_vault
                 , lower('0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9') as token_address
-                , sum(balancer_claims) as balancer_claims
-                , sum(incentives_claims) as incentives_claims
-                , sum(stkaave_claims) as stkaave_claims
+                , sum(stkaave_claims) as sm_stkAAVE_claims
+                , sum(balancer_claims) as sm_stkABPT_claims
+                , sum(incentives_claims) as lm_aave_v2_claims
+                
                 from staging
-                group by block_day, from_address 
-                order by block_day, from_address
+                group by block_day, reward_vault 
+                order by block_day, reward_vault
             """
 
         # initialise the query
@@ -1181,6 +1187,11 @@ def user_lm_rewards_claimed(context, block_numbers_by_day):
         
         rewards_claimed = pd.DataFrame(data=query_result.rows, columns=[x.lower() for x in query_result.columns])
         rewards_claimed.block_day = pd.to_datetime(rewards_claimed.block_day, utc=True)
+        rewards_claimed.rename(columns={
+            'sm_stkaave_claims': 'sm_stkAAVE_claims',
+            'sm_stkabpt_claims': 'sm_stkABPT_claims',
+            'lm_aave_v2_claims': 'lm_aave_v2_claims'
+        }, inplace=True)
 
 
 
@@ -1240,6 +1251,8 @@ def internal_external_addresses(context) -> pd.DataFrame:
             "preview": MetadataValue.md(internal_external.to_markdown()),
         }
     )
+
+    # todo: add the aave V1 addresses and the amm unwrapper contract to the table
 
     return internal_external
 

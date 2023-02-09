@@ -953,33 +953,38 @@ def test_user_lm_rewards_claimed():
                 'block_day': datetime(2022,11,26,0,0,0, tzinfo=timezone.utc),
                 'chain': 'ethereum',
                 'market': 'ethereum_v2',
+                'vault_address': '0x464c71f6c2f760dda6093dcb91c24c39e5d6e18c',
                 'reward_vault': 'ecosystem_reserve',
                 'token_address': '0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9'.lower(),
-                'balancer_claims': 1178.178995987,
-                'incentives_claims': 0,
-                'stkaave_claims': 103.964332841,
+                'sm_stkAAVE_claims': 103.964332841,
+                'sm_stkABPT_claims': 1178.178995987,
+                'lm_aave_v2_claims': 0,
+                
             },
             {
                 'block_day': datetime(2022,11,26,0,0,0, tzinfo=timezone.utc),
                 'chain': 'ethereum',
                 'market': 'ethereum_v2',
+                'vault_address': '0xd784927ff2f95ba542bfc824c8a8a98f3495f6b5',
                 'reward_vault': 'incentives_controller',
                 'token_address': '0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9'.lower(),
-                'balancer_claims': 0,
-                'incentives_claims': 83.24038401,
-                'stkaave_claims': 0,
+                'sm_stkAAVE_claims': 0,
+                'sm_stkABPT_claims': 0,
+                'lm_aave_v2_claims': 83.24038401,
+                
             }
         ]
     )
     expected_eth = standardise_types(expected_eth)
 
-    ic(expected_eth)
+    
     # the function should handle markets that are not aave_v2 on mainnet gracefully
     expected_non_eth = pd.DataFrame()
     
 
     result_eth = user_lm_rewards_claimed(context_eth, block_numbers_by_day_sample_output)
     result_non_eth = user_lm_rewards_claimed(context_arb, block_numbers_by_day_sample_output)
+    ic(expected_eth)
     ic(result_eth)
     
     assert_frame_equal(result_eth, expected_eth, check_exact=True)
@@ -1022,13 +1027,13 @@ if __name__ == "__main__":
     # test_market_tokens_by_day()
     # test_aave_oracle_prices_table()
     # test_market_tokens_table()
-    test_non_atoken_transfers_by_day()
+    # test_non_atoken_transfers_by_day()
     # test_collector_atoken_balances_by_day()
     # test_non_atoken_balances_table()
     # test_v3_accrued_fees_by_day()
     # test_v3_minted_to_treasury_by_day()
     # test_treasury_accrued_incentives()
-    # test_user_lm_rewards_claimed()
+    test_user_lm_rewards_claimed()
     # test_internal_external_addresses()
     # test_collector_atoken_transfers_by_day()
     

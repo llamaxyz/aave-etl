@@ -11,7 +11,8 @@ from pandas.testing import assert_frame_equal
 from financials.assets.data_warehouse import (
     blocks_by_day,
     atoken_measures_by_day,
-    non_atoken_measures_by_day
+    non_atoken_measures_by_day,
+    user_rewards_by_day
     )
 from financials.financials_config import *  # pylint: disable=wildcard-import, unused-wildcard-import
 
@@ -538,9 +539,97 @@ def test_non_atoken_measures_by_day():
     assert_frame_equal(result_eth, expected_eth, check_exact=True)
     assert_frame_equal(result_pol, expected_pol, check_exact=True)
     
+def test_user_rewards_by_day():
+    """
+    Tests the user_rewards_by_day function
+    """
+    pkey_eth = MultiPartitionKey(
+        {
+            "date": '2023-01-30',
+            "market": 'ethereum_v2'
+        }
+    )  # type: ignore
 
+    pkey_pol = MultiPartitionKey(
+        {
+            "date": '2023-01-30',
+            "market": 'polygon_v3'
+        }
+    )  # type: ignore
+
+    context_eth = build_op_context(partition_key=pkey_eth)
+    context_pol = build_op_context(partition_key=pkey_pol)
+    
+    user_lm_reward_claimed_eth_sample = pd.DataFrame(
+        [
+            {   
+                "block_day": datetime(2023,1,30,0,0,0),
+                "chain": "ethereum",
+                "market": "ethereum_v2",
+                "reward_vault": "ecosystem_reserve",
+                "vault_address": "0x464c71f6c2f760dda6093dcb91c24c39e5d6e18c",
+                "token_address": "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
+                "sm_stkAAVE_claims": 1033.82,
+                "sm_stkABPT_claims": 449.626,
+                "lm_aave_v2_claims": float(0)
+            },
+            {   
+                "block_day": datetime(2023,1,30,0,0,0),
+                "chain": "ethereum",
+                "market": "ethereum_v2",
+                "reward_vault": "incentives_controller_v2",
+                "vault_address": "0xd784927ff2f95ba542bfc824c8a8a98f3495f6b5",
+                "token_address": "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
+                "sm_stkAAVE_claims": float(0),
+                "sm_stkABPT_claims": float(0),
+                "lm_aave_v2_claims": 59.4723,
+            },
+        ]
+    )
+    user_lm_reward_claimed_eth_sample = standardise_types(user_lm_reward_claimed_eth_sample)
+
+    expected_eth = pd.DataFrame(
+        [
+            {   
+                "block_day": datetime(2023,1,30,0,0,0),
+                "chain": "ethereum",
+                "market": "ethereum_v2",
+                "reward_vault": "ecosystem_reserve",
+                "vault_address": "0x464c71f6c2f760dda6093dcb91c24c39e5d6e18c",
+                "token_address": "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
+                "sm_stkAAVE_claims": 1033.82,
+                "sm_stkABPT_claims": 449.626,
+                "lm_aave_v2_claims": float(0),
+                "sm_stkAAVE_owed": float(0),
+                "sm_stkABPT_owed": float(0),
+                "lm_aave_v2_owed": float(0),
+            },
+            {   
+                "block_day": datetime(2023,1,30,0,0,0),
+                "chain": "ethereum",
+                "market": "ethereum_v2",
+                "reward_vault": "incentives_controller_v2",
+                "vault_address": "0xd784927ff2f95ba542bfc824c8a8a98f3495f6b5",
+                "token_address": "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
+                "sm_stkAAVE_claims": float(0),
+                "sm_stkABPT_claims": float(0),
+                "lm_aave_v2_claims": 59.4723,
+                "sm_stkAAVE_owed": float(0),
+                "sm_stkABPT_owed": float(0),
+                "lm_aave_v2_owed": float(0),
+            },
+        ]
+    )
+    expected_eth = standardise_types(expected_eth)
+
+    result_eth = user_rewards_by_day(context_eth, user_lm_reward_claimed_eth_sample)
+    result_pol = user_rewards_by_day(context_pol, pd.DataFrame())
+
+    assert_frame_equal(result_eth, expected_eth, check_exact=True)
+    assert_frame_equal(result_pol, pd.DataFrame(), check_exact=True)
 
 if __name__ == "__main__":
     # test_blocks_by_day()
-    test_non_atoken_measures_by_day()
+    # test_non_atoken_measures_by_day()
+    test_user_rewards_by_day()
 
