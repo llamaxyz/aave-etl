@@ -42,13 +42,10 @@ def get_market_tokens_at_block_messari(
     markets = subgraph.Query.markets(  # type: ignore
         block={'number': block_height},
     )
+
     subgraph_data = sg.query_df([
-        markets.inputToken.id,
-        markets.inputToken.name,
-        markets.inputToken.symbol,
-        markets.inputToken.decimals,
-        markets.outputToken.id,
-        markets.outputToken.symbol
+        markets.inputToken,
+        markets.outputToken
     ])
     
     if not subgraph_data.empty:
@@ -64,6 +61,7 @@ def get_market_tokens_at_block_messari(
         },
             inplace=True
         )
+        subgraph_data = subgraph_data[['reserve','name','symbol','decimals','atoken','atoken_symbol']]
         subgraph_data['pool'] = version_config[market]['pool'] # type: ignore
         subgraph_data['market'] = market # type: ignore
         subgraph_data['atoken_decimals'] = subgraph_data.decimals # type: ignore
