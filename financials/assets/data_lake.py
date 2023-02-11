@@ -305,36 +305,37 @@ def collector_atoken_transfers_by_day(context, market_tokens_by_day, block_numbe
     if market == 'ethereum_v1':
         partition_datetime = datetime.strptime(date, '%Y-%m-%d')
         if partition_datetime > CONFIG_MARKETS[market]['collector_change_date']:
-            collector = CONFIG_MARKETS[market]['collector_v2']
+            collectors = [CONFIG_MARKETS[market]['collector'],CONFIG_MARKETS[market]['collector_v2']]
         else:
-            collector = CONFIG_MARKETS[market]['collector']
+            collectors = [CONFIG_MARKETS[market]['collector']]
     else:
-        collector = CONFIG_MARKETS[market]['collector']
+        collectors = [CONFIG_MARKETS[market]['collector']]
     
 
     context.log.info(f"market: {market}")
     context.log.info(f"date: {date}")
 
     transfers = pd.DataFrame()
-    for row in market_tokens_by_day.itertuples():
-        # ic(row)
-        if market == 'ethereum_v1':
-            token = row.reserve
-        else:
-            token = row.atoken
-        row_transfers = get_token_transfers_from_covalent(
-            start_block,
-            end_block,
-            chain_id,
-            collector,
-            token
-        )
-        context.log.info(f"atoken: {row.atoken_symbol}")
-        transfers = pd.concat([transfers, row_transfers]).reset_index(drop=True)
+    for collector in collectors:
+        for row in market_tokens_by_day.itertuples():
+            # ic(row)
+            if market == 'ethereum_v1':
+                token = row.reserve
+            else:
+                token = row.atoken
+            row_transfers = get_token_transfers_from_covalent(
+                start_block,
+                end_block,
+                chain_id,
+                collector,
+                token
+            )
+            context.log.info(f"atoken: {row.atoken_symbol}")
+            if not row_transfers.empty:
+                row_transfers['market'] = market
+                row_transfers['collector'] = collector
 
-    if not transfers.empty:
-        transfers['market'] = market
-        transfers['collector'] = collector
+            transfers = pd.concat([transfers, row_transfers]).reset_index(drop=True)
 
     transfers = standardise_types(transfers)
 
@@ -446,49 +447,51 @@ def collector_atoken_balances_by_day(context, market_tokens_by_day, block_number
 
     # special case for V1, collector contract changed
     if market == 'ethereum_v1':
+        partition_datetime = datetime.strptime(date, '%Y-%m-%d')
         if partition_datetime > CONFIG_MARKETS[market]['collector_change_date']:
-            collector = CONFIG_MARKETS[market]['collector_v2']
+            collectors = [CONFIG_MARKETS[market]['collector'],CONFIG_MARKETS[market]['collector_v2']]
         else:
-            collector = CONFIG_MARKETS[market]['collector']
+            collectors = [CONFIG_MARKETS[market]['collector']]
     else:
-        collector = CONFIG_MARKETS[market]['collector']
+        collectors = [CONFIG_MARKETS[market]['collector']]
 
     context.log.info(f"market: {market}")
     context.log.info(f"date: {date}")
 
     balances = pd.DataFrame()
-    for row in market_tokens_by_day.itertuples():
-        # ic(row)
-        if market == 'ethereum_v1':
-            token = row.reserve
-            decimals = row.decimals
-            symbol = row.symbol
-        else:
-            token = row.atoken
-            decimals = row.atoken_decimals
-            symbol = row.atoken_symbol
+    for collector in collectors:
+        for row in market_tokens_by_day.itertuples():
+            # ic(row)
+            if market == 'ethereum_v1':
+                token = row.reserve
+                decimals = row.decimals
+                symbol = row.symbol
+            else:
+                token = row.atoken
+                decimals = row.atoken_decimals
+                symbol = row.atoken_symbol
 
-        row_balance = get_erc20_balance_of(
-            collector,
-            token,
-            decimals,
-            chain,
-            block_height
-        )
-      
-        output_row = {
-                    'collector': collector, 
-                    'market': market,
-                    'token': token, 
-                    'symbol': symbol,
-                    'block_height': block_height, 
-                    'block_day': partition_datetime.replace(tzinfo=timezone.utc),
-                    'balance': row_balance
-                }
+            row_balance = get_erc20_balance_of(
+                collector,
+                token,
+                decimals,
+                chain,
+                block_height
+            )
+        
+            output_row = {
+                        'collector': collector, 
+                        'market': market,
+                        'token': token, 
+                        'symbol': symbol,
+                        'block_height': block_height, 
+                        'block_day': partition_datetime.replace(tzinfo=timezone.utc),
+                        'balance': row_balance
+                    }
 
-        balance_row = pd.DataFrame(output_row, index=[0])
-        context.log.info(f"atoken: {row.atoken_symbol}")
-        balances = pd.concat([balances, balance_row]).reset_index(drop=True)  # type: ignore
+            balance_row = pd.DataFrame(output_row, index=[0])
+            context.log.info(f"atoken: {row.atoken_symbol}")
+            balances = pd.concat([balances, balance_row]).reset_index(drop=True)  # type: ignore
 
     balances = standardise_types(balances)
 

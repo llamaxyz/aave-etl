@@ -3,7 +3,7 @@ import os
 from datetime import datetime
 
 
-FINANCIAL_PARTITION_START_DATE = '2023-01-19'
+FINANCIAL_PARTITION_START_DATE = '2022-09-01'
 
 ETHERSCAN_API_KEY =  os.environ['ETHERSCAN_API_KEY']
 POLYGONSCAN_API_KEY =  os.environ['POLYGONSCAN_API_KEY']
@@ -285,7 +285,7 @@ CONFIG_MARKETS = {
         "rewards_token_decimals": None,
         "subgraph": 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3-polygon',
         "messari_subgraph": "https://api.thegraph.com/subgraphs/name/messari/aave-v3-polygon",
-        "token_source": "aave", # messari not working via subgrounds at 2023-02-27
+        "token_source": "messari", 
         "atoken_prefix": "aPol",
         "oracle_base_currency": 'usd',
         "block_table_master": False,
@@ -304,7 +304,7 @@ CONFIG_MARKETS = {
         "rewards_token_decimals": None,
         "subgraph": 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3-avalanche',
         "messari_subgraph": "https://api.thegraph.com/subgraphs/name/messari/aave-v3-avalanche",
-        "token_source": "aave", # messari not working via subgrounds at 2023-02-27
+        "token_source": "messari", 
         "atoken_prefix": "aAva",
         "oracle_base_currency": 'usd',
         "block_table_master": False,
@@ -342,7 +342,7 @@ CONFIG_MARKETS = {
         "rewards_token_decimals": None,
         "subgraph": 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3-arbitrum',
         "messari_subgraph": "https://api.thegraph.com/subgraphs/name/messari/aave-v3-arbitrum",
-        "token_source": "aave", # messari not working via subgrounds at 2023-02-27
+        "token_source": "messari",
         "atoken_prefix": "aArb",
         "oracle_base_currency": 'usd',
         "block_table_master": True,
@@ -361,7 +361,7 @@ CONFIG_MARKETS = {
         "rewards_token_decimals": None,
         "subgraph": 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3-fantom',
         "messari_subgraph": "https://api.thegraph.com/subgraphs/name/messari/aave-v3-fantom",
-        "token_source": "aave", # messari not working via subgrounds at 2023-02-27
+        "token_source": "messari",
         "atoken_prefix": "aFan",
         "oracle_base_currency": 'usd',
         "block_table_master": True,
@@ -380,7 +380,7 @@ CONFIG_MARKETS = {
         "rewards_token_decimals": None,
         "subgraph": 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3-harmony',
         "messari_subgraph": "https://api.thegraph.com/subgraphs/name/messari/aave-v3-harmony",
-        "token_source": "aave", # messari not working via subgrounds at 2023-02-27
+        "token_source": "messari",
         "atoken_prefix": "aHar",
         "oracle_base_currency": 'usd',
         "block_table_master": True,
@@ -392,7 +392,7 @@ CONFIG_MARKETS = {
         "pool_address_provider": "0x24a42fd28c976a61df5d00d0599c34c4f90748c8",
         "collector": "0xe3d9988f676457123c5fd01297605efdd0cba1ae",
         "collector_change_date": datetime(2022,7,7,0,0,0),
-        "collector_v2": "0x464C71f6c2F760DdA6093dCB91C24c39e5d6e18c", #collector contract changed on 2021-07-07
+        "collector_v2": "0x464C71f6c2F760DdA6093dCB91C24c39e5d6e18c", #collector contract changed on 2022-07-07
         "protocol_data_provider": None,
         "oracle": "0x76b47460d7f7c5222cfb6b6a75615ab10895dde4",
         "incentives_controller": None,
