@@ -1039,7 +1039,7 @@ def treasury_accrued_incentives_by_day(context, block_numbers_by_day) -> pd.Data
                 rewards_token_element = pd.DataFrame(
                     [
                         {
-                            'network': chain,
+                            'chain': chain,
                             'market': market,
                             'collector_contract': collector_contract.lower(),
                             'block_height': block_height,
@@ -1061,7 +1061,7 @@ def treasury_accrued_incentives_by_day(context, block_numbers_by_day) -> pd.Data
             rewards = pd.DataFrame(
                     [
                         {
-                            'network': chain,
+                            'chain': chain,
                             'market': market,
                             'collector_contract': collector_contract.lower(),
                             'block_height': block_height,

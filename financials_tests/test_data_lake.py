@@ -139,8 +139,8 @@ def test_aave_oracle_prices_by_day():
     """
     Tests the aave oracle prices by day asset
 
-    Tests a single network and day
-    Materialize assets in dagster to test other networks
+    Tests a single chain and day
+    Materialize assets in dagster to test other chains
 
     """
 
@@ -415,6 +415,10 @@ def test_non_atoken_transfers_by_day():
                 0:16057596,
                 1:16057596
             },
+            "market":{
+                0:"ethereum_v2",
+                1:"ethereum_v2"
+            },            
             "collector":{
                 0:"0x25f2226b597e8f9514b3f68f00f494cf4f286491",
                 1:"0x25f2226b597e8f9514b3f68f00f494cf4f286491"
@@ -579,7 +583,7 @@ def test_non_atoken_balances_by_day():
             "token":{
                 0:"0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
                 1:"0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
-                2:"0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9"
+                2:"0xba100000625a3754423978a60c9317c58a424e3d"
             },
             "decimals":{
                 0:18,
@@ -604,7 +608,7 @@ def test_non_atoken_balances_by_day():
             "balance":{
                 0:1458317.7012564517,
                 1:59331.77495077029,
-                2:4.899669464115677
+                2:203387.609398
             }
         }
     )
@@ -865,7 +869,7 @@ def test_treasury_accrued_incentives():
     treasury_accrued_incentives_avax_v2_expected = pd.DataFrame(
         [
             {
-                'network': 'avalanche',
+                'chain': 'avalanche',
                 'market': 'avax_v2',
                 'collector_contract': '0x467b92aF281d14cB6809913AD016a607b5ba8A36'.lower(),
                 'block_height': 23644293,
@@ -881,7 +885,7 @@ def test_treasury_accrued_incentives():
     treasury_accrued_incentives_avax_v3_expected = pd.DataFrame(
         [
             {
-                'network': 'avalanche',
+                'chain': 'avalanche',
                 'market': 'avax_v3',
                 'collector_contract': '0x5ba7fd868c40c16f7aDfAe6CF87121E13FC2F7a0'.lower(),
                 'block_height': 23644293,
@@ -1001,9 +1005,9 @@ def test_internal_external_addresses():
     expected = pd.DataFrame(
         [
             {
-                "network": "arbitrum",
+                "chain": "arbitrum",
                 "description": "V3 collector",
-                "address": "0x053d55f9b5af8694c503eb288a1b7e552f590710",
+                "contract_address": "0x053d55f9b5af8694c503eb288a1b7e552f590710",
                 "internal_external": "aave_internal"
             }
         ]
@@ -1011,7 +1015,8 @@ def test_internal_external_addresses():
     expected = standardise_types(expected)
 
     result = internal_external_addresses(context)
-    # ic(result)
+    ic(expected)
+    ic(result.head(1))
 
     assert_frame_equal(result.head(1), expected, check_exact=True)
 
@@ -1029,12 +1034,12 @@ if __name__ == "__main__":
     # test_market_tokens_table()
     # test_non_atoken_transfers_by_day()
     # test_collector_atoken_balances_by_day()
-    # test_non_atoken_balances_table()
+    # test_non_atoken_balances_by_day()
     # test_v3_accrued_fees_by_day()
     # test_v3_minted_to_treasury_by_day()
     # test_treasury_accrued_incentives()
-    test_user_lm_rewards_claimed()
-    # test_internal_external_addresses()
+    # test_user_lm_rewards_claimed()
+    test_internal_external_addresses()
     # test_collector_atoken_transfers_by_day()
     
     # pass

@@ -12,7 +12,8 @@ from financials.assets.data_warehouse import (
     blocks_by_day,
     atoken_measures_by_day,
     non_atoken_measures_by_day,
-    user_rewards_by_day
+    user_rewards_by_day,
+    treasury_incentives_by_day
     )
 from financials.financials_config import *  # pylint: disable=wildcard-import, unused-wildcard-import
 
@@ -567,7 +568,7 @@ def test_user_rewards_by_day():
                 "chain": "ethereum",
                 "market": "ethereum_v2",
                 "reward_vault": "ecosystem_reserve",
-                "vault_address": "0x464c71f6c2f760dda6093dcb91c24c39e5d6e18c",
+                "vault_address": "0x25f2226b597e8f9514b3f68f00f494cf4f286491",
                 "token_address": "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
                 "sm_stkAAVE_claims": 1033.82,
                 "sm_stkABPT_claims": 449.626,
@@ -595,7 +596,7 @@ def test_user_rewards_by_day():
                 "chain": "ethereum",
                 "market": "ethereum_v2",
                 "reward_vault": "ecosystem_reserve",
-                "vault_address": "0x464c71f6c2f760dda6093dcb91c24c39e5d6e18c",
+                "vault_address": "0x25f2226b597e8f9514b3f68f00f494cf4f286491",
                 "token_address": "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
                 "sm_stkAAVE_claims": 1033.82,
                 "sm_stkABPT_claims": 449.626,
@@ -628,8 +629,73 @@ def test_user_rewards_by_day():
     assert_frame_equal(result_eth, expected_eth, check_exact=True)
     assert_frame_equal(result_pol, pd.DataFrame(), check_exact=True)
 
+
+def test_treasury_incentives_by_day():
+    """
+    Tests the table with treasury incentives data
+    """
+
+    pkey_eth = MultiPartitionKey(
+        {
+            "date": '2023-01-30',
+            "market": 'ethereum_v2'
+        }
+    )  # type: ignore
+
+    pkey_pol = MultiPartitionKey(
+        {
+            "date": '2023-01-30',
+            "market": 'polygon_v3'
+        }
+    )  # type: ignore
+
+    context_eth = build_op_context(partition_key=pkey_eth)
+    context_pol = build_op_context(partition_key=pkey_pol)
+    
+    treasury_accrued_incentives_eth_sample = pd.DataFrame(
+        [
+            {   
+                "chain": "ethereum",
+                "market": "ethereum_v2",
+                "collector_contract": "0x464c71f6c2f760dda6093dcb91c24c39e5d6e18c",
+                "block_day": datetime(2023,1,30,0,0,0),
+                "rewards_token_address": "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
+                "rewards_token_symbol": "stkAAVE",
+                "accrued_rewards": 561.626,
+            },
+        ]
+    )
+    treasury_accrued_incentives_eth_sample = standardise_types(treasury_accrued_incentives_eth_sample)
+
+    expected_eth = pd.DataFrame(
+        [
+            {   
+                "chain": "ethereum",
+                "market": "ethereum_v2",
+                "collector_contract": "0x464c71f6c2f760dda6093dcb91c24c39e5d6e18c",
+                "block_day": datetime(2023,1,30,0,0,0),
+                "rewards_token_address": "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
+                "rewards_token_symbol": "stkAAVE",
+                "accrued_rewards": 561.626,
+                "held_rewards": float(0),
+            },
+        ]
+    )
+    expected_eth = standardise_types(expected_eth)
+
+    result_eth = treasury_incentives_by_day(context_eth, treasury_accrued_incentives_eth_sample)
+    result_pol = treasury_incentives_by_day(context_pol, pd.DataFrame())
+    ic(expected_eth)
+    ic(result_eth)
+
+    assert_frame_equal(result_eth, expected_eth, check_exact=True)
+    assert_frame_equal(result_pol, pd.DataFrame(), check_exact=True)
+
+
+
 if __name__ == "__main__":
     # test_blocks_by_day()
     # test_non_atoken_measures_by_day()
-    test_user_rewards_by_day()
+    # test_user_rewards_by_day()
+    test_treasury_incentives_by_day()
 

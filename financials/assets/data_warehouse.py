@@ -317,9 +317,7 @@ def user_rewards_by_day(
 
     Args:
         context: dagster context object
-        non_atoken_balances_by_day: the output of non_atoken_balances_by_day
-        non_atoken_transfers_by_day: the output of non_atoken_transfers_by_day
-        internal_external_addresses: the output of internal_external_addresses
+        user_lm_rewards_claimed: the output of user_lm_rewards_claimed
 
     Returns:
         A dataframe with a row for each non-atoken on the day, and the output of all the measures
@@ -348,6 +346,61 @@ def user_rewards_by_day(
             "preview": MetadataValue.md(return_val.head().to_markdown()),
         }
     )
+    return return_val
+
+@asset(
+    compute_kind='python',
+    partitions_def=market_day_multipartition,
+    group_name='data_warehouse',
+    code_version="1"
+)
+def treasury_incentives_by_day(
+            context,
+            treasury_accrued_incentives_by_day
+            ) -> pd.DataFrame:
+    """
+    Joins all measures relevant to the LM rewards owed and owned by treasury contracts
+
+
+    Args:
+        context: dagster context object
+        treasury_accrued_incentives_by_day: the output of treasury_accrued_incentives_by_day
+
+    Returns:
+        A dataframe with a row for each non-atoken on the day, and the output of all the measures
+        joined to the token metadata.  Non existing measures are set to 0
+
+    """
+    date, market = context.partition_key.split("|")
+    context.log.info(f"market: {market}")
+    context.log.info(f"date: {date}")
+    chain = CONFIG_MARKETS[market]['chain']
+
+    if not treasury_accrued_incentives_by_day.empty:
+        return_val = treasury_accrued_incentives_by_day[[
+            'chain',
+            'market',
+            'collector_contract',
+            'block_day',
+            'rewards_token_address',
+            'rewards_token_symbol',
+            'accrued_rewards',
+        ]]
+
+        # todo: join held rewards table when implemented
+        return_val['held_rewards'] = float(0)
+    else:
+        return_val = pd.DataFrame()
+
+    return_val = standardise_types(return_val)
+
+    context.add_output_metadata(
+        {
+            "num_records": len(return_val),
+            "preview": MetadataValue.md(return_val.head().to_markdown()),
+        }
+    )
+
     return return_val
 
 if __name__ == "__main__":
