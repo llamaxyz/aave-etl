@@ -14,7 +14,9 @@ from dagster import (AssetIn,  # SourceAsset,; Output,
                      StaticPartitionsDefinition, asset, #op,
                      #LastPartitionMapping,
                      IdentityPartitionMapping,
-                     FreshnessPolicy
+                     FreshnessPolicy,
+                     MultiPartitionKey,
+                     build_op_context
 )
 from icecream import ic
 # from subgrounds.subgrounds import Subgrounds
@@ -180,7 +182,7 @@ def market_tokens_by_day(context, block_numbers_by_day) -> pd.DataFrame: #pylint
     io_manager_key = 'data_lake_io_manager'
 )
 def aave_oracle_prices_by_day(context, market_tokens_by_day) -> pd.DataFrame:  # type: ignore pylint: disable=W0621
-    """Table of the token and aave oracle price for each market at each block height
+    """Table of the token and aave oracle price foreacharket at each block height
 
     Uses web3.py to access an RPC node and call the oracle contract directly
 
@@ -211,7 +213,7 @@ def aave_oracle_prices_by_day(context, market_tokens_by_day) -> pd.DataFrame:  #
         context.log.info(f"block_height: {block_height}")
 
         # Get the eth price from the chainlink oracle if the Aave oracle price is denominated in eth
-        if CONFIG_MARKETS[market]['oracle_base_currency'] == 'eth':
+        if CONFIG_MARKETS[market]['oracle_base_currency'] == 'wei':
             w3 = Web3(Web3.HTTPProvider(CONFIG_CHAINS['ethereum']['web3_rpc_url']))
             eth_address = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
             usd_address = '0x0000000000000000000000000000000000000348'
@@ -219,7 +221,17 @@ def aave_oracle_prices_by_day(context, market_tokens_by_day) -> pd.DataFrame:  #
             feed_registry_abi_url = f"https://api.etherscan.io/api?module=contract&action=getabi&apikey={ETHERSCAN_API_KEY}&address={chainlink_feed_registry}"
             feed_registry_abi = json.loads(requests.get(feed_registry_abi_url, timeout=300).json()['result'])
             feed_registry = w3.eth.contract(address=chainlink_feed_registry, abi=feed_registry_abi)
-            eth_usd_price = float(feed_registry.functions.latestAnswer(eth_address, usd_address).call(block_identifier = block_height) / 10**8)
+            # get the block number from the eth_v2 upstream asset.
+            pkey = MultiPartitionKey(
+                {
+                    "date": date,
+                    "market": 'ethereum_v2'
+                }
+            )  # type: ignore
+            eth_context = build_op_context(partition_key=pkey)
+            eth_block_numbers_by_day = block_numbers_by_day(eth_context)
+            eth_block_height = int(eth_block_numbers_by_day.block_height.values[0])
+            eth_usd_price = float(feed_registry.functions.latestAnswer(eth_address, usd_address).call(block_identifier = eth_block_height) / 10**8)
         else:
             eth_usd_price = float(0)
 
@@ -257,7 +269,7 @@ def aave_oracle_prices_by_day(context, market_tokens_by_day) -> pd.DataFrame:  #
 
         # create a dataframe with the price
         return_val = market_tokens_by_day[['reserve','symbol','market','block_height','block_day']].copy()
-        return_val['usd_price'] = pd.Series(response, name='usd_price') * price_multiplier # type: ignore
+        return_val['usd_price'] = pd.Series(response, name='usd_price').astype('Float64') * price_multiplier # type: ignore
 
         return_val = standardise_types(return_val)
 
