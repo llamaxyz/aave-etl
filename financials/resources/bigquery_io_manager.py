@@ -37,32 +37,21 @@ from dagster import (
 
 BIGQUERY_DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 
-def initialise_pandas_gbq():
-    """Sets the config for pandas_gbq to connect to BigQuery
-    Args: none
-    Returns: nothing
-    """
-    #configure credentials for Google BigQuery
-    # ic(os.getcwd())
-    credentials = service_account.Credentials.from_service_account_file('./scottincrypto_db_write_token.json')
 
-    #set the default contexts for the BigQuery access
-    pandas_gbq.context.credentials = credentials
-    pandas_gbq.context.project = "top-reef-348907"
-    pandas_gbq.context.dialect = 'standard'
-
-    # ic(pandas_gbq.context.credentials)
-    
-
-
-
-@io_manager(config_schema={"project": str, "dataset": str, "service_account_creds": str})
+@io_manager(config_schema={
+    "project": str,
+    "dataset": str,
+    "service_account_creds": str,
+    "service_account_file": str,
+    "use_service_account_file": bool,})
 def bigquery_io_manager(init_context):
     return BigQueryIOManager(
         config = {
             "project": init_context.resource_config["project"],
             "dataset": init_context.resource_config["dataset"],
             "service_account_creds": init_context.resource_config["service_account_creds"],
+            "service_account_file": init_context.resource_config["service_account_file"],
+            "use_service_account_file": init_context.resource_config["use_service_account_file"],
         }
     )
 
@@ -77,7 +66,10 @@ class BigQueryIOManager(IOManager):
     def __init__(self, config):
         self._config = config
         # initialise the pandas_gbq context
-        bq_creds = service_account.Credentials.from_service_account_info(json.loads(config["service_account_creds"]))
+        if config['use_service_account_file']:
+            bq_creds = service_account.Credentials.from_service_account_file(config['service_account_file'])
+        else:
+            bq_creds = service_account.Credentials.from_service_account_info(json.loads(config["service_account_creds"]))
         pandas_gbq.context.credentials = bq_creds
         pandas_gbq.context.project = config["project"]
         pandas_gbq.context.dialect = 'standard'

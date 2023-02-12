@@ -56,9 +56,12 @@ else:
 
 # grab the appropriate service account credentials for the environment
 if dagster_deployment == 'local_cloud':
-    creds_env_var = os.environ['AAVE_ETL_DEV_BIGQUERY_SERVICE_ACCOUNT_CREDENTIALS']
+    # creds_env_var = os.environ['AAVE_ETL_DEV_BIGQUERY_SERVICE_ACCOUNT_CREDENTIALS']
+    creds_env_var = "not_configured"
+    creds_file = '.devcontainer/llama_aave_dev_service_account.json'
 elif dagster_deployment == 'prod':
     creds_env_var = os.environ['AAVE_ETL_PROD_BIGQUERY_SERVICE_ACCOUNT_CREDENTIALS']
+    creds_file = "not_configured"
 else:
     creds_env_var = "local_filesystem_mode"
 
@@ -73,14 +76,18 @@ resource_defs = {
             {
                 "project": "aave-dev",
                 "dataset": "financials_data_lake",
-                "service_account_creds": creds_env_var
+                "service_account_creds": creds_env_var,
+                "service_account_file" : creds_file,
+                "use_service_account_file": True,
             },
         ),
         "data_warehouse_io_manager": bigquery_io_manager.configured(
             {
                 "project": "aave-dev",
                 "dataset": "warehouse",
-                "service_account_creds": creds_env_var
+                "service_account_creds": creds_env_var,
+                "service_account_file" : creds_file,
+                "use_service_account_file": True,
             },
         ),
     },
@@ -89,14 +96,18 @@ resource_defs = {
             {
                 "project": "aave-prod",
                 "dataset": "financials_data_lake",
-                "service_account_creds": creds_env_var
+                "service_account_creds": creds_env_var,
+                "service_account_file" : creds_file,
+                "use_service_account_file": False,
             },
         ),
         "data_warehouse_io_manager": bigquery_io_manager.configured(
             {
                 "project": "aave-prod",
                 "dataset": "warehouse",
-                "service_account_creds": creds_env_var
+                "service_account_creds": creds_env_var,
+                "service_account_file" : creds_file,
+                "use_service_account_file": False,
             },
         ),
     },
