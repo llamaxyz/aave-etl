@@ -46,7 +46,6 @@ market_day_multipartition = MultiPartitionsDefinition(
     }
 )
 
-
 @asset(
     partitions_def=market_day_multipartition,
     compute_kind="python",
@@ -1259,3 +1258,62 @@ def internal_external_addresses(context) -> pd.DataFrame:
 
     return internal_external
 
+#######################################
+# Test assets for the io manager
+
+
+# @asset(
+#     partitions_def = DailyPartitionsDefinition(start_date=FINANCIAL_PARTITION_START_DATE),
+#     compute_kind="python",
+#     group_name='test_group',
+#     io_manager_key = 'data_lake_io_manager'
+# )
+# def daily_asset(context):
+#     return pd.DataFrame(
+#         [
+#             {
+#             'string_col': context.partition_key
+#             }
+#         ]
+#     )
+
+# @asset(
+#     partitions_def = DailyPartitionsDefinition(start_date=FINANCIAL_PARTITION_START_DATE),
+#     compute_kind="python",
+#     group_name='test_group',
+#     io_manager_key = 'data_lake_io_manager'
+# )
+# def daily_asset_downstream(context, daily_asset):
+
+#     ic(daily_asset)
+#     return_value = daily_asset
+#     return_value['additional_col'] = 'additional value'
+#     raise ValueError('force crash')
+#     return return_value
+
+# @asset(
+#     compute_kind="python",
+#     group_name='test_group',
+#     io_manager_key = 'data_lake_io_manager'
+# )
+# def no_partition_asset(context):
+#     return pd.DataFrame(
+#         [
+#             {
+#             'string_col': 'unpartitioned asset'            }
+#         ]
+#     )
+
+# @asset(
+#     compute_kind="python",
+#     group_name='test_group',
+#     io_manager_key = 'data_lake_io_manager'
+# )
+# def no_partition_asset_downstream(context, no_partition_asset):
+#     ic(no_partition_asset)
+#     return_value = no_partition_asset
+#     return_value['additional_col'] = 'additional value'
+#     raise ValueError('force crash')
+#     return return_value
+# 
+################################

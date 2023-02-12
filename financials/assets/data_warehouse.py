@@ -34,7 +34,8 @@ if not sys.warnoptions:
     compute_kind='python',
     partitions_def=market_day_multipartition,
     group_name='data_warehouse',
-    code_version="1"
+    code_version="1",
+    io_manager_key = 'data_warehouse_io_manager'
 )
 def blocks_by_day(context, block_numbers_by_day) -> pd.DataFrame:
     """
@@ -75,7 +76,8 @@ def blocks_by_day(context, block_numbers_by_day) -> pd.DataFrame:
     compute_kind='python',
     partitions_def=market_day_multipartition,
     group_name='data_warehouse',
-    code_version="1"
+    code_version="1",
+    io_manager_key = 'data_warehouse_io_manager'
 )
 def atoken_measures_by_day(
             context,
@@ -201,7 +203,8 @@ def atoken_measures_by_day(
     compute_kind='python',
     partitions_def=market_day_multipartition,
     group_name='data_warehouse',
-    code_version="1"
+    code_version="1",
+    io_manager_key = 'data_warehouse_io_manager'
 )
 def non_atoken_measures_by_day(
             context,
@@ -305,7 +308,8 @@ def non_atoken_measures_by_day(
     compute_kind='python',
     partitions_def=market_day_multipartition,
     group_name='data_warehouse',
-    code_version="1"
+    code_version="1",
+    io_manager_key = 'data_warehouse_io_manager'
 )
 def user_rewards_by_day(
             context,
@@ -352,7 +356,8 @@ def user_rewards_by_day(
     compute_kind='python',
     partitions_def=market_day_multipartition,
     group_name='data_warehouse',
-    code_version="1"
+    code_version="1",
+    io_manager_key = 'data_warehouse_io_manager'
 )
 def treasury_incentives_by_day(
             context,

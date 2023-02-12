@@ -15,6 +15,7 @@ from dagster import (
 )
 from financials.assets import data_lake, data_warehouse
 from financials.assets.data_lake import market_day_multipartition
+from financials.resources.bigquery_io_manager import bigquery_io_manager
 
 from dagster_gcp.gcs.io_manager import gcs_pickle_io_manager
 from dagster_gcp.gcs.resources import gcs_resource
@@ -46,49 +47,114 @@ financials_update_job = define_asset_job(
 
 # )
 
-
-if 'DAGSTER_DEPLOYMENT' in os.environ:
+# check for environment variable DAGSTER_DEPLOYMENT is set to a valid value
+if 'DAGSTER_DEPLOYMENT' in os.environ and os.environ['DAGSTER_DEPLOYMENT'] in ['local_filesystem', 'local_cloud', 'prod']:
     dagster_deployment = os.environ['DAGSTER_DEPLOYMENT']
 else:
     errmsg = "Environment variable DAGSTER_DEPLOYMENT must be set to either 'local_filesystem', 'local_cloud', or 'prod'"
     raise EnvironmentError(errmsg)
 
-if dagster_deployment == 'local_filesystem':
-    # dev on local machine, files stored on local filesystem
-    resource_defs = {
-        "data_lake_io_manager": fs_io_manager,
-    }
-elif dagster_deployment == 'local_cloud':
-    # dev on local machine, files stored in GCS dev bucket and BQ dev tables
-    service_account_creds = os.environ['AAVE_ETL_DEV_BIGQUERY_SERVICE_ACCOUNT_CREDENTIALS']
-    gcs_credentials = service_account.Credentials.from_service_account_info(json.loads(service_account_creds))
-    storage_client = storage.Client(credentials=gcs_credentials)
-    resource_defs = {
-        "data_lake_io_manager": gcs_pickle_io_manager.configured(
-            {
-                "gcs_bucket": "llama_aave_dev_datalake",
-                "gcs_prefix": "financials"
-            }
-        ),
-        "gcs": ResourceDefinition.hardcoded_resource(storage_client)
-    }
+# grab the appropriate service account credentials for the environment
+if dagster_deployment == 'local_cloud':
+    creds_env_var = os.environ['AAVE_ETL_DEV_BIGQUERY_SERVICE_ACCOUNT_CREDENTIALS']
 elif dagster_deployment == 'prod':
-    # running on dagster cloud in prod GCS bucket and BQ env
-    service_account_creds = os.environ['AAVE_ETL_PROD_BIGQUERY_SERVICE_ACCOUNT_CREDENTIALS']
-    gcs_credentials = service_account.Credentials.from_service_account_info(json.loads(service_account_creds))
-    storage_client = storage.Client(credentials=gcs_credentials)
-    resource_defs = {
-        "data_lake_io_manager": gcs_pickle_io_manager.configured(
-            {
-                "gcs_bucket": "llama_aave_prod_datalake",
-                "gcs_prefix": "financials"
-            }
-        ),
-        "gcs": ResourceDefinition.hardcoded_resource(storage_client)
-    }
+    creds_env_var = os.environ['AAVE_ETL_PROD_BIGQUERY_SERVICE_ACCOUNT_CREDENTIALS']
 else:
-    errmsg = "Environment variable DAGSTER_DEPLOYMENT must be set to either 'local_filesystem', 'local_cloud', or 'prod'"
-    raise EnvironmentError(errmsg)
+    creds_env_var = "local_filesystem_mode"
+
+# configure the resource definitions for each environment option
+resource_defs = {
+    "local_filesystem": {
+        "data_lake_io_manager": fs_io_manager,
+        "data_warehouse_io_manager": fs_io_manager,
+    },
+    "local_cloud": {
+        "data_lake_io_manager": bigquery_io_manager.configured(
+            {
+                "project": "aave-dev",
+                "dataset": "financials_data_lake",
+                "service_account_creds": creds_env_var
+            },
+        ),
+        "data_warehouse_io_manager": bigquery_io_manager.configured(
+            {
+                "project": "aave-dev",
+                "dataset": "warehouse",
+                "service_account_creds": creds_env_var
+            },
+        ),
+    },
+    "prod": {
+        "data_lake_io_manager": bigquery_io_manager.configured(
+            {
+                "project": "aave-prod",
+                "dataset": "financials_data_lake",
+                "service_account_creds": creds_env_var
+            },
+        ),
+        "data_warehouse_io_manager": bigquery_io_manager.configured(
+            {
+                "project": "aave-prod",
+                "dataset": "warehouse",
+                "service_account_creds": creds_env_var
+            },
+        ),
+    },
+}
+
+
+####################
+# config for data lake in gcs storage buckets, not used
+####################
+
+# if dagster_deployment == 'local_filesystem':
+#     # dev on local machine, files stored on local filesystem
+#     resource_defs = {
+#         "data_lake_io_manager": fs_io_manager,
+#     }
+# elif dagster_deployment == 'local_cloud':
+#     # dev on local machine, files stored in GCS dev bucket and BQ dev tables
+#     service_account_creds = os.environ['AAVE_ETL_DEV_BIGQUERY_SERVICE_ACCOUNT_CREDENTIALS']
+#     gcs_credentials = service_account.Credentials.from_service_account_info(json.loads(service_account_creds))
+#     storage_client = storage.Client(credentials=gcs_credentials)
+#     resource_defs = {
+#         "data_lake_io_manager": gcs_pickle_io_manager.configured(
+#             {
+#                 "gcs_bucket": "llama_aave_dev_datalake",
+#                 "gcs_prefix": "financials"
+#             }
+#         ),
+#         "data_lake_io_manager": gcs_pickle_io_manager.configured(
+#             {
+#                 "gcs_bucket": "llama_aave_dev_datalake",
+#                 "gcs_prefix": "financials"
+#             }
+#         ),
+#         "gcs": ResourceDefinition.hardcoded_resource(storage_client)
+#     }
+# elif dagster_deployment == 'prod':
+#     # running on dagster cloud in prod GCS bucket and BQ env
+#     service_account_creds = os.environ['AAVE_ETL_PROD_BIGQUERY_SERVICE_ACCOUNT_CREDENTIALS']
+#     gcs_credentials = service_account.Credentials.from_service_account_info(json.loads(service_account_creds))
+#     storage_client = storage.Client(credentials=gcs_credentials)
+#     resource_defs = {
+#         "data_lake_io_manager": gcs_pickle_io_manager.configured(
+#             {
+#                 "gcs_bucket": "llama_aave_prod_datalake",
+#                 "gcs_prefix": "financials"
+#             }
+#         ),
+#         "data_lake_io_manager": gcs_pickle_io_manager.configured(
+#             {
+#                 "gcs_bucket": "llama_aave_dev_datalake",
+#                 "gcs_prefix": "financials"
+#             }
+#         ),
+#         "gcs": ResourceDefinition.hardcoded_resource(storage_client)
+#     }
+# else:
+#     errmsg = "Environment variable DAGSTER_DEPLOYMENT must be set to either 'local_filesystem', 'local_cloud', or 'prod'"
+#     raise EnvironmentError(errmsg)
 
 
     
@@ -105,5 +171,5 @@ defs = Definitions(
     # schedules=[financials_update_job_schedule]
     jobs=[financials_update_job],
     # sensors=[financials_update_sensor],
-    resources=resource_defs,
+    resources=resource_defs[dagster_deployment],
 )
