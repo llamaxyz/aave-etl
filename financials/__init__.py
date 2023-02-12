@@ -44,7 +44,7 @@ financials_update_job = define_asset_job(
 financials_update_sensor = build_asset_reconciliation_sensor(
     name="financials_update_sensor",
     asset_selection=AssetSelection.all(),
-    minimum_interval_seconds=60*60*2 # 2 hours
+    minimum_interval_seconds=60*30
 )
 
 # check for environment variable DAGSTER_DEPLOYMENT is set to a valid value
