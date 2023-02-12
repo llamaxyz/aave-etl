@@ -17,7 +17,7 @@ import pandas_gbq
 from google.oauth2 import service_account
 from icecream import ic
 
-
+from financials.resources.helpers import standardise_types
 
 from dagster import (
     IOManager,
@@ -169,7 +169,9 @@ class BigQueryIOManager(IOManager):
     def _handle_pandas_output(
         self, obj: PandasDataFrame, dataset: str, table: str
     ) -> Mapping[str, Any]:
-        
+        obj = standardise_types(obj)
+        # obj.info()
+        # ic(obj[['symbol','usd_price']])
         obj.to_gbq(destination_table = f'{dataset}.{table}', if_exists = 'append', progress_bar = False)
 
         return {
@@ -244,7 +246,7 @@ class BigQueryIOManager(IOManager):
                 result = pd.DataFrame()
             else:
                 raise pandas_gbq.exceptions.GenericGBQException(err)
-                
+
         return result
 
 
