@@ -41,11 +41,11 @@ financials_update_job = define_asset_job(
     partitions_def=market_day_multipartition
 )
 
-# financials_update_sensor = build_asset_reconciliation_sensor(
-#     name="financials_update_sensor",
-#     asset_selection=AssetSelection.all(),
-
-# )
+financials_update_sensor = build_asset_reconciliation_sensor(
+    name="financials_update_sensor",
+    asset_selection=AssetSelection.all(),
+    minimum_interval_seconds=120
+)
 
 # check for environment variable DAGSTER_DEPLOYMENT is set to a valid value
 if 'DAGSTER_DEPLOYMENT' in os.environ and os.environ['DAGSTER_DEPLOYMENT'] in ['local_filesystem', 'local_cloud', 'prod']:
@@ -170,6 +170,6 @@ defs = Definitions(
     assets=financial_assets,
     # schedules=[financials_update_job_schedule]
     jobs=[financials_update_job],
-    # sensors=[financials_update_sensor],
+    sensors=[financials_update_sensor],
     resources=resource_defs[dagster_deployment],
 )

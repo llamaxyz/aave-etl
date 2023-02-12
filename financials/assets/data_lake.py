@@ -52,6 +52,7 @@ market_day_multipartition = MultiPartitionsDefinition(
     partitions_def=market_day_multipartition,
     compute_kind="python",
     group_name='data_lake',
+    code_version="1",
     io_manager_key = 'data_lake_io_manager'
     # freshness_policy=FreshnessPolicy(maximum_lag_minutes=6*60),
 )
@@ -127,6 +128,7 @@ def block_numbers_by_day(context) -> pd.DataFrame:
     partitions_def=market_day_multipartition,
     compute_kind="python",
     group_name='data_lake',
+    code_version="1",
     io_manager_key = 'data_lake_io_manager'
 )
 def market_tokens_by_day(context, block_numbers_by_day) -> pd.DataFrame: #pylint: disable=W0621
@@ -179,6 +181,7 @@ def market_tokens_by_day(context, block_numbers_by_day) -> pd.DataFrame: #pylint
     partitions_def=market_day_multipartition,
     compute_kind="python",
     group_name='data_lake',
+    code_version="1",
     io_manager_key = 'data_lake_io_manager'
 )
 def aave_oracle_prices_by_day(context, market_tokens_by_day) -> pd.DataFrame:  # type: ignore pylint: disable=W0621
@@ -286,6 +289,7 @@ def aave_oracle_prices_by_day(context, market_tokens_by_day) -> pd.DataFrame:  #
     partitions_def=market_day_multipartition,
     compute_kind="python",
     group_name='data_lake',
+    code_version="1",
     io_manager_key = 'data_lake_io_manager'
 )
 def collector_atoken_transfers_by_day(context, market_tokens_by_day, block_numbers_by_day) -> pd.DataFrame:  # type: ignore pylint: disable=W0621
@@ -363,6 +367,7 @@ def collector_atoken_transfers_by_day(context, market_tokens_by_day, block_numbe
     partitions_def=market_day_multipartition,
     compute_kind="python",
     group_name='data_lake',
+    code_version="1",
     io_manager_key = 'data_lake_io_manager'
 )
 def non_atoken_transfers_by_day(context, block_numbers_by_day) -> pd.DataFrame:  # type: ignore pylint: disable=W0621
@@ -431,6 +436,7 @@ def non_atoken_transfers_by_day(context, block_numbers_by_day) -> pd.DataFrame: 
     partitions_def=market_day_multipartition,
     compute_kind="python",
     group_name='data_lake',
+    code_version="1",
     io_manager_key = 'data_lake_io_manager'
 )
 def collector_atoken_balances_by_day(context, market_tokens_by_day, block_numbers_by_day) -> pd.DataFrame:  # type: ignore pylint: disable=W0621
@@ -519,6 +525,7 @@ def collector_atoken_balances_by_day(context, market_tokens_by_day, block_number
     partitions_def=market_day_multipartition,
     compute_kind="python", 
     group_name='data_lake',
+    code_version="1",
     io_manager_key = 'data_lake_io_manager'
 )
 def non_atoken_balances_by_day(context, block_numbers_by_day) -> pd.DataFrame:  # type: ignore pylint: disable=W0621
@@ -594,15 +601,16 @@ def non_atoken_balances_by_day(context, block_numbers_by_day) -> pd.DataFrame:  
 @asset(
     # partitions_def=v3_market_day_multipartition,
     partitions_def=market_day_multipartition,
-    ins={
-        "market_tokens_by_day":
-            AssetIn(
-                key="market_tokens_by_day",
-                partition_mapping=IdentityPartitionMapping()
-            )
-    },
+    # ins={
+    #     "market_tokens_by_day":
+    #         AssetIn(
+    #             key="market_tokens_by_day",
+    #             partition_mapping=IdentityPartitionMapping()
+    #         )
+    # },
     compute_kind="python", 
     group_name='data_lake',
+    code_version="1",
     io_manager_key = 'data_lake_io_manager'
 
 )
@@ -756,15 +764,16 @@ def v3_accrued_fees_by_day(context, market_tokens_by_day) -> pd.DataFrame: # typ
 @asset(
     # partitions_def=v3_market_day_multipartition,
     partitions_def=market_day_multipartition,
-    ins={
-        "market_tokens_by_day":
-            AssetIn(
-                key="market_tokens_by_day",
-                partition_mapping=IdentityPartitionMapping()
-            ),
-    },
+    # ins={
+    #     "market_tokens_by_day":
+    #         AssetIn(
+    #             key="market_tokens_by_day",
+    #             partition_mapping=IdentityPartitionMapping()
+    #         ),
+    # },
     compute_kind="python",
     group_name='data_lake',
+    code_version="1",
     io_manager_key = 'data_lake_io_manager'
 
 )
@@ -928,6 +937,7 @@ def v3_minted_to_treasury_by_day(context, block_numbers_by_day, market_tokens_by
     partitions_def=market_day_multipartition,
     compute_kind="python",
     group_name='data_lake',
+    code_version="1",
     io_manager_key = 'data_lake_io_manager'
 )
 def treasury_accrued_incentives_by_day(context, block_numbers_by_day) -> pd.DataFrame:
@@ -1105,6 +1115,7 @@ def treasury_accrued_incentives_by_day(context, block_numbers_by_day) -> pd.Data
     partitions_def=market_day_multipartition,
     compute_kind="python",
     group_name='data_lake',
+    code_version="1",
     io_manager_key = 'data_lake_io_manager'
 )
 def user_lm_rewards_claimed(context, block_numbers_by_day):
