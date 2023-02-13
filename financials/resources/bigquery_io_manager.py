@@ -15,6 +15,7 @@ from pandas import DataFrame as PandasDataFrame
 
 import pandas_gbq 
 from google.oauth2 import service_account
+from google.cloud.bigquery import Client, LoadJobConfig
 from icecream import ic
 
 from financials.resources.helpers import standardise_types
@@ -73,6 +74,8 @@ class BigQueryIOManager(IOManager):
         pandas_gbq.context.credentials = bq_creds
         pandas_gbq.context.project = config["project"]
         pandas_gbq.context.dialect = 'standard'
+        # initialise the google client for write operations
+        self.client = Client(credentials=bq_creds, project=config["project"])
 
     def handle_output(self, context: OutputContext, obj: PandasDataFrame):
         # ic(context.asset_key)
@@ -104,7 +107,7 @@ class BigQueryIOManager(IOManager):
             try:
                 pd.read_gbq(cleanup_query, dialect='standard')
             except pandas_gbq.exceptions.GenericGBQException as err:
-                # skip error if the table does not exist
+                # skip error if the table does not exist, write operation will create it
                 if not "Reason: 404 Not found: Table" in str(err):
                     raise pandas_gbq.exceptions.GenericGBQException(err)
 
@@ -164,7 +167,10 @@ class BigQueryIOManager(IOManager):
         obj = standardise_types(obj)
         # obj.info()
         # ic(obj[['symbol','usd_price']])
-        obj.to_gbq(destination_table = f'{dataset}.{table}', if_exists = 'append', progress_bar = False)
+        # use the google-cloud-bigquery library to write the dataframe to bigquery
+        # pandas-gbq hits rate limits when writing many small table updates
+        self.client.load_table_from_dataframe(obj, f'{dataset}.{table}', job_config=LoadJobConfig(write_disposition='WRITE_APPEND'))
+        # obj.to_gbq(destination_table = f'{dataset}.{table}', if_exists = 'append', progress_bar = False, )
 
         return {
             "rows": obj.shape[0],
@@ -231,7 +237,7 @@ class BigQueryIOManager(IOManager):
         # ic(sql)
         
         try:
-            result = pd.read_gbq(sql)
+            result = pd.read_gbq(sql, use_bqstorage_api=True)
         except pandas_gbq.exceptions.GenericGBQException as err:
             # skip error if the table does not exist
             if "Reason: 404 Not found: Table" in str(err):
