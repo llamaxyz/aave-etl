@@ -1277,8 +1277,6 @@ def internal_external_addresses(context) -> pd.DataFrame:
         }
     )
 
-    # todo: add the aave V1 addresses and the amm unwrapper contract to the table
-
     return internal_external
 
 #######################################
