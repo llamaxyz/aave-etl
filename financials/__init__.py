@@ -21,7 +21,7 @@ from dagster_gcp.gcs.io_manager import gcs_pickle_io_manager
 from dagster_gcp.gcs.resources import gcs_resource
 
 from dagster._utils import file_relative_path
-from dagster_dbt import dbt_cli_resource, load_assets_from_dbt_project
+# from dagster_dbt import dbt_cli_resource, load_assets_from_dbt_project
 
 from google.oauth2 import service_account
 from google.cloud import storage
