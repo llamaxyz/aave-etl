@@ -78,6 +78,10 @@ class BigQueryIOManager(IOManager):
         self.client = Client(credentials=bq_creds, project=config["project"])
 
     def handle_output(self, context: OutputContext, obj: PandasDataFrame):
+        # dbt handling
+        if isinstance(obj, type(None)):
+            return
+            
         # ic(context.asset_key)
         dataset = self._config["dataset"]
         table = context.asset_key.path[-1]  # type: ignore

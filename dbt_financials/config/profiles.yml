@@ -1,0 +1,14 @@
+dbt_financials:
+  outputs:
+    dev:
+      dataset: warehouse
+      job_execution_timeout_seconds: 300
+      job_retries: 1
+      keyfile: /workspaces/aave-etl/.devcontainer/llama_aave_dev_service_account.json
+      location: US
+      method: service-account
+      priority: interactive
+      project: aave-dev
+      threads: 1
+      type: bigquery
+  target: dev
