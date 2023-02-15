@@ -43,9 +43,21 @@ financials_update_job = define_asset_job(
 
 financials_update_sensor = build_asset_reconciliation_sensor(
     name="financials_update_sensor",
-    asset_selection=AssetSelection.all(),
-    minimum_interval_seconds=60*30
+    asset_selection=AssetSelection.all() - AssetSelection.keys('block_numbers_by_day'),
+    minimum_interval_seconds=60*3
 )
+
+# ########################
+# # dbt config
+# ########################
+
+# DBT_PROJECT_DIR = file_relative_path(__file__, "../dbt_financials")
+# DBT_PROFILES_DIR = file_relative_path(__file__, "../dbt_financials/config")
+
+# dbt_assets = load_assets_from_dbt_project(
+#     DBT_PROJECT_DIR,
+#     io_manager_key="bq_io_manager"
+# )
 
 # check for environment variable DAGSTER_DEPLOYMENT is set to a valid value
 if 'DAGSTER_DEPLOYMENT' in os.environ and os.environ['DAGSTER_DEPLOYMENT'] in ['local_filesystem', 'local_cloud', 'prod']:
