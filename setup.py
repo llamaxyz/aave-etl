@@ -30,13 +30,15 @@ setup(
         "dagster",
         "dagster-gcp",
         "dagster-cloud",
+        "dagster-dbt",
+        "dbt-bigquery",
         "boto3",  # used by Dagster Cloud Serverless
         "pandas",
         "pandas_gbq",
         "google-auth",
         "icecream", #dev debug tool
         "requests",
-        "web3==6.0.0b6", # pin to 6.0.0b6 to avoid protobuf update in next release which clashes with dagster
+        "web3==5.31.0", # pin to 5.x to avoid protobuf interactions with google libs
         "subgrounds",  # API for accessing subgraphs easily
         "shroomdk",  # API for accessing shroom Flipside Crypto data tables via SQL
     ],
