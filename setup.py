@@ -38,9 +38,7 @@ setup(
         "google-auth",
         "icecream", #dev debug tool
         "requests",
-        "protobuf==3.20.1", 
-        # "web3==6.0.0b6", # pin to 6.0.0b6 to avoid protobuf update in next release which clashes with dagster
-        "web3==5.31.0",
+        "web3==5.31.0", # pin to 5.x to avoid protobuf interactions with google libs
         "subgrounds",  # API for accessing subgraphs easily
         "shroomdk",  # API for accessing shroom Flipside Crypto data tables via SQL
     ],
