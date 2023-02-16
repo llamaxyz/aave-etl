@@ -20,6 +20,9 @@ from financials.resources.bigquery_io_manager import bigquery_io_manager
 from dagster_gcp.gcs.io_manager import gcs_pickle_io_manager
 from dagster_gcp.gcs.resources import gcs_resource
 
+from dagster._utils import file_relative_path
+from dagster_dbt import dbt_cli_resource, load_assets_from_dbt_project
+
 from google.oauth2 import service_account
 from google.cloud import storage
 
@@ -47,18 +50,16 @@ financials_update_sensor = build_asset_reconciliation_sensor(
     minimum_interval_seconds=60*3
 )
 
-# ########################
-# # dbt config
-# ########################
+########################
+# dbt config
+########################
 
-# DBT_PROJECT_DIR = file_relative_path(__file__, "../dbt_financials")
-# DBT_PROFILES_DIR = file_relative_path(__file__, "../dbt_financials/config")
+DBT_PROJECT_DIR = file_relative_path(__file__, "../dbt_financials")
+DBT_PROFILES_DIR = file_relative_path(__file__, "../dbt_financials/config")
 
-# dbt_assets = load_assets_from_dbt_project(
-#     DBT_PROJECT_DIR,
-#     io_manager_key="bq_io_manager"
-# )
-
+########################
+# logic for dev/prod environments
+########################
 # check for environment variable DAGSTER_DEPLOYMENT is set to a valid value
 if 'DAGSTER_DEPLOYMENT' in os.environ and os.environ['DAGSTER_DEPLOYMENT'] in ['local_filesystem', 'local_cloud', 'prod']:
     dagster_deployment = os.environ['DAGSTER_DEPLOYMENT']
@@ -102,6 +103,16 @@ resource_defs = {
                 "use_service_account_file": True,
             },
         ),
+        "datamart_io_manager": bigquery_io_manager.configured(
+            {
+                "project": "aave-dev",
+                "dataset": "datamart",
+                "service_account_creds": creds_env_var,
+                "service_account_file" : creds_file,
+                "use_service_account_file": True,
+            },
+        ),
+        "dbt": dbt_cli_resource.configured({ "project_dir": DBT_PROJECT_DIR, "profiles_dir": DBT_PROFILES_DIR, "target": "dev"})
     },
     "prod": {
         "data_lake_io_manager": bigquery_io_manager.configured(
@@ -122,9 +133,25 @@ resource_defs = {
                 "use_service_account_file": False,
             },
         ),
+        "datamart_io_manager": bigquery_io_manager.configured(
+            {
+                "project": "aave-prod",
+                "dataset": "datamart",
+                "service_account_creds": creds_env_var,
+                "service_account_file" : creds_file,
+                "use_service_account_file": False,
+            },
+        ),
+        "dbt": dbt_cli_resource.configured({ "project_dir": DBT_PROJECT_DIR, "profiles_dir": DBT_PROFILES_DIR, "target": "prod"})
     },
 }
 
+
+
+dbt_assets = load_assets_from_dbt_project(
+    DBT_PROJECT_DIR,
+    io_manager_key="datamart_io_manager"
+)
 
 ####################
 # config for data lake in gcs storage buckets, not used
@@ -190,7 +217,7 @@ resource_defs = {
 
 
 defs = Definitions(
-    assets=financial_assets,
+    assets=[*financial_assets, *dbt_assets],
     # schedules=[financials_update_job_schedule]
     jobs=[financials_update_job],
     sensors=[financials_update_sensor],
