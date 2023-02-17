@@ -1,6 +1,8 @@
 # from .repository import aave
 import json
 import os
+import sys
+
 from dagster import (
     load_assets_from_modules,
     Definitions,
@@ -11,7 +13,8 @@ from dagster import (
     build_schedule_from_partitioned_job,
     build_asset_reconciliation_sensor,
     fs_io_manager,
-    ResourceDefinition
+    ResourceDefinition, 
+    ExperimentalWarning
 )
 from financials.assets import data_lake, data_warehouse
 from financials.assets.data_lake import market_day_multipartition
@@ -25,6 +28,11 @@ from dagster_dbt import dbt_cli_resource, load_assets_from_dbt_project
 
 from google.oauth2 import service_account
 from google.cloud import storage
+
+if not sys.warnoptions:
+    import warnings
+    # warnings.simplefilter("ignore")
+    warnings.filterwarnings("ignore", category=ExperimentalWarning)
 
 
 financial_assets = load_assets_from_modules(
@@ -44,11 +52,7 @@ financials_update_job = define_asset_job(
     partitions_def=market_day_multipartition
 )
 
-financials_update_sensor = build_asset_reconciliation_sensor(
-    name="financials_update_sensor",
-    asset_selection=AssetSelection.all() - AssetSelection.keys('block_numbers_by_day'),
-    minimum_interval_seconds=60*3
-)
+
 
 ########################
 # dbt config
@@ -151,6 +155,15 @@ resource_defs = {
 dbt_assets = load_assets_from_dbt_project(
     DBT_PROJECT_DIR,
     io_manager_key="datamart_io_manager"
+)
+
+# print(type(dbt_assets))
+
+
+financials_update_sensor = build_asset_reconciliation_sensor(
+    name="financials_update_sensor",
+    asset_selection=AssetSelection.all() - AssetSelection.keys('block_numbers_by_day') - AssetSelection.assets(*dbt_assets),
+    minimum_interval_seconds=60*3
 )
 
 ####################

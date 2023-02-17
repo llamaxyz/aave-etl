@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone  # , date, time, timedelta, t
 import numpy as np
 import pandas as pd
 import requests
+import sys 
 from web3 import Web3
 from web3.exceptions import BadFunctionCallOutput
 from dagster import (AssetIn,  # SourceAsset,; Output,
@@ -35,11 +36,10 @@ from financials.resources.helpers import (
     standardise_types
 )
 
-# # if not sys.warnoptions:
-# import warnings
-# with warnings.catch_warnings():
-#     warnings.filterwarnings("ignore", category=ExperimentalWarning)
-#     # warnings.simplefilter("ignore", category=ExperimentalWarning)
+if not sys.warnoptions:
+    import warnings
+    # warnings.simplefilter("ignore")
+    warnings.filterwarnings("ignore", category=ExperimentalWarning)
 
 market_day_multipartition = MultiPartitionsDefinition(
     {
