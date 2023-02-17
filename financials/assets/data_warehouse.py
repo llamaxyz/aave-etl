@@ -20,15 +20,15 @@ from financials.resources.helpers import (
 )
 
 
+if not sys.warnoptions:
+    import warnings
+    warnings.filterwarnings("ignore", category=ExperimentalWarning)
+
 from financials.assets.data_lake import (
     market_day_multipartition,
     # v3_market_day_multipartition
 )
 
-
-if not sys.warnoptions:
-    import warnings
-    warnings.filterwarnings("ignore", category=ExperimentalWarning)
 
 @asset(
     compute_kind='python',
