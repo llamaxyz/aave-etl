@@ -179,7 +179,7 @@ dbt_assets = load_assets_from_dbt_project(
 
 financials_update_sensor = build_asset_reconciliation_sensor(
     name="financials_update_sensor",
-    asset_selection=AssetSelection.all() - AssetSelection.keys('financials_data_lake/block_numbers_by_day') - AssetSelection.assets(*dbt_assets),
+    asset_selection=AssetSelection.all() - AssetSelection.keys('financials_data_lake/block_numbers_by_day'),# - AssetSelection.assets(*dbt_assets),
     minimum_interval_seconds=60*3
 )
 

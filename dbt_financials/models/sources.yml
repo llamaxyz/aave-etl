@@ -4,4 +4,12 @@ sources:
   - name: financials_data_lake
     tables:
       - name: market_tokens_by_day
-      - name: internal_external_addresses
+      # - name: internal_external_addresses
+  - name: warehouse
+    tables:
+      - name: atoken_measures_by_day
+      - name: block_by_day
+      - name: non_atoken_measures_by_day
+      - name: treasury_incentives_by_day
+      - name: user_rewards_by_day
+      
