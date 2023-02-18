@@ -1,0 +1,15 @@
+
+version: 2
+
+models:
+  # - name: aave_atokens
+  #   description: "All aave atokens with metadata"
+  #   # columns:
+  #   #   - name: id
+  #   #     description: "The primary key for this table"
+  #   #     tests:
+  #   #       - unique
+  #   #       - not_null
+  - name: int_ext
+    description: "static table"
+

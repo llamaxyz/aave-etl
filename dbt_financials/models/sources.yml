@@ -1,0 +1,7 @@
+version: 2
+
+sources:
+  - name: financials_data_lake
+    tables:
+      - name: market_tokens_by_day
+      - name: internal_external_addresses

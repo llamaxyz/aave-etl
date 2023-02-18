@@ -10,6 +10,7 @@ from dagster import (#AssetIn,  # SourceAsset,; Output,
                     #  StaticPartitionsDefinition, 
                     asset,# op,
                     #  LastPartitionMapping
+                    AssetIn
                      )
 from icecream import ic
 
@@ -35,7 +36,10 @@ from financials.assets.data_lake import (
     partitions_def=market_day_multipartition,
     group_name='data_warehouse',
     code_version="1",
-    io_manager_key = 'data_warehouse_io_manager'
+    io_manager_key = 'data_warehouse_io_manager',
+    ins={
+        "block_numbers_by_day": AssetIn(key_prefix="financials_data_lake"),
+    }
 )
 def blocks_by_day(context, block_numbers_by_day) -> pd.DataFrame:
     """
@@ -77,7 +81,14 @@ def blocks_by_day(context, block_numbers_by_day) -> pd.DataFrame:
     partitions_def=market_day_multipartition,
     group_name='data_warehouse',
     code_version="1",
-    io_manager_key = 'data_warehouse_io_manager'
+    io_manager_key = 'data_warehouse_io_manager',
+    ins={
+        "collector_atoken_balances_by_day": AssetIn(key_prefix="financials_data_lake"),
+        "collector_atoken_transfers_by_day": AssetIn(key_prefix="financials_data_lake"),
+        "v3_accrued_fees_by_day": AssetIn(key_prefix="financials_data_lake"),
+        "v3_minted_to_treasury_by_day": AssetIn(key_prefix="financials_data_lake"),
+        "internal_external_addresses": AssetIn(key_prefix="financials_data_lake"),
+    }
 )
 def atoken_measures_by_day(
             context,
@@ -204,7 +215,12 @@ def atoken_measures_by_day(
     partitions_def=market_day_multipartition,
     group_name='data_warehouse',
     code_version="1",
-    io_manager_key = 'data_warehouse_io_manager'
+    io_manager_key = 'data_warehouse_io_manager',
+    ins={
+        "non_atoken_balances_by_day": AssetIn(key_prefix="financials_data_lake"),
+        "non_atoken_transfers_by_day": AssetIn(key_prefix="financials_data_lake"),
+        "internal_external_addresses": AssetIn(key_prefix="financials_data_lake"),
+    }
 )
 def non_atoken_measures_by_day(
             context,
@@ -309,7 +325,10 @@ def non_atoken_measures_by_day(
     partitions_def=market_day_multipartition,
     group_name='data_warehouse',
     code_version="1",
-    io_manager_key = 'data_warehouse_io_manager'
+    io_manager_key = 'data_warehouse_io_manager',
+    ins={
+        "user_lm_rewards_claimed": AssetIn(key_prefix="financials_data_lake"),
+    }
 )
 def user_rewards_by_day(
             context,
@@ -357,7 +376,10 @@ def user_rewards_by_day(
     partitions_def=market_day_multipartition,
     group_name='data_warehouse',
     code_version="1",
-    io_manager_key = 'data_warehouse_io_manager'
+    io_manager_key = 'data_warehouse_io_manager',
+    ins={
+        "treasury_accrued_incentives_by_day": AssetIn(key_prefix="financials_data_lake"),
+    }
 )
 def treasury_incentives_by_day(
             context,

@@ -112,7 +112,7 @@ class BigQueryIOManager(IOManager):
                 pd.read_gbq(cleanup_query, dialect='standard')
             except pandas_gbq.exceptions.GenericGBQException as err:
                 # skip error if the table does not exist, write operation will create it
-                if not "Reason: 404 Not found: Table" in str(err):
+                if not "Reason: 404" in str(err):
                     raise pandas_gbq.exceptions.GenericGBQException(err)
 
 

@@ -129,7 +129,10 @@ def block_numbers_by_day(context) -> pd.DataFrame:
     compute_kind="python",
     group_name='data_lake',
     code_version="1",
-    io_manager_key = 'data_lake_io_manager'
+    io_manager_key = 'data_lake_io_manager',
+    ins={
+        "block_numbers_by_day": AssetIn(key_prefix="financials_data_lake"),
+    }
 )
 def market_tokens_by_day(context, block_numbers_by_day) -> pd.DataFrame: #pylint: disable=W0621
     """Table of the tokens and metadata in a market at a given block height
@@ -182,7 +185,10 @@ def market_tokens_by_day(context, block_numbers_by_day) -> pd.DataFrame: #pylint
     compute_kind="python",
     group_name='data_lake',
     code_version="1",
-    io_manager_key = 'data_lake_io_manager'
+    io_manager_key = 'data_lake_io_manager',
+    ins={
+        "market_tokens_by_day": AssetIn(key_prefix="financials_data_lake"),
+    }
 )
 def aave_oracle_prices_by_day(context, market_tokens_by_day) -> pd.DataFrame:  # type: ignore pylint: disable=W0621
     """Table of the token and aave oracle price foreacharket at each block height
@@ -290,7 +296,11 @@ def aave_oracle_prices_by_day(context, market_tokens_by_day) -> pd.DataFrame:  #
     compute_kind="python",
     group_name='data_lake',
     code_version="1",
-    io_manager_key = 'data_lake_io_manager'
+    io_manager_key = 'data_lake_io_manager',
+    ins={
+        "block_numbers_by_day": AssetIn(key_prefix="financials_data_lake"),
+        "market_tokens_by_day": AssetIn(key_prefix="financials_data_lake"),
+    }
 )
 def collector_atoken_transfers_by_day(context, market_tokens_by_day, block_numbers_by_day) -> pd.DataFrame:  # type: ignore pylint: disable=W0621
     """
@@ -368,7 +378,10 @@ def collector_atoken_transfers_by_day(context, market_tokens_by_day, block_numbe
     compute_kind="python",
     group_name='data_lake',
     code_version="1",
-    io_manager_key = 'data_lake_io_manager'
+    io_manager_key = 'data_lake_io_manager',
+    ins={
+        "block_numbers_by_day": AssetIn(key_prefix="financials_data_lake"),
+    }
 )
 def non_atoken_transfers_by_day(context, block_numbers_by_day) -> pd.DataFrame:  # type: ignore pylint: disable=W0621
     """
@@ -437,7 +450,11 @@ def non_atoken_transfers_by_day(context, block_numbers_by_day) -> pd.DataFrame: 
     compute_kind="python",
     group_name='data_lake',
     code_version="1",
-    io_manager_key = 'data_lake_io_manager'
+    io_manager_key = 'data_lake_io_manager',
+    ins={
+        "block_numbers_by_day": AssetIn(key_prefix="financials_data_lake"),
+        "market_tokens_by_day": AssetIn(key_prefix="financials_data_lake"),
+    }
 )
 def collector_atoken_balances_by_day(context, market_tokens_by_day, block_numbers_by_day) -> pd.DataFrame:  # type: ignore pylint: disable=W0621
     """
@@ -526,7 +543,10 @@ def collector_atoken_balances_by_day(context, market_tokens_by_day, block_number
     compute_kind="python", 
     group_name='data_lake',
     code_version="1",
-    io_manager_key = 'data_lake_io_manager'
+    io_manager_key = 'data_lake_io_manager',
+    ins={
+        "block_numbers_by_day": AssetIn(key_prefix="financials_data_lake"),
+    }
 )
 def non_atoken_balances_by_day(context, block_numbers_by_day) -> pd.DataFrame:  # type: ignore pylint: disable=W0621
     """
@@ -611,7 +631,10 @@ def non_atoken_balances_by_day(context, block_numbers_by_day) -> pd.DataFrame:  
     compute_kind="python", 
     group_name='data_lake',
     code_version="1",
-    io_manager_key = 'data_lake_io_manager'
+    io_manager_key = 'data_lake_io_manager',
+    ins={
+        "market_tokens_by_day": AssetIn(key_prefix="financials_data_lake"),
+    }
 
 )
 def v3_accrued_fees_by_day(context, market_tokens_by_day) -> pd.DataFrame: # type: ignore
@@ -774,7 +797,11 @@ def v3_accrued_fees_by_day(context, market_tokens_by_day) -> pd.DataFrame: # typ
     compute_kind="python",
     group_name='data_lake',
     code_version="1",
-    io_manager_key = 'data_lake_io_manager'
+    io_manager_key = 'data_lake_io_manager',
+    ins={
+        "block_numbers_by_day": AssetIn(key_prefix="financials_data_lake"),
+        "market_tokens_by_day": AssetIn(key_prefix="financials_data_lake"),
+    }
 
 )
 def v3_minted_to_treasury_by_day(context, block_numbers_by_day, market_tokens_by_day) -> pd.DataFrame:
@@ -938,7 +965,10 @@ def v3_minted_to_treasury_by_day(context, block_numbers_by_day, market_tokens_by
     compute_kind="python",
     group_name='data_lake',
     code_version="1",
-    io_manager_key = 'data_lake_io_manager'
+    io_manager_key = 'data_lake_io_manager',
+    ins={
+        "block_numbers_by_day": AssetIn(key_prefix="financials_data_lake"),
+    }
 )
 def treasury_accrued_incentives_by_day(context, block_numbers_by_day) -> pd.DataFrame:
     """
@@ -1116,7 +1146,10 @@ def treasury_accrued_incentives_by_day(context, block_numbers_by_day) -> pd.Data
     compute_kind="python",
     group_name='data_lake',
     code_version="1",
-    io_manager_key = 'data_lake_io_manager'
+    io_manager_key = 'data_lake_io_manager',
+    ins={
+        "block_numbers_by_day": AssetIn(key_prefix="financials_data_lake"),
+    }
 )
 def user_lm_rewards_claimed(context, block_numbers_by_day):
     """
@@ -1238,7 +1271,8 @@ def user_lm_rewards_claimed(context, block_numbers_by_day):
     compute_kind="python",
     group_name='data_lake',
     io_manager_key = 'data_lake_io_manager',
-    code_version="1"
+    code_version="1",
+    # key_prefix="financials_data_lake"
 )
 def internal_external_addresses(context) -> pd.DataFrame:
     """

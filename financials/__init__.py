@@ -35,10 +35,20 @@ if not sys.warnoptions:
     warnings.filterwarnings("ignore", category=ExperimentalWarning)
 
 
-financial_assets = load_assets_from_modules(
-    # modules=[financials]
-    modules=[data_lake, data_warehouse]
-    # modules=[data_lake_minimal]
+# financial_assets = load_assets_from_modules(
+#     # modules=[financials]
+#     modules=[data_lake, data_warehouse]
+#     # modules=[data_lake_minimal]
+# )
+
+financials_data_lake_assets = load_assets_from_modules(
+    modules=[data_lake],
+    key_prefix="financials_data_lake"
+)
+
+warehouse_assets = load_assets_from_modules(
+    modules=[data_warehouse],
+    key_prefix="warehouse"
 )
 
 # financials_update_job = define_asset_job(
@@ -46,11 +56,11 @@ financial_assets = load_assets_from_modules(
 #     selection=AssetSelection.keys('block_numbers_by_day')
 # )
 
-financials_update_job = define_asset_job(
-    name='financials_update_job',
-    selection=AssetSelection.keys('block_numbers_by_day'),
-    partitions_def=market_day_multipartition
-)
+# financials_update_job = define_asset_job(
+#     name='financials_update_job',
+#     selection=AssetSelection.keys('block_numbers_by_day'),
+#     partitions_def=market_day_multipartition
+# )
 
 
 
@@ -116,7 +126,13 @@ resource_defs = {
                 "use_service_account_file": True,
             },
         ),
-        "dbt": dbt_cli_resource.configured({ "project_dir": DBT_PROJECT_DIR, "profiles_dir": DBT_PROFILES_DIR, "target": "dev"})
+        "dbt": dbt_cli_resource.configured(
+            {
+                "project_dir": DBT_PROJECT_DIR,
+                "profiles_dir": DBT_PROFILES_DIR,
+                "target": "dev"
+            }
+        )
     },
     "prod": {
         "data_lake_io_manager": bigquery_io_manager.configured(
@@ -154,7 +170,8 @@ resource_defs = {
 
 dbt_assets = load_assets_from_dbt_project(
     DBT_PROJECT_DIR,
-    io_manager_key="datamart_io_manager"
+    io_manager_key="datamart_io_manager",
+    # partitions_def=market_day_multipartition
 )
 
 # print(type(dbt_assets))
@@ -162,7 +179,7 @@ dbt_assets = load_assets_from_dbt_project(
 
 financials_update_sensor = build_asset_reconciliation_sensor(
     name="financials_update_sensor",
-    asset_selection=AssetSelection.all() - AssetSelection.keys('block_numbers_by_day') - AssetSelection.assets(*dbt_assets),
+    asset_selection=AssetSelection.all() - AssetSelection.keys('financials_data_lake/block_numbers_by_day') - AssetSelection.assets(*dbt_assets),
     minimum_interval_seconds=60*3
 )
 
@@ -230,9 +247,9 @@ financials_update_sensor = build_asset_reconciliation_sensor(
 
 
 defs = Definitions(
-    assets=[*financial_assets, *dbt_assets],
+    assets=[*financials_data_lake_assets, *warehouse_assets, *dbt_assets],
     # schedules=[financials_update_job_schedule]
-    jobs=[financials_update_job],
+    # jobs=[financials_update_job],
     sensors=[financials_update_sensor],
     resources=resource_defs[dagster_deployment],
 )
