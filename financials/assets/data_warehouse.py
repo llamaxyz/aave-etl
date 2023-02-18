@@ -197,7 +197,9 @@ def atoken_measures_by_day(
             return_val['minted_amount'] = float(0)
         
         return_val = return_val.fillna(float(0))
+        return_val['chain'] = chain
         return_val = standardise_types(return_val)
+        
         
     else:
         return_val = pd.DataFrame()
@@ -307,6 +309,7 @@ def non_atoken_measures_by_day(
         # ic(return_val)
         return_val = return_val.fillna(float(0))
         return_val = standardise_types(return_val)
+        
         
     else:
         return_val = pd.DataFrame()

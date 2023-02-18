@@ -302,6 +302,7 @@ def test_atoken_measures_by_day():
                 'tokens_out_internal': 0.4,
                 'minted_to_treasury_amount': 0.00109192,
                 'minted_amount': 0.0010951,
+                'chain': 'polygon'
             }
         ]
     )
@@ -324,6 +325,7 @@ def test_atoken_measures_by_day():
                 'tokens_out_internal': float(0),
                 'minted_to_treasury_amount': float(0),
                 'minted_amount': float(0),
+                'chain': 'ethereum'
             }
         ]
     )
@@ -697,5 +699,5 @@ if __name__ == "__main__":
     # test_blocks_by_day()
     # test_non_atoken_measures_by_day()
     # test_user_rewards_by_day()
-    test_treasury_incentives_by_day()
-
+    # test_treasury_incentives_by_day()
+    test_atoken_measures_by_day()
