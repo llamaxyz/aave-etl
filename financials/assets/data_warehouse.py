@@ -475,11 +475,23 @@ def token_prices_by_day(
     market_chain = []
     for market in CONFIG_MARKETS.keys():
         chain = CONFIG_MARKETS[market]['chain']
-        market_chain.append((market, chain))
+        price_rank = CONFIG_MARKETS[market]['price_rank']
+        market_chain.append((market, chain, price_rank))
     
-    market_chain = pd.DataFrame(market_chain, columns=['market', 'chain'])
+    market_chain = pd.DataFrame(market_chain, columns=['market', 'chain', 'price_rank'])
     return_val = return_val.merge(market_chain, on='market', how='left')
 
+    # group by chain, reserve, symbol, block_day and calc the min price rank
+    min_ranks = return_val.groupby(['chain', 'reserve', 'symbol', 'block_day']).agg(
+        min_rank = ('price_rank', 'min')
+    ).reset_index()
+
+    # join the min ranks to the return val
+    return_val = return_val.merge(min_ranks, on=['chain', 'reserve', 'symbol', 'block_day'], how='left')
+
+    # filter to only the min rank
+    return_val = return_val.loc[return_val.price_rank == return_val.min_rank]
+    
     return_val = return_val[['chain', 'block_day', 'reserve', 'symbol', 'usd_price', 'pricing_source']].copy()
     return_val = return_val.drop_duplicates()
 
