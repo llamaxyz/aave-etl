@@ -77,6 +77,7 @@ class BigQueryIOManager(IOManager):
         # initialise the google client for write operations
         self.client = Client(credentials=bq_creds, project=config["project"])
 
+
     def handle_output(self, context: OutputContext, obj: PandasDataFrame):
         # dbt handling
         if isinstance(obj, type(None)):
@@ -214,8 +215,11 @@ class BigQueryIOManager(IOManager):
         dataset = self._config["dataset"]
         table = context.asset_key.path[-1]  # type: ignore
 
+        # context.has_partition_key / context.partition_key are the run partition key which is the ouput
+        # context.has_asset_partitions / context.asset_partitions_def are the asset partition key which is the input
+
         # set the partition mode and associated vars based on the partition type
-        if context.has_asset_partitions:
+        if context.has_asset_partitions and context.has_partition_key:
             if isinstance(context.asset_partitions_def, TimeWindowPartitionsDefinition):
                 partition_type = "time_window"
                 partition_key = context.asset_partition_key
