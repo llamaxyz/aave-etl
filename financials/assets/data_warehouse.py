@@ -469,7 +469,29 @@ def token_prices_by_day(
     return_val = aave_oracle_prices_by_day
     return_val['pricing_source'] = 'aave_oracle'
 
-    ic(return_val.shape)
+    # todo: add a price ranking to the config, put logic in here to pick the best price rank
+    # authoritative_markets = ['ethereum_v3','polygon_v3','arbitrum_v3','optimism_v3','fantom_v3','avalanche_v3']
+
+    market_chain = []
+    for market in CONFIG_MARKETS.keys():
+        chain = CONFIG_MARKETS[market]['chain']
+        market_chain.append((market, chain))
+    
+    market_chain = pd.DataFrame(market_chain, columns=['market', 'chain'])
+    return_val = return_val.merge(market_chain, on='market', how='left')
+
+    return_val = return_val[['chain', 'block_day', 'reserve', 'symbol', 'usd_price', 'pricing_source']].copy()
+    return_val = return_val.drop_duplicates()
+
+    return_val = standardise_types(return_val)
+
+    # ic(return_val.shape)
+    context.add_output_metadata(
+        {
+            "num_records": len(return_val),
+            "preview": MetadataValue.md(return_val.head().to_markdown()),
+        }
+    )
 
     return return_val
 
