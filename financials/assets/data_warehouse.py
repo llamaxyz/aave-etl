@@ -10,6 +10,8 @@ from dagster import (#AssetIn,  # SourceAsset,; Output,
                     #  StaticPartitionsDefinition, 
                     asset,# op,
                     #  LastPartitionMapping
+                    AllPartitionMapping,
+                    IdentityPartitionMapping,
                     AssetIn
                      )
 from icecream import ic
@@ -432,6 +434,45 @@ def treasury_incentives_by_day(
     )
 
     return return_val
+
+
+@asset(
+    compute_kind='python',
+    # partitions_def=market_day_multipartition,
+    group_name='data_warehouse',
+    code_version="1",
+    io_manager_key = 'data_warehouse_io_manager',
+    ins={
+        "aave_oracle_prices_by_day": AssetIn(
+            key_prefix="financials_data_lake",
+            # partition_mapping=AllPartitionMapping()
+            ),
+    }
+)
+def token_prices_by_day(
+            context,
+            aave_oracle_prices_by_day
+            ) -> pd.DataFrame:
+    """
+    Returns the prices of all tokens on the day, collated from the Aave oracle
+      and other sources
+
+
+    Args:
+        context: dagster context object
+        aave_oracle_prices_by_day: the output of aave_oracle_prices_by_day
+
+    Returns:
+        A dataframe with a row for each reserve token on the day with usd pricing
+
+    """
+    return_val = aave_oracle_prices_by_day
+    return_val['pricing_source'] = 'aave_oracle'
+
+    ic(return_val.shape)
+
+    return return_val
+
 
 if __name__ == "__main__":
     # test_blocks_by_day()
