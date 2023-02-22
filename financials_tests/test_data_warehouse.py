@@ -13,7 +13,8 @@ from financials.assets.data_warehouse import (
     atoken_measures_by_day,
     non_atoken_measures_by_day,
     user_rewards_by_day,
-    treasury_incentives_by_day
+    treasury_incentives_by_day,
+    token_prices_by_day
     )
 from financials.financials_config import *  # pylint: disable=wildcard-import, unused-wildcard-import
 
@@ -24,8 +25,6 @@ from financials.resources.helpers import (
 def test_blocks_by_day():
     """
     tests the blocks by day data warehouse table asset
-    etherum_v2 is block_table_master
-    polygon_v3 is not block_table_master
 
     """
 
@@ -36,14 +35,8 @@ def test_blocks_by_day():
         }
     )  # type: ignore
 
-    pkey_pol = MultiPartitionKey(
-        {
-            "date": '2022-11-26',
-            "market": 'polygon_v3'
-        }
-    )  # type: ignore
     context_eth = build_op_context(partition_key=pkey_eth)
-    context_pol = build_op_context(partition_key=pkey_pol)
+
 
     block_numbers_by_day_sample_output_eth = pd.DataFrame(
         [
@@ -54,25 +47,20 @@ def test_blocks_by_day():
                 'end_block': 16057596,
                 'chain': 'ethereum',
                 'market': 'ethereum_v2',
-            }
-        ]
-    )
-
-    block_numbers_by_day_sample_output_pol = pd.DataFrame(
-        [
+            },
             {
                 'block_day': datetime(2022,11,26,0,0,0),
-                'block_time': datetime(2022,11,26,0,0,1),
-                'block_height': 38527699,
-                'end_block': 38567207,
-                'chain': 'polygon',
-                'market': 'polygon_v3',
-            }
+                'block_time': datetime(2022,11,26,0,0,11),
+                'block_height': 16050438,
+                'end_block': 16057596,
+                'chain': 'ethereum',
+                'market': 'ethereum_v1',
+            },
         ]
     )
 
+    
     block_numbers_by_day_sample_output_eth = standardise_types(block_numbers_by_day_sample_output_eth)
-    block_numbers_by_day_sample_output_pol = standardise_types(block_numbers_by_day_sample_output_pol)
 
     expected_eth = pd.DataFrame(
         [
@@ -86,13 +74,12 @@ def test_blocks_by_day():
         ]
     )
     expected_eth = standardise_types(expected_eth)
-    expected_pol = pd.DataFrame()
 
     result_eth = blocks_by_day(context_eth, block_numbers_by_day_sample_output_eth)
-    result_pol = blocks_by_day(context_pol, block_numbers_by_day_sample_output_pol)
+
 
     assert_frame_equal(result_eth, expected_eth, check_exact=True)
-    assert_frame_equal(result_pol, expected_pol, check_exact=True)
+
 
 
 def test_atoken_measures_by_day():
@@ -295,6 +282,7 @@ def test_atoken_measures_by_day():
                 'block_height': 38249632,
                 'block_day': datetime(2023,1,19,0,0,0),
                 'balance': 0.438996,
+                'chain': 'polygon',                
                 'accrued_fees': 0.00071708,
                 'tokens_in_external': 0.1,
                 'tokens_in_internal': 0.2,
@@ -302,7 +290,7 @@ def test_atoken_measures_by_day():
                 'tokens_out_internal': 0.4,
                 'minted_to_treasury_amount': 0.00109192,
                 'minted_amount': 0.0010951,
-                'chain': 'polygon'
+
             }
         ]
     )
@@ -318,6 +306,7 @@ def test_atoken_measures_by_day():
                 'block_height': 16515917,
                 'block_day': datetime(2023,1,30,0,0,0),
                 'balance': 97.5636,
+                'chain': 'ethereum',
                 'accrued_fees': float(0),
                 'tokens_in_external': float(0),
                 'tokens_in_internal': float(0),
@@ -325,7 +314,7 @@ def test_atoken_measures_by_day():
                 'tokens_out_internal': float(0),
                 'minted_to_treasury_amount': float(0),
                 'minted_amount': float(0),
-                'chain': 'ethereum'
+
             }
         ]
     )
@@ -693,11 +682,62 @@ def test_treasury_incentives_by_day():
     assert_frame_equal(result_eth, expected_eth, check_exact=True)
     assert_frame_equal(result_pol, pd.DataFrame(), check_exact=True)
 
+def test_token_prices_by_day():
+    """
+    Tests the table with token prices data
+    """
+
+    context = build_op_context()
+    
+    token_prices_eth_sample = pd.DataFrame(
+        {
+            "reserve": {
+                0: "0x2f2a2543b76a4166549f7aab2e75bef0aefc5b0f",
+                1: "0x2f2a2543b76a4166549f7aab2e75bef0aefc5b0f",
+            },
+            "symbol": {0: "WETH", 1: "WETH"},
+            "market": {0: "polygon_v2", 1: "polygon_v3"},
+            "block_height": {0: 41220510, 1: 41220510},
+            "block_day": {
+                0: datetime(2022, 11, 26, 0, 0, 0),
+                1: datetime(2022, 11, 26, 0, 0, 0),
+            },
+            "usd_price": {0: 16505.23772028, 1: 16505.0},
+        }
+    )
+    token_prices_eth_sample = standardise_types(token_prices_eth_sample)
+
+    expected = pd.DataFrame(
+        [
+            { 
+                "block_day":  datetime(2022, 11, 26, 0, 0, 0),
+                "chain": "polygon",
+                "reserve": "0x2f2a2543b76a4166549f7aab2e75bef0aefc5b0f",
+                "symbol": "WETH",
+                "usd_price": 16505.0,
+                "pricing_source": "aave_oracle"
+            },
+        ]
+    )
+
+    expected = standardise_types(expected)
+
+    result = token_prices_by_day(context, token_prices_eth_sample)
+    ic(expected)
+    ic(result)
+
+    assert_frame_equal(result, expected, check_exact=True)
+
+
+
+
 
 
 if __name__ == "__main__":
     # test_blocks_by_day()
+    # test_atoken_measures_by_day()
     # test_non_atoken_measures_by_day()
     # test_user_rewards_by_day()
-    # test_treasury_incentives_by_day()
-    test_atoken_measures_by_day()
+    test_treasury_incentives_by_day()
+    # test_atoken_measures_by_day()
+    # test_token_prices_by_day()

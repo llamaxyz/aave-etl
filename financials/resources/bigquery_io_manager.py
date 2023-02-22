@@ -288,4 +288,5 @@ class BigQueryIOManager(IOManager):
         return f"""WHERE _dagster_partition_time BETWEEN '{start_dt.strftime(BIGQUERY_DATETIME_FORMAT)}' AND '{end_dt.strftime(BIGQUERY_DATETIME_FORMAT)}'"""
 
 if __name__ == '__main__':
-    initialise_pandas_gbq()
+    # initialise_pandas_gbq()
+    pass

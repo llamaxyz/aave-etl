@@ -35,7 +35,7 @@ from financials.assets.data_lake import (
 
 @asset(
     compute_kind='python',
-    partitions_def=market_day_multipartition,
+    # partitions_def=market_day_multipartition,
     group_name='data_warehouse',
     code_version="1",
     io_manager_key = 'data_warehouse_io_manager',
@@ -58,16 +58,18 @@ def blocks_by_day(context, block_numbers_by_day) -> pd.DataFrame:
         A dataframe with the block details for the master chain only
 
     """
-    date, market = context.partition_key.split("|")
-    context.log.info(f"market: {market}")
-    context.log.info(f"date: {date}")
+    # date, market = context.partition_key.split("|")
+    # context.log.info(f"market: {market}")
+    # context.log.info(f"date: {date}")
     
-    is_master = CONFIG_MARKETS[market]['block_table_master']
+    # is_master = CONFIG_MARKETS[market]['block_table_master']
     
-    if is_master:
-        return_val = block_numbers_by_day[['block_day','block_time','block_height','end_block','chain']]
-    else:
-        return_val = pd.DataFrame()
+    # if is_master:
+    #     return_val = block_numbers_by_day[['block_day','block_time','block_height','end_block','chain']]
+    # else:
+    #     return_val = pd.DataFrame()
+
+    return_val = block_numbers_by_day[['block_day','block_time','block_height','end_block','chain']].drop_duplicates()
 
     context.add_output_metadata(
         {
@@ -80,7 +82,7 @@ def blocks_by_day(context, block_numbers_by_day) -> pd.DataFrame:
 
 @asset(
     compute_kind='python',
-    partitions_def=market_day_multipartition,
+    # partitions_def=market_day_multipartition,
     group_name='data_warehouse',
     code_version="1",
     io_manager_key = 'data_warehouse_io_manager',
@@ -116,13 +118,23 @@ def atoken_measures_by_day(
         joined to the atoken metadata.  Non existing measures are set to 0
 
     """
-    date, market = context.partition_key.split("|")
-    context.log.info(f"market: {market}")
-    context.log.info(f"date: {date}")
-    chain = CONFIG_MARKETS[market]['chain']
+    # date, market = context.partition_key.split("|")
+    # context.log.info(f"market: {market}")
+    # context.log.info(f"date: {date}")
+    # chain = CONFIG_MARKETS[market]['chain']
+
+    mc = []
+    for market in CONFIG_MARKETS.keys():
+        mc.append([market, CONFIG_MARKETS[market]['chain']])
+    mc = pd.DataFrame(mc, columns=['market','chain'])
+
 
     return_val = collector_atoken_balances_by_day
+    
+
     if not return_val.empty:
+        return_val = return_val.merge(mc, how='left')
+
         if not v3_accrued_fees_by_day.empty:
             v3_accrued_fees_by_day = v3_accrued_fees_by_day[['market','atoken','atoken_symbol','block_height','block_day','accrued_fees']].copy()
             v3_accrued_fees_by_day.rename(columns={'atoken':'token','atoken_symbol':'symbol'}, inplace=True)
@@ -138,9 +150,11 @@ def atoken_measures_by_day(
             # transfers need to be classified as internal/external and aggregated to day level
             transfers = collector_atoken_transfers_by_day.copy()
             transfers.columns = transfers.columns.str.replace('transfers_','')
+            transfers = transfers.merge(mc, how='left')
 
             transfers = transfers[[
                     'market',
+                    'chain',
                     'collector',
                     'transfer_type',
                     'from_address',
@@ -155,8 +169,8 @@ def atoken_measures_by_day(
             # classify transfers as internal or external
             transfers_in = transfers.loc[transfers['transfer_type']=='IN']
             transfers_out = transfers.loc[transfers['transfer_type']=='OUT']
-            transfer_class = internal_external_addresses.loc[internal_external_addresses['chain']==chain]
-            transfer_class = transfer_class[['contract_address','internal_external']].copy()
+            # transfer_class = internal_external_addresses.loc[internal_external_addresses['chain']==chain]
+            transfer_class = internal_external_addresses[['chain','contract_address','internal_external']].copy()
 
             if not transfers_in.empty:
                     transfer_class_in = transfer_class.rename(columns={'contract_address':'from_address'})
@@ -169,6 +183,7 @@ def atoken_measures_by_day(
             transfers = pd.concat([transfers_in, transfers_out])
             transfers.internal_external.fillna('aave_external', inplace=True)
             
+
             # create columns for internal and external transfers
             transfers['tokens_in_external'] = np.where((transfers['internal_external']=='aave_external') & (transfers['transfer_type'] == 'IN'), transfers['amount_transferred'], float(0))
             transfers['tokens_in_internal'] = np.where((transfers['internal_external']=='aave_internal') & (transfers['transfer_type'] == 'IN'), transfers['amount_transferred'], float(0))
@@ -177,8 +192,8 @@ def atoken_measures_by_day(
                        
 
             # aggregate transfers to collector
-            transfers = transfers[['market','collector','block_day','tokens_in_external','tokens_in_internal','tokens_out_external','tokens_out_internal']]
-            transfers = transfers.groupby(['market','collector','block_day']).sum().reset_index() 
+            transfers = transfers[['market','chain','collector','block_day','token','symbol','tokens_in_external','tokens_in_internal','tokens_out_external','tokens_out_internal']]
+            transfers = transfers.groupby(['market','chain','collector','token','symbol','block_day']).sum().reset_index() 
 
             # join transfers to main table
             return_val = return_val.merge(transfers, how='left')
@@ -199,13 +214,16 @@ def atoken_measures_by_day(
             return_val['minted_amount'] = float(0)
         
         return_val = return_val.fillna(float(0))
-        return_val['chain'] = chain
-        return_val = standardise_types(return_val)
+        # return_val['chain'] = chain
+        # return_val = standardise_types(return_val)
         
         
     else:
         return_val = pd.DataFrame()
     
+    
+    return_val = standardise_types(return_val)
+
     context.add_output_metadata(
         {
             "num_records": len(return_val),
@@ -216,7 +234,7 @@ def atoken_measures_by_day(
 
 @asset(
     compute_kind='python',
-    partitions_def=market_day_multipartition,
+    # partitions_def=market_day_multipartition,
     group_name='data_warehouse',
     code_version="1",
     io_manager_key = 'data_warehouse_io_manager',
@@ -246,21 +264,28 @@ def non_atoken_measures_by_day(
         joined to the token metadata.  Non existing measures are set to 0
 
     """
-    date, market = context.partition_key.split("|")
-    context.log.info(f"market: {market}")
-    context.log.info(f"date: {date}")
-    chain = CONFIG_MARKETS[market]['chain']
+    # date, market = context.partition_key.split("|")
+    # context.log.info(f"market: {market}")
+    # context.log.info(f"date: {date}")
+    # chain = CONFIG_MARKETS[market]['chain']
+
+    mc = []
+    for market in CONFIG_MARKETS.keys():
+        mc.append([market, CONFIG_MARKETS[market]['chain']])
+    mc = pd.DataFrame(mc, columns=['market','chain'])
 
     return_val = non_atoken_balances_by_day
     if not return_val.empty:
-        
+        return_val = return_val.merge(mc, how='left')
         if not non_atoken_transfers_by_day.empty:
             # transfers need to be classified as internal/external and aggregated to day level
             transfers = non_atoken_transfers_by_day.copy()
             transfers.columns = transfers.columns.str.replace('transfers_','')
+            transfers = transfers.merge(mc, how='left')
 
             transfers = transfers[[
                     'market',
+                    'chain',
                     'collector',
                     'transfer_type',
                     'from_address',
@@ -275,8 +300,8 @@ def non_atoken_measures_by_day(
             # classify transfers as internal or external
             transfers_in = transfers.loc[transfers['transfer_type']=='IN']
             transfers_out = transfers.loc[transfers['transfer_type']=='OUT']
-            transfer_class = internal_external_addresses.loc[internal_external_addresses['chain']==chain]
-            transfer_class = transfer_class[['contract_address','internal_external']].copy()
+            # transfer_class = internal_external_addresses.loc[internal_external_addresses['chain']==chain]
+            transfer_class = internal_external_addresses[['chain','contract_address','internal_external']].copy()
 
             if not transfers_in.empty:
                     transfer_class_in = transfer_class.rename(columns={'contract_address':'from_address'})
@@ -297,8 +322,8 @@ def non_atoken_measures_by_day(
                        
 
             # aggregate transfers to collector
-            transfers = transfers[['market','contract_address','block_day','tokens_in_external','tokens_in_internal','tokens_out_external','tokens_out_internal']]
-            transfers = transfers.groupby(['market','contract_address','block_day']).sum().reset_index() 
+            transfers = transfers[['market','chain','contract_address','block_day','tokens_in_external','tokens_in_internal','tokens_out_external','tokens_out_internal']]
+            transfers = transfers.groupby(['market','chain','contract_address','block_day']).sum().reset_index() 
 
             # join transfers to main table
             return_val = return_val.merge(transfers, how='left')
@@ -310,11 +335,13 @@ def non_atoken_measures_by_day(
             return_val['tokens_out_internal'] = float(0)
         # ic(return_val)
         return_val = return_val.fillna(float(0))
-        return_val = standardise_types(return_val)
+        
         
         
     else:
         return_val = pd.DataFrame()
+    
+    return_val = standardise_types(return_val)
     
     context.add_output_metadata(
         {
@@ -327,7 +354,7 @@ def non_atoken_measures_by_day(
 
 @asset(
     compute_kind='python',
-    partitions_def=market_day_multipartition,
+    # partitions_def=market_day_multipartition,
     group_name='data_warehouse',
     code_version="1",
     io_manager_key = 'data_warehouse_io_manager',
@@ -352,10 +379,10 @@ def user_rewards_by_day(
         joined to the token metadata.  Non existing measures are set to 0
 
     """
-    date, market = context.partition_key.split("|")
-    context.log.info(f"market: {market}")
-    context.log.info(f"date: {date}")
-    chain = CONFIG_MARKETS[market]['chain']
+    # date, market = context.partition_key.split("|")
+    # context.log.info(f"market: {market}")
+    # context.log.info(f"date: {date}")
+    # chain = CONFIG_MARKETS[market]['chain']
 
     if not user_lm_rewards_claimed.empty:
         return_val = user_lm_rewards_claimed
@@ -378,7 +405,7 @@ def user_rewards_by_day(
 
 @asset(
     compute_kind='python',
-    partitions_def=market_day_multipartition,
+    # partitions_def=market_day_multipartition,
     group_name='data_warehouse',
     code_version="1",
     io_manager_key = 'data_warehouse_io_manager',
@@ -403,10 +430,10 @@ def treasury_incentives_by_day(
         joined to the token metadata.  Non existing measures are set to 0
 
     """
-    date, market = context.partition_key.split("|")
-    context.log.info(f"market: {market}")
-    context.log.info(f"date: {date}")
-    chain = CONFIG_MARKETS[market]['chain']
+    # date, market = context.partition_key.split("|")
+    # context.log.info(f"market: {market}")
+    # context.log.info(f"date: {date}")
+    # chain = CONFIG_MARKETS[market]['chain']
 
     if not treasury_accrued_incentives_by_day.empty:
         return_val = treasury_accrued_incentives_by_day[[
@@ -469,9 +496,6 @@ def token_prices_by_day(
     return_val = aave_oracle_prices_by_day
     return_val['pricing_source'] = 'aave_oracle'
 
-    # todo: add a price ranking to the config, put logic in here to pick the best price rank
-    # authoritative_markets = ['ethereum_v3','polygon_v3','arbitrum_v3','optimism_v3','fantom_v3','avalanche_v3']
-
     market_chain = []
     for market in CONFIG_MARKETS.keys():
         chain = CONFIG_MARKETS[market]['chain']
@@ -491,9 +515,9 @@ def token_prices_by_day(
 
     # filter to only the min rank
     return_val = return_val.loc[return_val.price_rank == return_val.min_rank]
-    
-    return_val = return_val[['chain', 'block_day', 'reserve', 'symbol', 'usd_price', 'pricing_source']].copy()
-    return_val = return_val.drop_duplicates()
+
+    return_val = return_val[['block_day', 'chain', 'reserve', 'symbol', 'usd_price', 'pricing_source']].copy()
+    return_val = return_val.drop_duplicates().reset_index(drop=True)
 
     return_val = standardise_types(return_val)
 
