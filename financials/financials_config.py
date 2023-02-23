@@ -14,7 +14,7 @@ OPTIMISM_ALCHEMY_KEY = os.environ['OPTIMISM_ALCHEMY_KEY']
 ARBITRUM_ALCHEMY_KEY = os.environ['ARBITRUM_ALCHEMY_KEY']
 FLIPSIDE_API_KEY = os.environ['FLIPSIDE_API_KEY']
 
- # a minimal ERC20 ABI supporting balanceOf and decimals
+ # a minimal ERC20 ABI supporting balanceOf, scaledBalanceOf, symbol and decimals
 ERC20_ABI = [
         {
             "constant": "true",
@@ -28,6 +28,25 @@ ERC20_ABI = [
             "outputs": [
             {
                 "name": "balance",
+                "type": "uint256"
+            }
+            ],
+            "payable": "false",
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "constant": "true",
+            "inputs": [
+            {
+                "name": "owner",
+                "type": "address"
+            }
+            ],
+            "name": "scaledBalanceOf",
+            "outputs": [
+            {
+                "name": "scaledBalance",
                 "type": "uint256"
             }
             ],

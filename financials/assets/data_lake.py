@@ -32,6 +32,7 @@ from financials.resources.helpers import (
     get_market_tokens_at_block_aave,
     get_token_transfers_from_covalent,
     get_erc20_balance_of,
+    get_scaled_balance_of,
     get_events_by_topic_hash_from_covalent,
     standardise_types
 )
@@ -512,6 +513,14 @@ def collector_atoken_balances_by_day(context, market_tokens_by_day, block_number
                 chain,
                 block_height
             )
+
+            row_scaled_balance = get_scaled_balance_of(
+                collector,
+                token,
+                decimals,
+                chain,
+                block_height
+            )
         
             output_row = {
                         'collector': collector, 
@@ -520,7 +529,8 @@ def collector_atoken_balances_by_day(context, market_tokens_by_day, block_number
                         'symbol': symbol,
                         'block_height': block_height, 
                         'block_day': partition_datetime.replace(tzinfo=timezone.utc),
-                        'balance': row_balance
+                        'balance': row_balance,
+                        'scaled_balance': row_scaled_balance
                     }
 
             balance_row = pd.DataFrame(output_row, index=[0])
@@ -1226,7 +1236,7 @@ def user_lm_rewards_claimed(context, block_numbers_by_day):
                 , '{market}' as market
                 , case 
                     when reward_vault = 'incentives_controller' then '0xd784927ff2f95ba542bfc824c8a8a98f3495f6b5'
-                    when reward_vault = 'ecosystem_reserve' then '0x464c71f6c2f760dda6093dcb91c24c39e5d6e18c'
+                    when reward_vault = 'ecosystem_reserve' then '0x25f2226b597e8f9514b3f68f00f494cf4f286491'
                   end as vault_address
                 , reward_vault
                 , lower('0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9') as token_address

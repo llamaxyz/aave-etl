@@ -523,6 +523,10 @@ def test_collector_atoken_balances_by_day():
             "balance":{
                 0:6383512.575754,
                 1:641.9904367553161
+            },
+            "scaled_balance":{
+                0:5914432.381422,
+                1:631.197027
             }
         }
     )
@@ -1033,13 +1037,13 @@ if __name__ == "__main__":
     # test_aave_oracle_prices_table()
     # test_market_tokens_table()
     # test_non_atoken_transfers_by_day()
-    # test_collector_atoken_balances_by_day()
+    test_collector_atoken_balances_by_day()
     # test_non_atoken_balances_by_day()
     # test_v3_accrued_fees_by_day()
     # test_v3_minted_to_treasury_by_day()
     # test_treasury_accrued_incentives()
     # test_user_lm_rewards_claimed()
-    test_internal_external_addresses()
+    # test_internal_external_addresses()
     # test_collector_atoken_transfers_by_day()
     
     # pass

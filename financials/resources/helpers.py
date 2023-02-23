@@ -274,6 +274,43 @@ def get_erc20_balance_of(
 
     return balance
 
+def get_scaled_balance_of(
+                address: str,
+                token: str,
+                token_decimals: int,
+                chain: str,
+                block_height: int = 0
+                ) -> float:
+    """
+    Uses web3.py to get the balance of an ERC20 token for a given address
+
+    Assumes an aave atoken token with a scaledBalanceOf function
+
+    Args:
+        address: wallet address to find the balance for
+        token: token address to find the balance of
+        token_decimals: already in the database so passed in to save an RPC call
+        chain: string from CONFIG_CHAINS
+
+    Returns:
+        float: balance of the token for the address, decimals adjusted
+
+
+    """    
+       
+    #initialise Web3 and token contract
+    w3 = Web3(Web3.HTTPProvider(CONFIG_CHAINS[chain]['web3_rpc_url']))
+    token_contract = w3.eth.contract(address=Web3.toChecksumAddress(token), abi=ERC20_ABI)
+
+    if block_height > 0:
+        balance_raw = token_contract.functions.scaledBalanceOf(Web3.toChecksumAddress(address)).call(block_identifier=int(block_height))
+    else:
+        balance_raw = token_contract.functions.scaledBalanceOf(Web3.toChecksumAddress(address)).call()
+
+    balance = balance_raw / pow(10, token_decimals)
+
+    return balance
+
     
 def get_events_by_topic_hash_from_covalent(start_block: int,
                              end_block: int,
