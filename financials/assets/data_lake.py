@@ -497,6 +497,7 @@ def collector_atoken_balances_by_day(context, market_tokens_by_day, block_number
     for collector in collectors:
         for row in market_tokens_by_day.itertuples():
             # ic(row)
+
             if market == 'ethereum_v1':
                 token = row.reserve
                 decimals = row.decimals
@@ -505,6 +506,7 @@ def collector_atoken_balances_by_day(context, market_tokens_by_day, block_number
                 token = row.atoken
                 decimals = row.atoken_decimals
                 symbol = row.atoken_symbol
+                
 
             row_balance = get_erc20_balance_of(
                 collector,
@@ -514,13 +516,16 @@ def collector_atoken_balances_by_day(context, market_tokens_by_day, block_number
                 block_height
             )
 
-            row_scaled_balance = get_scaled_balance_of(
-                collector,
-                token,
-                decimals,
-                chain,
-                block_height
-            )
+            if market == 'ethereum_v1':
+                row_scaled_balance = row_balance
+            else:
+                row_scaled_balance = get_scaled_balance_of(
+                    collector,
+                    token,
+                    decimals,
+                    chain,
+                    block_height
+                )
         
             output_row = {
                         'collector': collector, 
