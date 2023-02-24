@@ -24,11 +24,7 @@ from dagster_gcp.gcs.io_manager import gcs_pickle_io_manager
 from dagster_gcp.gcs.resources import gcs_resource
 
 from dagster._utils import file_relative_path
-<<<<<<< HEAD
-# from dagster_dbt import dbt_cli_resource, load_assets_from_dbt_project
-=======
 from dagster_dbt import dbt_cli_resource, load_assets_from_dbt_project
->>>>>>> dbt_install
 
 from google.oauth2 import service_account
 from google.cloud import storage
@@ -66,25 +62,6 @@ warehouse_assets = load_assets_from_modules(
 #     partitions_def=market_day_multipartition
 # )
 
-<<<<<<< HEAD
-financials_update_sensor = build_asset_reconciliation_sensor(
-    name="financials_update_sensor",
-    asset_selection=AssetSelection.all() - AssetSelection.keys('block_numbers_by_day'),
-    minimum_interval_seconds=60*3
-)
-
-# ########################
-# # dbt config
-# ########################
-
-# DBT_PROJECT_DIR = file_relative_path(__file__, "../dbt_financials")
-# DBT_PROFILES_DIR = file_relative_path(__file__, "../dbt_financials/config")
-
-# dbt_assets = load_assets_from_dbt_project(
-#     DBT_PROJECT_DIR,
-#     io_manager_key="bq_io_manager"
-# )
-=======
 
 
 ########################
@@ -93,7 +70,6 @@ financials_update_sensor = build_asset_reconciliation_sensor(
 
 DBT_PROJECT_DIR = file_relative_path(__file__, "../dbt_financials")
 DBT_PROFILES_DIR = file_relative_path(__file__, "../dbt_financials/config")
->>>>>>> dbt_install
 
 ########################
 # logic for dev/prod environments
