@@ -1,5 +1,4 @@
--- PK is collector contract & token address and day
--- union of atoken & non atoken tables
+{{ config(materialized='table') }}
 
 -- bring together the atokens * non-atokens into one table
 with token_measures as (
@@ -19,7 +18,8 @@ select
   , tokens_out_internal
   , minted_to_treasury_amount
   , minted_amount
-from warehouse.atoken_measures_by_day
+-- from warehouse.atoken_measures_by_day
+from  {{ source('warehouse','atoken_measures_by_day')}}
 union all
 select
   contract_address as collector
@@ -37,7 +37,7 @@ select
   , tokens_out_internal
   , 0 as minted_to_treasury_amount
   , 0 as minted_amount
-from warehouse.non_atoken_measures_by_day
+from  {{ source('warehouse','non_atoken_measures_by_day')}}
 )
 
 -- add underlying reserve to join pricing
@@ -61,7 +61,8 @@ select
   , t.minted_to_treasury_amount
   , t.minted_amount
 from token_measures t 
-  left join datamart.aave_atokens a on (t.token = a.atoken and t.chain = a.chain)
+  -- left join datamart.aave_atokens a on (t.token = a.atoken and t.chain = a.chain)
+  left join {{ref('aave_atokens')}} a on (t.token = a.atoken and t.chain = a.chain)
 )
 
 , balances_prices as (
@@ -96,8 +97,6 @@ select
 from token_measures_reserves t 
   left join financials_data_lake.aave_oracle_prices_by_day p on (t.underlying_reserve = p.reserve and t.block_day = p.block_day and t.market = p.market)
   left join warehouse.user_rewards_by_day r on (t.market = r.market and t.block_day = r.block_day and t.collector = r.vault_address and t.token = r.token_address)
--- where t.symbol = 'AAVE'
--- order by t.market, t.token, t.collector, t.block_day
 )
 
 , token_level_calcs_staging as (
@@ -294,8 +293,10 @@ select
   , d.display_chain
   , d.display_name
 from long_format l
-  left join financials_data_lake.tx_classification t on (l.measure = t.measure)
-  left join financials_data_lake.display_names d on (l.collector = d.collector and l.chain = d.chain and l.market = d.market)
+  -- left join financials_data_lake.tx_classification t on (l.measure = t.measure)
+  -- left join financials_data_lake.display_names d on (l.collector = d.collector and l.chain = d.chain and l.market = d.market)
+  left join {{ source('financials_data_lake','tx_classification')}} t on (l.measure = t.measure)
+  left join {{ source('financials_data_lake','display_names')}} d on (l.collector = d.collector and l.chain = d.chain and l.market = d.market)
 where t.measure_type is not null
 order by display_chain, display_name, block_day, symbol
 

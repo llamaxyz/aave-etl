@@ -5,6 +5,8 @@ sources:
     tables:
       - name: market_tokens_by_day
       - name: block_numbers_by_day
+      - name: tx_classification
+      - name: display_names
       # - name: internal_external_addresses
   - name: warehouse
     tables:
