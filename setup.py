@@ -38,7 +38,10 @@ setup(
         "google-auth",
         "icecream", #dev debug tool
         "requests",
+<<<<<<< HEAD
         "web3==5.31.0", # pin to 5.x to avoid protobuf interactions with google libs
+=======
+>>>>>>> dbt_install
         "subgrounds",  # API for accessing subgraphs easily
         "shroomdk",  # API for accessing shroom Flipside Crypto data tables via SQL
     ],

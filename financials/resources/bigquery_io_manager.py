@@ -77,7 +77,12 @@ class BigQueryIOManager(IOManager):
         # initialise the google client for write operations
         self.client = Client(credentials=bq_creds, project=config["project"])
 
+
     def handle_output(self, context: OutputContext, obj: PandasDataFrame):
+        # dbt handling
+        if isinstance(obj, type(None)):
+            return
+            
         # ic(context.asset_key)
         dataset = self._config["dataset"]
         table = context.asset_key.path[-1]  # type: ignore
@@ -108,7 +113,7 @@ class BigQueryIOManager(IOManager):
                 pd.read_gbq(cleanup_query, dialect='standard')
             except pandas_gbq.exceptions.GenericGBQException as err:
                 # skip error if the table does not exist, write operation will create it
-                if not "Reason: 404 Not found: Table" in str(err):
+                if not "Reason: 404" in str(err):
                     raise pandas_gbq.exceptions.GenericGBQException(err)
 
 
@@ -178,7 +183,7 @@ class BigQueryIOManager(IOManager):
                 TableSchema(
                     columns=[
                         TableColumn(name=name, type=str(dtype))
-                        for name, dtype in obj.dtypes.iteritems()
+                        for name, dtype in obj.dtypes.items() 
                     ]
                 )
             ),
@@ -210,8 +215,11 @@ class BigQueryIOManager(IOManager):
         dataset = self._config["dataset"]
         table = context.asset_key.path[-1]  # type: ignore
 
+        # context.has_partition_key / context.partition_key are the run partition key which is the ouput
+        # context.has_asset_partitions / context.asset_partitions_def are the asset partition key which is the input
+
         # set the partition mode and associated vars based on the partition type
-        if context.has_asset_partitions:
+        if context.has_asset_partitions and context.has_partition_key:
             if isinstance(context.asset_partitions_def, TimeWindowPartitionsDefinition):
                 partition_type = "time_window"
                 partition_key = context.asset_partition_key
@@ -280,4 +288,5 @@ class BigQueryIOManager(IOManager):
         return f"""WHERE _dagster_partition_time BETWEEN '{start_dt.strftime(BIGQUERY_DATETIME_FORMAT)}' AND '{end_dt.strftime(BIGQUERY_DATETIME_FORMAT)}'"""
 
 if __name__ == '__main__':
-    initialise_pandas_gbq()
+    # initialise_pandas_gbq()
+    pass

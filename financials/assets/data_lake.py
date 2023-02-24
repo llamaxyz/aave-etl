@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone  # , date, time, timedelta, t
 import numpy as np
 import pandas as pd
 import requests
+import sys 
 from web3 import Web3
 from web3.exceptions import BadFunctionCallOutput
 from dagster import (AssetIn,  # SourceAsset,; Output,
@@ -31,15 +32,15 @@ from financials.resources.helpers import (
     get_market_tokens_at_block_aave,
     get_token_transfers_from_covalent,
     get_erc20_balance_of,
+    get_scaled_balance_of,
     get_events_by_topic_hash_from_covalent,
     standardise_types
 )
 
-# # if not sys.warnoptions:
-# import warnings
-# with warnings.catch_warnings():
-#     warnings.filterwarnings("ignore", category=ExperimentalWarning)
-#     # warnings.simplefilter("ignore", category=ExperimentalWarning)
+if not sys.warnoptions:
+    import warnings
+    # warnings.simplefilter("ignore")
+    warnings.filterwarnings("ignore", category=ExperimentalWarning)
 
 market_day_multipartition = MultiPartitionsDefinition(
     {
@@ -129,7 +130,10 @@ def block_numbers_by_day(context) -> pd.DataFrame:
     compute_kind="python",
     group_name='data_lake',
     code_version="1",
-    io_manager_key = 'data_lake_io_manager'
+    io_manager_key = 'data_lake_io_manager',
+    ins={
+        "block_numbers_by_day": AssetIn(key_prefix="financials_data_lake"),
+    }
 )
 def market_tokens_by_day(context, block_numbers_by_day) -> pd.DataFrame: #pylint: disable=W0621
     """Table of the tokens and metadata in a market at a given block height
@@ -182,7 +186,10 @@ def market_tokens_by_day(context, block_numbers_by_day) -> pd.DataFrame: #pylint
     compute_kind="python",
     group_name='data_lake',
     code_version="1",
-    io_manager_key = 'data_lake_io_manager'
+    io_manager_key = 'data_lake_io_manager',
+    ins={
+        "market_tokens_by_day": AssetIn(key_prefix="financials_data_lake"),
+    }
 )
 def aave_oracle_prices_by_day(context, market_tokens_by_day) -> pd.DataFrame:  # type: ignore pylint: disable=W0621
     """Table of the token and aave oracle price foreacharket at each block height
@@ -290,7 +297,11 @@ def aave_oracle_prices_by_day(context, market_tokens_by_day) -> pd.DataFrame:  #
     compute_kind="python",
     group_name='data_lake',
     code_version="1",
-    io_manager_key = 'data_lake_io_manager'
+    io_manager_key = 'data_lake_io_manager',
+    ins={
+        "block_numbers_by_day": AssetIn(key_prefix="financials_data_lake"),
+        "market_tokens_by_day": AssetIn(key_prefix="financials_data_lake"),
+    }
 )
 def collector_atoken_transfers_by_day(context, market_tokens_by_day, block_numbers_by_day) -> pd.DataFrame:  # type: ignore pylint: disable=W0621
     """
@@ -368,7 +379,10 @@ def collector_atoken_transfers_by_day(context, market_tokens_by_day, block_numbe
     compute_kind="python",
     group_name='data_lake',
     code_version="1",
-    io_manager_key = 'data_lake_io_manager'
+    io_manager_key = 'data_lake_io_manager',
+    ins={
+        "block_numbers_by_day": AssetIn(key_prefix="financials_data_lake"),
+    }
 )
 def non_atoken_transfers_by_day(context, block_numbers_by_day) -> pd.DataFrame:  # type: ignore pylint: disable=W0621
     """
@@ -437,7 +451,11 @@ def non_atoken_transfers_by_day(context, block_numbers_by_day) -> pd.DataFrame: 
     compute_kind="python",
     group_name='data_lake',
     code_version="1",
-    io_manager_key = 'data_lake_io_manager'
+    io_manager_key = 'data_lake_io_manager',
+    ins={
+        "block_numbers_by_day": AssetIn(key_prefix="financials_data_lake"),
+        "market_tokens_by_day": AssetIn(key_prefix="financials_data_lake"),
+    }
 )
 def collector_atoken_balances_by_day(context, market_tokens_by_day, block_numbers_by_day) -> pd.DataFrame:  # type: ignore pylint: disable=W0621
     """
@@ -479,6 +497,7 @@ def collector_atoken_balances_by_day(context, market_tokens_by_day, block_number
     for collector in collectors:
         for row in market_tokens_by_day.itertuples():
             # ic(row)
+
             if market == 'ethereum_v1':
                 token = row.reserve
                 decimals = row.decimals
@@ -487,6 +506,7 @@ def collector_atoken_balances_by_day(context, market_tokens_by_day, block_number
                 token = row.atoken
                 decimals = row.atoken_decimals
                 symbol = row.atoken_symbol
+                
 
             row_balance = get_erc20_balance_of(
                 collector,
@@ -495,6 +515,17 @@ def collector_atoken_balances_by_day(context, market_tokens_by_day, block_number
                 chain,
                 block_height
             )
+
+            if market == 'ethereum_v1':
+                row_scaled_balance = row_balance
+            else:
+                row_scaled_balance = get_scaled_balance_of(
+                    collector,
+                    token,
+                    decimals,
+                    chain,
+                    block_height
+                )
         
             output_row = {
                         'collector': collector, 
@@ -503,7 +534,8 @@ def collector_atoken_balances_by_day(context, market_tokens_by_day, block_number
                         'symbol': symbol,
                         'block_height': block_height, 
                         'block_day': partition_datetime.replace(tzinfo=timezone.utc),
-                        'balance': row_balance
+                        'balance': row_balance,
+                        'scaled_balance': row_scaled_balance
                     }
 
             balance_row = pd.DataFrame(output_row, index=[0])
@@ -526,7 +558,10 @@ def collector_atoken_balances_by_day(context, market_tokens_by_day, block_number
     compute_kind="python", 
     group_name='data_lake',
     code_version="1",
-    io_manager_key = 'data_lake_io_manager'
+    io_manager_key = 'data_lake_io_manager',
+    ins={
+        "block_numbers_by_day": AssetIn(key_prefix="financials_data_lake"),
+    }
 )
 def non_atoken_balances_by_day(context, block_numbers_by_day) -> pd.DataFrame:  # type: ignore pylint: disable=W0621
     """
@@ -611,7 +646,10 @@ def non_atoken_balances_by_day(context, block_numbers_by_day) -> pd.DataFrame:  
     compute_kind="python", 
     group_name='data_lake',
     code_version="1",
-    io_manager_key = 'data_lake_io_manager'
+    io_manager_key = 'data_lake_io_manager',
+    ins={
+        "market_tokens_by_day": AssetIn(key_prefix="financials_data_lake"),
+    }
 
 )
 def v3_accrued_fees_by_day(context, market_tokens_by_day) -> pd.DataFrame: # type: ignore
@@ -774,7 +812,11 @@ def v3_accrued_fees_by_day(context, market_tokens_by_day) -> pd.DataFrame: # typ
     compute_kind="python",
     group_name='data_lake',
     code_version="1",
-    io_manager_key = 'data_lake_io_manager'
+    io_manager_key = 'data_lake_io_manager',
+    ins={
+        "block_numbers_by_day": AssetIn(key_prefix="financials_data_lake"),
+        "market_tokens_by_day": AssetIn(key_prefix="financials_data_lake"),
+    }
 
 )
 def v3_minted_to_treasury_by_day(context, block_numbers_by_day, market_tokens_by_day) -> pd.DataFrame:
@@ -938,7 +980,10 @@ def v3_minted_to_treasury_by_day(context, block_numbers_by_day, market_tokens_by
     compute_kind="python",
     group_name='data_lake',
     code_version="1",
-    io_manager_key = 'data_lake_io_manager'
+    io_manager_key = 'data_lake_io_manager',
+    ins={
+        "block_numbers_by_day": AssetIn(key_prefix="financials_data_lake"),
+    }
 )
 def treasury_accrued_incentives_by_day(context, block_numbers_by_day) -> pd.DataFrame:
     """
@@ -1116,7 +1161,10 @@ def treasury_accrued_incentives_by_day(context, block_numbers_by_day) -> pd.Data
     compute_kind="python",
     group_name='data_lake',
     code_version="1",
-    io_manager_key = 'data_lake_io_manager'
+    io_manager_key = 'data_lake_io_manager',
+    ins={
+        "block_numbers_by_day": AssetIn(key_prefix="financials_data_lake"),
+    }
 )
 def user_lm_rewards_claimed(context, block_numbers_by_day):
     """
@@ -1193,7 +1241,7 @@ def user_lm_rewards_claimed(context, block_numbers_by_day):
                 , '{market}' as market
                 , case 
                     when reward_vault = 'incentives_controller' then '0xd784927ff2f95ba542bfc824c8a8a98f3495f6b5'
-                    when reward_vault = 'ecosystem_reserve' then '0x464c71f6c2f760dda6093dcb91c24c39e5d6e18c'
+                    when reward_vault = 'ecosystem_reserve' then '0x25f2226b597e8f9514b3f68f00f494cf4f286491'
                   end as vault_address
                 , reward_vault
                 , lower('0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9') as token_address
@@ -1238,7 +1286,8 @@ def user_lm_rewards_claimed(context, block_numbers_by_day):
     compute_kind="python",
     group_name='data_lake',
     io_manager_key = 'data_lake_io_manager',
-    code_version="1"
+    code_version="1",
+    # key_prefix="financials_data_lake"
 )
 def internal_external_addresses(context) -> pd.DataFrame:
     """
@@ -1278,6 +1327,96 @@ def internal_external_addresses(context) -> pd.DataFrame:
     )
 
     return internal_external
+
+@asset(
+    compute_kind="python",
+    group_name='data_lake',
+    io_manager_key = 'data_lake_io_manager',
+    code_version="1",
+)
+def tx_classification(context) -> pd.DataFrame:
+    """
+    Returns a dataframe of transaction types for Aave
+    Used in the classification of transactions in the data warehouse
+    Data is loaded from the public Google Cloud Storage bucket so
+    no authentication is required
+    
+    Args:
+        context: Dagster context object
+    Returns:
+        A dataframe transaction classifications for Aave financials
+    Raises:
+        EnvironmentError: if the DAGSTER_DEPLOYMENT environment variable is not set correctly
+
+    """
+
+    from financials import dagster_deployment
+
+    if dagster_deployment in ('local_filesystem','local_cloud'):
+        url = 'https://storage.googleapis.com/llama_aave_dev_public/aave_financials_transaction_classification.csv'
+    elif dagster_deployment == 'prod':
+        url = 'https://storage.googleapis.com/llama_aave_prod_public/aave_financials_transaction_classification.csv'
+    else:
+        errmsg = "Environment variable DAGSTER_DEPLOYMENT must be set to either 'local_filesystem', 'local_cloud', or 'prod'"
+        raise EnvironmentError(errmsg)
+
+
+    tx = pd.read_csv(url, engine='python', quoting=3)
+    tx = standardise_types(tx)
+
+    context.add_output_metadata(
+        {
+            "num_records": len(tx),
+            "preview": MetadataValue.md(tx.to_markdown()),
+        }
+    )
+
+    return tx
+
+@asset(
+    compute_kind="python",
+    group_name='data_lake',
+    io_manager_key = 'data_lake_io_manager',
+    code_version="1",
+)
+def display_names(context) -> pd.DataFrame:
+    """
+    Returns a dataframe of display names for Aave financials
+    Used in the classification of transactions in the data warehouse
+    Data is loaded from the public Google Cloud Storage bucket so
+    no authentication is required
+    
+    Args:
+        context: Dagster context object
+    Returns:
+        A dataframe of display names for Aave financials
+    Raises:
+        EnvironmentError: if the DAGSTER_DEPLOYMENT environment variable is not set correctly
+
+    """
+
+    from financials import dagster_deployment
+
+    if dagster_deployment in ('local_filesystem','local_cloud'):
+        url = 'https://storage.googleapis.com/llama_aave_dev_public/financials_display_names.csv'
+    elif dagster_deployment == 'prod':
+        url = 'https://storage.googleapis.com/llama_aave_prod_public/financials_display_names.csv'
+    else:
+        errmsg = "Environment variable DAGSTER_DEPLOYMENT must be set to either 'local_filesystem', 'local_cloud', or 'prod'"
+        raise EnvironmentError(errmsg)
+
+
+    names = pd.read_csv(url, engine='python', quoting=3)
+    names = standardise_types(names)
+
+    context.add_output_metadata(
+        {
+            "num_records": len(names),
+            "preview": MetadataValue.md(names.to_markdown()),
+        }
+    )
+
+    return names
 
 #######################################
 # Test assets for the io manager

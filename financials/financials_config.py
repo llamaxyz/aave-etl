@@ -3,7 +3,11 @@ import os
 from datetime import datetime
 
 
+<<<<<<< HEAD
 FINANCIAL_PARTITION_START_DATE = '2023-02-10'
+=======
+FINANCIAL_PARTITION_START_DATE = '2023-02-15'
+>>>>>>> dbt_install
 
 ETHERSCAN_API_KEY =  os.environ['ETHERSCAN_API_KEY']
 POLYGONSCAN_API_KEY =  os.environ['POLYGONSCAN_API_KEY']
@@ -14,7 +18,7 @@ OPTIMISM_ALCHEMY_KEY = os.environ['OPTIMISM_ALCHEMY_KEY']
 ARBITRUM_ALCHEMY_KEY = os.environ['ARBITRUM_ALCHEMY_KEY']
 FLIPSIDE_API_KEY = os.environ['FLIPSIDE_API_KEY']
 
- # a minimal ERC20 ABI supporting balanceOf and decimals
+ # a minimal ERC20 ABI supporting balanceOf, scaledBalanceOf, symbol and decimals
 ERC20_ABI = [
         {
             "constant": "true",
@@ -28,6 +32,25 @@ ERC20_ABI = [
             "outputs": [
             {
                 "name": "balance",
+                "type": "uint256"
+            }
+            ],
+            "payable": "false",
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "constant": "true",
+            "inputs": [
+            {
+                "name": "owner",
+                "type": "address"
+            }
+            ],
+            "name": "scaledBalanceOf",
+            "outputs": [
+            {
+                "name": "scaledBalance",
                 "type": "uint256"
             }
             ],
@@ -160,6 +183,7 @@ CONFIG_MARKETS = {
         "atoken_prefix": "a",
         "oracle_base_currency": 'wei',
         "block_table_master": True,
+        "price_rank": 3
     },
     "aave_amm": {
         "chain": "ethereum",
@@ -178,6 +202,7 @@ CONFIG_MARKETS = {
         "atoken_prefix": "a",
         "oracle_base_currency": 'wei',
         "block_table_master": False,
+        "price_rank": 4
     },
     "aave_arc": {
         "chain": "ethereum",
@@ -197,6 +222,7 @@ CONFIG_MARKETS = {
         "atoken_prefix": "a",
         "oracle_base_currency": 'wei',
         "block_table_master": False,
+        "price_rank": 5
     },
     "aave_rwa": {
         "chain": "ethereum",
@@ -215,6 +241,7 @@ CONFIG_MARKETS = {
         "atoken_prefix": "a",
         "oracle_base_currency": 'usd',
         "block_table_master": False,
+        "price_rank": 2
     },
     "ethereum_v3": {
         "chain": "ethereum",
@@ -234,6 +261,7 @@ CONFIG_MARKETS = {
         "atoken_prefix": "aEth",
         "oracle_base_currency": 'usd',
         "block_table_master": False,
+        "price_rank": 1
     },
     "polygon_v2": {
         "chain": "polygon",
@@ -252,6 +280,7 @@ CONFIG_MARKETS = {
         "atoken_prefix": "am",
         "oracle_base_currency": 'wei',
         "block_table_master": True,
+        "price_rank": 2
     },
     "avax_v2": {
         "chain": "avalanche",
@@ -270,6 +299,7 @@ CONFIG_MARKETS = {
         "atoken_prefix": "av",
         "oracle_base_currency": 'usd',
         "block_table_master": True,
+        "price_rank": 2
     },
     "polygon_v3": {
         "chain": "polygon",
@@ -289,6 +319,7 @@ CONFIG_MARKETS = {
         "atoken_prefix": "aPol",
         "oracle_base_currency": 'usd',
         "block_table_master": False,
+        "price_rank": 1
     },
     "avax_v3": {
         "chain": "avalanche",
@@ -308,6 +339,7 @@ CONFIG_MARKETS = {
         "atoken_prefix": "aAva",
         "oracle_base_currency": 'usd',
         "block_table_master": False,
+        "price_rank": 1
     },
     "optimism_v3": {
         "chain": "optimism",
@@ -327,6 +359,7 @@ CONFIG_MARKETS = {
         "atoken_prefix": "aOpt",
         "oracle_base_currency": 'usd',
         "block_table_master": True,
+        "price_rank": 1
     },
     "arbitrum_v3": {
         "chain": "arbitrum",
@@ -346,6 +379,7 @@ CONFIG_MARKETS = {
         "atoken_prefix": "aArb",
         "oracle_base_currency": 'usd',
         "block_table_master": True,
+        "price_rank": 1
     },
     "fantom_v3": {
         "chain": "fantom",
@@ -365,6 +399,7 @@ CONFIG_MARKETS = {
         "atoken_prefix": "aFan",
         "oracle_base_currency": 'usd',
         "block_table_master": True,
+        "price_rank": 1
     },
     "harmony_v3": {
         "chain": "harmony",
@@ -384,6 +419,7 @@ CONFIG_MARKETS = {
         "atoken_prefix": "aHar",
         "oracle_base_currency": 'usd',
         "block_table_master": True,
+        "price_rank": 1
     },
     "ethereum_v1": {
         "chain": "ethereum",
@@ -405,6 +441,7 @@ CONFIG_MARKETS = {
         "atoken_prefix": "a",
         "oracle_base_currency": 'wei',
         "block_table_master": False,
+        "price_rank": 6
     },
 }
 

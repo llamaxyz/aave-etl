@@ -1,6 +1,8 @@
 # from .repository import aave
 import json
 import os
+import sys
+
 from dagster import (
     load_assets_from_modules,
     Definitions,
@@ -11,7 +13,8 @@ from dagster import (
     build_schedule_from_partitioned_job,
     build_asset_reconciliation_sensor,
     fs_io_manager,
-    ResourceDefinition
+    ResourceDefinition, 
+    ExperimentalWarning
 )
 from financials.assets import data_lake, data_warehouse
 from financials.assets.data_lake import market_day_multipartition
@@ -21,16 +24,35 @@ from dagster_gcp.gcs.io_manager import gcs_pickle_io_manager
 from dagster_gcp.gcs.resources import gcs_resource
 
 from dagster._utils import file_relative_path
+<<<<<<< HEAD
 # from dagster_dbt import dbt_cli_resource, load_assets_from_dbt_project
+=======
+from dagster_dbt import dbt_cli_resource, load_assets_from_dbt_project
+>>>>>>> dbt_install
 
 from google.oauth2 import service_account
 from google.cloud import storage
 
+if not sys.warnoptions:
+    import warnings
+    # warnings.simplefilter("ignore")
+    warnings.filterwarnings("ignore", category=ExperimentalWarning)
 
-financial_assets = load_assets_from_modules(
-    # modules=[financials]
-    modules=[data_lake, data_warehouse]
-    # modules=[data_lake_minimal]
+
+# financial_assets = load_assets_from_modules(
+#     # modules=[financials]
+#     modules=[data_lake, data_warehouse]
+#     # modules=[data_lake_minimal]
+# )
+
+financials_data_lake_assets = load_assets_from_modules(
+    modules=[data_lake],
+    key_prefix="financials_data_lake"
+)
+
+warehouse_assets = load_assets_from_modules(
+    modules=[data_warehouse],
+    key_prefix="warehouse"
 )
 
 # financials_update_job = define_asset_job(
@@ -38,12 +60,13 @@ financial_assets = load_assets_from_modules(
 #     selection=AssetSelection.keys('block_numbers_by_day')
 # )
 
-financials_update_job = define_asset_job(
-    name='financials_update_job',
-    selection=AssetSelection.keys('block_numbers_by_day'),
-    partitions_def=market_day_multipartition
-)
+# financials_update_job = define_asset_job(
+#     name='financials_update_job',
+#     selection=AssetSelection.keys('block_numbers_by_day'),
+#     partitions_def=market_day_multipartition
+# )
 
+<<<<<<< HEAD
 financials_update_sensor = build_asset_reconciliation_sensor(
     name="financials_update_sensor",
     asset_selection=AssetSelection.all() - AssetSelection.keys('block_numbers_by_day'),
@@ -61,6 +84,16 @@ financials_update_sensor = build_asset_reconciliation_sensor(
 #     DBT_PROJECT_DIR,
 #     io_manager_key="bq_io_manager"
 # )
+=======
+
+
+########################
+# dbt config
+########################
+
+DBT_PROJECT_DIR = file_relative_path(__file__, "../dbt_financials")
+DBT_PROFILES_DIR = file_relative_path(__file__, "../dbt_financials/config")
+>>>>>>> dbt_install
 
 ########################
 # logic for dev/prod environments
@@ -108,6 +141,22 @@ resource_defs = {
                 "use_service_account_file": True,
             },
         ),
+        "datamart_io_manager": bigquery_io_manager.configured(
+            {
+                "project": "aave-dev",
+                "dataset": "datamart",
+                "service_account_creds": creds_env_var,
+                "service_account_file" : creds_file,
+                "use_service_account_file": True,
+            },
+        ),
+        "dbt": dbt_cli_resource.configured(
+            {
+                "project_dir": DBT_PROJECT_DIR,
+                "profiles_dir": DBT_PROFILES_DIR,
+                "target": "dev"
+            }
+        )
     },
     "prod": {
         "data_lake_io_manager": bigquery_io_manager.configured(
@@ -128,9 +177,35 @@ resource_defs = {
                 "use_service_account_file": False,
             },
         ),
+        "datamart_io_manager": bigquery_io_manager.configured(
+            {
+                "project": "aave-prod",
+                "dataset": "datamart",
+                "service_account_creds": creds_env_var,
+                "service_account_file" : creds_file,
+                "use_service_account_file": False,
+            },
+        ),
+        "dbt": dbt_cli_resource.configured({ "project_dir": DBT_PROJECT_DIR, "profiles_dir": DBT_PROFILES_DIR, "target": "prod"})
     },
 }
 
+
+
+dbt_assets = load_assets_from_dbt_project(
+    DBT_PROJECT_DIR,
+    io_manager_key="datamart_io_manager",
+    # partitions_def=market_day_multipartition
+)
+
+# print(type(dbt_assets))
+
+
+financials_update_sensor = build_asset_reconciliation_sensor(
+    name="financials_update_sensor",
+    asset_selection=AssetSelection.all() - AssetSelection.keys('financials_data_lake/block_numbers_by_day'),# - AssetSelection.assets(*dbt_assets),
+    minimum_interval_seconds=60*3
+)
 
 ####################
 # config for data lake in gcs storage buckets, not used
@@ -196,9 +271,9 @@ resource_defs = {
 
 
 defs = Definitions(
-    assets=financial_assets,
+    assets=[*financials_data_lake_assets, *warehouse_assets, *dbt_assets],
     # schedules=[financials_update_job_schedule]
-    jobs=[financials_update_job],
+    # jobs=[financials_update_job],
     sensors=[financials_update_sensor],
     resources=resource_defs[dagster_deployment],
 )

@@ -6,12 +6,14 @@ from icecream import ic
 from pandas.testing import assert_frame_equal
 # pylint: disable=import-error
 from financials.financials_config import CONFIG_MARKETS 
-from financials.resources.helpers import (get_erc20_balance_of,
-                              get_market_tokens_at_block_aave,
-                              get_market_tokens_at_block_messari,
-                              get_token_transfers_from_covalent,
-                              get_events_by_topic_hash_from_covalent,
-                              standardise_types
+from financials.resources.helpers import (
+                            get_erc20_balance_of,
+                            get_scaled_balance_of,
+                            get_market_tokens_at_block_aave,
+                            get_market_tokens_at_block_messari,
+                            get_token_transfers_from_covalent,
+                            get_events_by_topic_hash_from_covalent,
+                            standardise_types
                               )
  # pylint: enable=import-error
 
@@ -249,6 +251,26 @@ def test_get_erc20_balance_of():
     assert result_harmony == expected_harmony, str(result_harmony)  
     assert isinstance(result_harmony, float), str(type(result_ethereum))
 
+def test_get_scaled_balance_of():
+    """
+    Tests the scaled balance of function against a reference response
+
+    Tests harmony chain as there is no block explorer support for contract ABIs
+
+    """
+    
+    expected_ethereum = 5893907.247913
+    expected_harmony = 341.926480873084
+
+    result_ethereum  = get_scaled_balance_of('0x464C71f6c2F760DdA6093dCB91C24c39e5d6e18c', '0xbcca60bb61934080951369a648fb03df4f96263c', 6, 'ethereum', block_height=16057596)
+    result_harmony  = get_scaled_balance_of('0x8a020d92d6b119978582be4d3edfdc9f7b28bf31', '0x191c10Aa4AF7C30e871E70C95dB0E4eb77237530', 18, 'harmony', block_height=34443481)
+
+    assert result_ethereum == expected_ethereum, str(result_ethereum)  
+    assert isinstance(result_ethereum, float), str(type(result_ethereum))
+
+    assert result_harmony == expected_harmony, str(result_harmony)  
+    assert isinstance(result_harmony, float), str(type(result_ethereum))
+
 
 def test_get_events_by_topic_hash_from_covalent():
     """
@@ -369,4 +391,5 @@ if __name__ == "__main__":
     # test_get_erc20_balance_of()
     # test_get_token_transfers_from_covalent()
     # test_get_events_by_topic_hash_from_covalent()
-    test_standarise_types()
+    # test_standarise_types()
+    test_get_scaled_balance_of()
