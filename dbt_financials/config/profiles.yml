@@ -1,5 +1,4 @@
 dbt_financials:
-  target: dev
   outputs:
     dev:
       dataset: datamart
@@ -17,20 +16,22 @@ dbt_financials:
       job_execution_timeout_seconds: 300
       job_retries: 1
       location: us-east1
-      method: service-account
+      method: service-account-json
       priority: interactive
       project: aave-prod
       threads: 1
       type: bigquery
-      keyfile_json:
-          type: service_account
-          project_id: aave-prod
-          private_key_id: "{{ env_var('AAVE_ETL_PROD_BIGQUERY_PK_ID') }}"
-          private_key: "{{ env_var('AAVE_ETL_PROD_BIGQUERY_PK') }}"
-          client_email: "aave-etl@aave-prod.iam.gserviceaccount.com"
-          client_id: "100009802138940096308"
-          auth_uri: "https://accounts.google.com/o/oauth2/auth"
-          token_uri: "https://accounts.google.com/o/oauth2/token"
-          auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs"
-          client_x509_cert_url: "https://www.googleapis.com/robot/v1/metadata/x509/aave-etl%40aave-prod.iam.gserviceaccount.com"
+      keyfile_json: "{{ env_var('AAVE_ETL_PROD_BIGQUERY_SERVICE_ACCOUNT_CREDENTIALS') | as_native }}"
+      # keyfile_json:
+      #     type: service_account
+      #     project_id: aave-prod
+      #     private_key_id: "{{ env_var('AAVE_ETL_PROD_BIGQUERY_PK_ID') }}"
+      #     private_key: "{{ env_var('AAVE_ETL_PROD_BIGQUERY_PK') }}"
+      #     client_email: "aave-etl@aave-prod.iam.gserviceaccount.com"
+      #     client_id: "100009802138940096308"
+      #     auth_uri: "https://accounts.google.com/o/oauth2/auth"
+      #     token_uri: "https://accounts.google.com/o/oauth2/token"
+      #     auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs"
+      #     client_x509_cert_url: "https://www.googleapis.com/robot/v1/metadata/x509/aave-etl%40aave-prod.iam.gserviceaccount.com"
+  target: dev
   
