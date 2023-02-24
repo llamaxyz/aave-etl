@@ -3,11 +3,7 @@ import os
 from datetime import datetime
 
 
-<<<<<<< HEAD
 FINANCIAL_PARTITION_START_DATE = '2023-02-10'
-=======
-FINANCIAL_PARTITION_START_DATE = '2023-02-15'
->>>>>>> dbt_install
 
 ETHERSCAN_API_KEY =  os.environ['ETHERSCAN_API_KEY']
 POLYGONSCAN_API_KEY =  os.environ['POLYGONSCAN_API_KEY']
