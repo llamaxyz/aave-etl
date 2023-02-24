@@ -1328,6 +1328,96 @@ def internal_external_addresses(context) -> pd.DataFrame:
 
     return internal_external
 
+@asset(
+    compute_kind="python",
+    group_name='data_lake',
+    io_manager_key = 'data_lake_io_manager',
+    code_version="1",
+)
+def tx_classification(context) -> pd.DataFrame:
+    """
+    Returns a dataframe of transaction types for Aave
+    Used in the classification of transactions in the data warehouse
+    Data is loaded from the public Google Cloud Storage bucket so
+    no authentication is required
+    
+    Args:
+        context: Dagster context object
+    Returns:
+        A dataframe transaction classifications for Aave financials
+    Raises:
+        EnvironmentError: if the DAGSTER_DEPLOYMENT environment variable is not set correctly
+
+    """
+
+    from financials import dagster_deployment
+
+    if dagster_deployment in ('local_filesystem','local_cloud'):
+        url = 'https://storage.googleapis.com/llama_aave_dev_public/aave_financials_transaction_classification.csv'
+    elif dagster_deployment == 'prod':
+        url = 'https://storage.googleapis.com/llama_aave_prod_public/aave_financials_transaction_classification.csv'
+    else:
+        errmsg = "Environment variable DAGSTER_DEPLOYMENT must be set to either 'local_filesystem', 'local_cloud', or 'prod'"
+        raise EnvironmentError(errmsg)
+
+
+    tx = pd.read_csv(url, engine='python', quoting=3)
+    tx = standardise_types(tx)
+
+    context.add_output_metadata(
+        {
+            "num_records": len(tx),
+            "preview": MetadataValue.md(tx.to_markdown()),
+        }
+    )
+
+    return tx
+
+@asset(
+    compute_kind="python",
+    group_name='data_lake',
+    io_manager_key = 'data_lake_io_manager',
+    code_version="1",
+)
+def display_names(context) -> pd.DataFrame:
+    """
+    Returns a dataframe of display names for Aave financials
+    Used in the classification of transactions in the data warehouse
+    Data is loaded from the public Google Cloud Storage bucket so
+    no authentication is required
+    
+    Args:
+        context: Dagster context object
+    Returns:
+        A dataframe of display names for Aave financials
+    Raises:
+        EnvironmentError: if the DAGSTER_DEPLOYMENT environment variable is not set correctly
+
+    """
+
+    from financials import dagster_deployment
+
+    if dagster_deployment in ('local_filesystem','local_cloud'):
+        url = 'https://storage.googleapis.com/llama_aave_dev_public/financials_display_names.csv'
+    elif dagster_deployment == 'prod':
+        url = 'https://storage.googleapis.com/llama_aave_prod_public/financials_display_names.csv'
+    else:
+        errmsg = "Environment variable DAGSTER_DEPLOYMENT must be set to either 'local_filesystem', 'local_cloud', or 'prod'"
+        raise EnvironmentError(errmsg)
+
+
+    names = pd.read_csv(url, engine='python', quoting=3)
+    names = standardise_types(names)
+
+    context.add_output_metadata(
+        {
+            "num_records": len(names),
+            "preview": MetadataValue.md(names.to_markdown()),
+        }
+    )
+
+    return names
+
 #######################################
 # Test assets for the io manager
 

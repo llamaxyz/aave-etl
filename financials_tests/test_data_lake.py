@@ -21,7 +21,9 @@ from financials.assets.data_lake import (aave_oracle_prices_by_day,
                                     v3_minted_to_treasury_by_day,
                                     treasury_accrued_incentives_by_day,
                                     user_lm_rewards_claimed,
-                                    internal_external_addresses
+                                    internal_external_addresses,
+                                    tx_classification,
+                                    display_names
                                     )
 # from financials.assets import data_lake
 # from financials.
@@ -1025,6 +1027,56 @@ def test_internal_external_addresses():
     assert_frame_equal(result.head(1), expected, check_exact=True)
 
 
+def test_tx_classification():
+    """
+    Tests the loading of the tx_classification asset
+    """
+
+    context = build_op_context()
+
+    expected = pd.DataFrame(
+        [
+            {
+                "measure": "start_balance_usd",
+                "measure_type": "balance",
+                "currency": "usd"
+            }
+        ]
+    )
+    expected = standardise_types(expected)
+
+    result = tx_classification(context)
+    ic(expected)
+    ic(result.head(1))
+
+    assert_frame_equal(result.head(1), expected, check_exact=True)
+
+def test_display_names():
+    """
+    Tests the loading of the display_names asset
+    """
+
+    context = build_op_context()
+
+    expected = pd.DataFrame(
+        [
+            {
+                "collector": "0x053d55f9b5af8694c503eb288a1b7e552f590710",
+                "chain": "arbitrum",
+                "market": "arbitrum_v3",
+                "display_chain": "Arbitrum",
+                "display_name": "Aave V3"
+            }
+        ]
+    )
+    expected = standardise_types(expected)
+
+    result = display_names(context)
+    ic(expected)
+    ic(result.head(1))
+
+    assert_frame_equal(result.head(1), expected, check_exact=True)
+
 if __name__ == "__main__":
     # ic(list(CONFIG_CHAINS.keys()))
     # ic(get_block_number_at_datetime('ethereum', datetime(2022, 11, 26, 0, 0, 0)))
@@ -1037,7 +1089,7 @@ if __name__ == "__main__":
     # test_aave_oracle_prices_table()
     # test_market_tokens_table()
     # test_non_atoken_transfers_by_day()
-    test_collector_atoken_balances_by_day()
+    # test_collector_atoken_balances_by_day()
     # test_non_atoken_balances_by_day()
     # test_v3_accrued_fees_by_day()
     # test_v3_minted_to_treasury_by_day()
@@ -1045,6 +1097,8 @@ if __name__ == "__main__":
     # test_user_lm_rewards_claimed()
     # test_internal_external_addresses()
     # test_collector_atoken_transfers_by_day()
+    # test_tx_classification()
+    test_display_names()
     
     # pass
 
