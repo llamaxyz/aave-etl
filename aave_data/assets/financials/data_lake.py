@@ -56,7 +56,7 @@ market_day_multipartition = MultiPartitionsDefinition(
 @asset(
     partitions_def=market_day_multipartition,
     compute_kind="python",
-    group_name='data_lake',
+    #group_name='data_lake',
     code_version="1",
     io_manager_key = 'data_lake_io_manager'
     # freshness_policy=FreshnessPolicy(maximum_lag_minutes=6*60),
@@ -132,7 +132,7 @@ def block_numbers_by_day(context) -> pd.DataFrame:
 @asset(
     partitions_def=market_day_multipartition,
     compute_kind="python",
-    group_name='data_lake',
+    #group_name='data_lake',
     code_version="1",
     io_manager_key = 'data_lake_io_manager',
     ins={
@@ -188,7 +188,7 @@ def market_tokens_by_day(context, block_numbers_by_day) -> pd.DataFrame: #pylint
 @asset(
     partitions_def=market_day_multipartition,
     compute_kind="python",
-    group_name='data_lake',
+    #group_name='data_lake',
     code_version="1",
     io_manager_key = 'data_lake_io_manager',
     ins={
@@ -316,7 +316,7 @@ def aave_oracle_prices_by_day(context, market_tokens_by_day) -> pd.DataFrame:  #
 @asset(
     partitions_def=market_day_multipartition,
     compute_kind="python",
-    group_name='data_lake',
+    #group_name='data_lake',
     code_version="1",
     io_manager_key = 'data_lake_io_manager',
     ins={
@@ -398,7 +398,7 @@ def collector_atoken_transfers_by_day(context, market_tokens_by_day, block_numbe
 @asset(
     partitions_def=market_day_multipartition,
     compute_kind="python",
-    group_name='data_lake',
+    #group_name='data_lake',
     code_version="1",
     io_manager_key = 'data_lake_io_manager',
     ins={
@@ -470,7 +470,7 @@ def non_atoken_transfers_by_day(context, block_numbers_by_day) -> pd.DataFrame: 
 @asset(
     partitions_def=market_day_multipartition,
     compute_kind="python",
-    group_name='data_lake',
+    #group_name='data_lake',
     code_version="1",
     io_manager_key = 'data_lake_io_manager',
     ins={
@@ -577,7 +577,7 @@ def collector_atoken_balances_by_day(context, market_tokens_by_day, block_number
 @asset(
     partitions_def=market_day_multipartition,
     compute_kind="python", 
-    group_name='data_lake',
+    #group_name='data_lake',
     code_version="1",
     io_manager_key = 'data_lake_io_manager',
     ins={
@@ -665,7 +665,7 @@ def non_atoken_balances_by_day(context, block_numbers_by_day) -> pd.DataFrame:  
     #         )
     # },
     compute_kind="python", 
-    group_name='data_lake',
+    #group_name='data_lake',
     code_version="1",
     io_manager_key = 'data_lake_io_manager',
     ins={
@@ -831,7 +831,7 @@ def v3_accrued_fees_by_day(context, market_tokens_by_day) -> pd.DataFrame: # typ
     #         ),
     # },
     compute_kind="python",
-    group_name='data_lake',
+    #group_name='data_lake',
     code_version="1",
     io_manager_key = 'data_lake_io_manager',
     ins={
@@ -999,7 +999,7 @@ def v3_minted_to_treasury_by_day(context, block_numbers_by_day, market_tokens_by
     # partitions_def=v3_market_day_multipartition,
     partitions_def=market_day_multipartition,
     compute_kind="python",
-    group_name='data_lake',
+    #group_name='data_lake',
     code_version="1",
     io_manager_key = 'data_lake_io_manager',
     ins={
@@ -1180,7 +1180,7 @@ def treasury_accrued_incentives_by_day(context, block_numbers_by_day) -> pd.Data
     # partitions_def=v3_market_day_multipartition,
     partitions_def=market_day_multipartition,
     compute_kind="python",
-    group_name='data_lake',
+    #group_name='data_lake',
     code_version="1",
     io_manager_key = 'data_lake_io_manager',
     ins={
@@ -1305,7 +1305,7 @@ def user_lm_rewards_claimed(context, block_numbers_by_day):
 
 @asset(
     compute_kind="python",
-    group_name='data_lake',
+    #group_name='data_lake',
     io_manager_key = 'data_lake_io_manager',
     code_version="1",
     # key_prefix="financials_data_lake"
@@ -1351,7 +1351,7 @@ def internal_external_addresses(context) -> pd.DataFrame:
 
 @asset(
     compute_kind="python",
-    group_name='data_lake',
+    #group_name='data_lake',
     io_manager_key = 'data_lake_io_manager',
     code_version="1",
 )
@@ -1396,7 +1396,7 @@ def tx_classification(context) -> pd.DataFrame:
 
 @asset(
     compute_kind="python",
-    group_name='data_lake',
+    #group_name='data_lake',
     io_manager_key = 'data_lake_io_manager',
     code_version="1",
 )

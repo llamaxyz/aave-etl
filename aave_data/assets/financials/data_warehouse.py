@@ -34,7 +34,7 @@ if not sys.warnoptions:
 
 @asset(
     compute_kind='python',
-    group_name='data_warehouse',
+    #group_name='data_warehouse',
     code_version="1",
     io_manager_key = 'data_warehouse_io_manager',
     ins={
@@ -70,7 +70,7 @@ def blocks_by_day(context, block_numbers_by_day) -> pd.DataFrame:
 
 @asset(
     compute_kind='python',
-    group_name='data_warehouse',
+    #group_name='data_warehouse',
     code_version="1",
     io_manager_key = 'data_warehouse_io_manager',
     ins={
@@ -217,7 +217,7 @@ def atoken_measures_by_day(
 
 @asset(
     compute_kind='python',
-    group_name='data_warehouse',
+    #group_name='data_warehouse',
     code_version="1",
     io_manager_key = 'data_warehouse_io_manager',
     ins={
@@ -331,7 +331,7 @@ def non_atoken_measures_by_day(
 
 @asset(
     compute_kind='python',
-    group_name='data_warehouse',
+    #group_name='data_warehouse',
     code_version="1",
     io_manager_key = 'data_warehouse_io_manager',
     ins={
@@ -377,7 +377,7 @@ def user_rewards_by_day(
 
 @asset(
     compute_kind='python',
-    group_name='data_warehouse',
+    #group_name='data_warehouse',
     code_version="1",
     io_manager_key = 'data_warehouse_io_manager',
     ins={
@@ -431,7 +431,7 @@ def treasury_incentives_by_day(
 
 @asset(
     compute_kind='python',
-    group_name='data_warehouse',
+    #group_name='data_warehouse',
     code_version="1",
     io_manager_key = 'data_warehouse_io_manager',
     ins={
@@ -499,7 +499,7 @@ def token_prices_by_day(
 
 @asset(
     compute_kind='python',
-    group_name='data_warehouse',
+    #group_name='data_warehouse',
     code_version="1",
     io_manager_key = 'data_warehouse_io_manager',
     ins={

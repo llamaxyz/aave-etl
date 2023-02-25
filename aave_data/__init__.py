@@ -43,12 +43,14 @@ if not sys.warnoptions:
 
 financials_data_lake_assets = load_assets_from_modules(
     modules=[data_lake],
-    key_prefix="financials_data_lake"
+    key_prefix="financials_data_lake",
+    group_name="financials_data_lake"
 )
 
 warehouse_assets = load_assets_from_modules(
     modules=[data_warehouse],
-    key_prefix="warehouse"
+    key_prefix="warehouse",
+    group_name="warehouse"
 )
 
 # financials_update_job = define_asset_job(
