@@ -176,7 +176,15 @@ class BigQueryIOManager(IOManager):
         # use the google-cloud-bigquery library to write the dataframe to bigquery
         # pandas-gbq hits rate limits when writing many small table updates
         bqjob = self.client.load_table_from_dataframe(obj, f'{dataset}.{table}', job_config=LoadJobConfig(write_disposition='WRITE_APPEND'))
-        bqjob.result(retry=DEFAULT_RETRY)
+        custom_retry = Retry(
+            initial=0.1,  # initial delay in seconds
+            maximum=60,  # maximum delay in seconds
+            multiplier=2,  # exponential backoff factor
+            deadline=120,  # maximum time to wait for the response in seconds
+            predicate=None  # function to determine which exceptions to retry on
+        )
+        # bqjob.result(retry=DEFAULT_RETRY)
+        bqjob.result(retry=custom_retry)
 
         # obj.to_gbq(destination_table = f'{dataset}.{table}', if_exists = 'append', progress_bar = False, )
 
