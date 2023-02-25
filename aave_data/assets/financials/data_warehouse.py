@@ -16,26 +16,24 @@ from dagster import (#AssetIn,  # SourceAsset,; Output,
                      )
 from icecream import ic
 
-from financials.financials_config import * #pylint: disable=wildcard-import, unused-wildcard-import
+from aave_data.resources.financials_config import * #pylint: disable=wildcard-import, unused-wildcard-import
 
-from financials.resources.helpers import (
+from aave_data.resources.helpers import (
     standardise_types
 )
-
+from aave_data.assets.financials.data_lake import (
+    market_day_multipartition,
+)
 
 if not sys.warnoptions:
     import warnings
     warnings.filterwarnings("ignore", category=ExperimentalWarning)
 
-from financials.assets.data_lake import (
-    market_day_multipartition,
-    # v3_market_day_multipartition
-)
+
 
 
 @asset(
     compute_kind='python',
-    # partitions_def=market_day_multipartition,
     group_name='data_warehouse',
     code_version="1",
     io_manager_key = 'data_warehouse_io_manager',
@@ -58,16 +56,6 @@ def blocks_by_day(context, block_numbers_by_day) -> pd.DataFrame:
         A dataframe with the block details for the master chain only
 
     """
-    # date, market = context.partition_key.split("|")
-    # context.log.info(f"market: {market}")
-    # context.log.info(f"date: {date}")
-    
-    # is_master = CONFIG_MARKETS[market]['block_table_master']
-    
-    # if is_master:
-    #     return_val = block_numbers_by_day[['block_day','block_time','block_height','end_block','chain']]
-    # else:
-    #     return_val = pd.DataFrame()
 
     return_val = block_numbers_by_day[['block_day','block_time','block_height','end_block','chain']].drop_duplicates()
 
@@ -82,7 +70,6 @@ def blocks_by_day(context, block_numbers_by_day) -> pd.DataFrame:
 
 @asset(
     compute_kind='python',
-    # partitions_def=market_day_multipartition,
     group_name='data_warehouse',
     code_version="1",
     io_manager_key = 'data_warehouse_io_manager',
@@ -118,10 +105,6 @@ def atoken_measures_by_day(
         joined to the atoken metadata.  Non existing measures are set to 0
 
     """
-    # date, market = context.partition_key.split("|")
-    # context.log.info(f"market: {market}")
-    # context.log.info(f"date: {date}")
-    # chain = CONFIG_MARKETS[market]['chain']
 
     mc = []
     for market in CONFIG_MARKETS.keys():
@@ -234,7 +217,6 @@ def atoken_measures_by_day(
 
 @asset(
     compute_kind='python',
-    # partitions_def=market_day_multipartition,
     group_name='data_warehouse',
     code_version="1",
     io_manager_key = 'data_warehouse_io_manager',
@@ -264,11 +246,6 @@ def non_atoken_measures_by_day(
         joined to the token metadata.  Non existing measures are set to 0
 
     """
-    # date, market = context.partition_key.split("|")
-    # context.log.info(f"market: {market}")
-    # context.log.info(f"date: {date}")
-    # chain = CONFIG_MARKETS[market]['chain']
-
     mc = []
     for market in CONFIG_MARKETS.keys():
         mc.append([market, CONFIG_MARKETS[market]['chain']])
@@ -354,7 +331,6 @@ def non_atoken_measures_by_day(
 
 @asset(
     compute_kind='python',
-    # partitions_def=market_day_multipartition,
     group_name='data_warehouse',
     code_version="1",
     io_manager_key = 'data_warehouse_io_manager',
@@ -379,10 +355,6 @@ def user_rewards_by_day(
         joined to the token metadata.  Non existing measures are set to 0
 
     """
-    # date, market = context.partition_key.split("|")
-    # context.log.info(f"market: {market}")
-    # context.log.info(f"date: {date}")
-    # chain = CONFIG_MARKETS[market]['chain']
 
     if not user_lm_rewards_claimed.empty:
         return_val = user_lm_rewards_claimed
@@ -405,7 +377,6 @@ def user_rewards_by_day(
 
 @asset(
     compute_kind='python',
-    # partitions_def=market_day_multipartition,
     group_name='data_warehouse',
     code_version="1",
     io_manager_key = 'data_warehouse_io_manager',
@@ -430,11 +401,6 @@ def treasury_incentives_by_day(
         joined to the token metadata.  Non existing measures are set to 0
 
     """
-    # date, market = context.partition_key.split("|")
-    # context.log.info(f"market: {market}")
-    # context.log.info(f"date: {date}")
-    # chain = CONFIG_MARKETS[market]['chain']
-
     if not treasury_accrued_incentives_by_day.empty:
         return_val = treasury_accrued_incentives_by_day[[
             'chain',
@@ -465,7 +431,6 @@ def treasury_incentives_by_day(
 
 @asset(
     compute_kind='python',
-    # partitions_def=market_day_multipartition,
     group_name='data_warehouse',
     code_version="1",
     io_manager_key = 'data_warehouse_io_manager',

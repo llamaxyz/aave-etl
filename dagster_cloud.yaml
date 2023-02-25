@@ -1,4 +1,4 @@
 locations:
-  - location_name: financials
+  - location_name: aave_data
     code_source:
-      package_name: financials
+      package_name: aave_data

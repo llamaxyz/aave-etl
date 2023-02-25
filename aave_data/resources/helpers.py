@@ -10,7 +10,7 @@ from web3 import Web3
 from time import sleep
 
 
-from financials.financials_config import * #pylint: disable=wildcard-import, unused-wildcard-import
+from aave_data.resources.financials_config import * #pylint: disable=wildcard-import, unused-wildcard-import
 
 INITIAL_RETRY = 0.01 #seconds
 MAX_RETRIES = 10

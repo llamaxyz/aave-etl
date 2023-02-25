@@ -26,9 +26,9 @@ from eth_utils.conversions import to_bytes
 from shroomdk import ShroomDK
 from time import sleep
 
-from financials.financials_config import * #pylint: disable=wildcard-import, unused-wildcard-import
+from aave_data.resources.financials_config import * #pylint: disable=wildcard-import, unused-wildcard-import
 
-from financials.resources.helpers import (
+from aave_data.resources.helpers import (
     get_market_tokens_at_block_messari,
     get_market_tokens_at_block_aave,
     get_token_transfers_from_covalent,
@@ -1326,7 +1326,7 @@ def internal_external_addresses(context) -> pd.DataFrame:
 
     """
 
-    from financials import dagster_deployment
+    from aave_data import dagster_deployment
 
     if dagster_deployment in ('local_filesystem','local_cloud'):
         url = 'https://storage.googleapis.com/llama_aave_dev_public/aave_internal_external_addresses.csv'
@@ -1371,7 +1371,7 @@ def tx_classification(context) -> pd.DataFrame:
 
     """
 
-    from financials import dagster_deployment
+    from aave_data import dagster_deployment
 
     if dagster_deployment in ('local_filesystem','local_cloud'):
         url = 'https://storage.googleapis.com/llama_aave_dev_public/aave_financials_transaction_classification.csv'
@@ -1416,7 +1416,7 @@ def display_names(context) -> pd.DataFrame:
 
     """
 
-    from financials import dagster_deployment
+    from aave_data import dagster_deployment
 
     if dagster_deployment in ('local_filesystem','local_cloud'):
         url = 'https://storage.googleapis.com/llama_aave_dev_public/financials_display_names.csv'

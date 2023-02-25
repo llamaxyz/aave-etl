@@ -5,8 +5,8 @@ import numpy as np
 from icecream import ic
 from pandas.testing import assert_frame_equal
 # pylint: disable=import-error
-from financials.financials_config import CONFIG_MARKETS 
-from financials.resources.helpers import (
+from aave_data.resources.financials_config import CONFIG_MARKETS 
+from aave_data.resources.helpers import (
                             get_erc20_balance_of,
                             get_scaled_balance_of,
                             get_market_tokens_at_block_aave,

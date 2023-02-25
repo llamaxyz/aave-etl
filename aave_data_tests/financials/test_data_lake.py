@@ -10,26 +10,26 @@ from icecream import ic
 from pandas.testing import assert_frame_equal
 # ic(os.getcwd())
 # from aave.financials.
-from financials.assets.data_lake import (aave_oracle_prices_by_day,
-                                    block_numbers_by_day,
-                                    market_tokens_by_day,
-                                    collector_atoken_balances_by_day,
-                                    collector_atoken_transfers_by_day,
-                                    non_atoken_transfers_by_day,
-                                    non_atoken_balances_by_day,
-                                    v3_accrued_fees_by_day,
-                                    v3_minted_to_treasury_by_day,
-                                    treasury_accrued_incentives_by_day,
-                                    user_lm_rewards_claimed,
-                                    internal_external_addresses,
-                                    tx_classification,
-                                    display_names
-                                    )
+from aave_data.assets.financials.data_lake import (aave_oracle_prices_by_day,
+                                                    block_numbers_by_day,
+                                                    market_tokens_by_day,
+                                                    collector_atoken_balances_by_day,
+                                                    collector_atoken_transfers_by_day,
+                                                    non_atoken_transfers_by_day,
+                                                    non_atoken_balances_by_day,
+                                                    v3_accrued_fees_by_day,
+                                                    v3_minted_to_treasury_by_day,
+                                                    treasury_accrued_incentives_by_day,
+                                                    user_lm_rewards_claimed,
+                                                    internal_external_addresses,
+                                                    tx_classification,
+                                                    display_names
+                                                    )
 # from financials.assets import data_lake
 # from financials.
-from financials.financials_config import *  # pylint: disable=wildcard-import, unused-wildcard-import
+from aave_data.resources.financials_config import *  # pylint: disable=wildcard-import, unused-wildcard-import
 
-from financials.resources.helpers import (
+from aave_data.resources.helpers import (
     standardise_types
 )
 
@@ -963,7 +963,7 @@ def test_user_lm_rewards_claimed():
                 'block_day': datetime(2022,11,26,0,0,0, tzinfo=timezone.utc),
                 'chain': 'ethereum',
                 'market': 'ethereum_v2',
-                'vault_address': '0x464c71f6c2f760dda6093dcb91c24c39e5d6e18c',
+                'vault_address': '0x25f2226b597e8f9514b3f68f00f494cf4f286491',
                 'reward_vault': 'ecosystem_reserve',
                 'token_address': '0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9'.lower(),
                 'sm_stkAAVE_claims': 103.964332841,
@@ -1012,7 +1012,7 @@ def test_internal_external_addresses():
         [
             {
                 "chain": "arbitrum",
-                "description": "V3 collector",
+                "label": "Arbitrum V3 Treasury",
                 "contract_address": "0x053d55f9b5af8694c503eb288a1b7e552f590710",
                 "internal_external": "aave_internal"
             }
@@ -1085,7 +1085,7 @@ if __name__ == "__main__":
     # test_eth_oracle_prices_by_day()
     # test_get_market_tokens_at_block_messari()
     # test_block_numbers_by_day()
-    test_market_tokens_by_day()
+    # test_market_tokens_by_day()
     # test_aave_oracle_prices_table()
     # test_market_tokens_table()
     # test_non_atoken_transfers_by_day()
@@ -1095,7 +1095,7 @@ if __name__ == "__main__":
     # test_v3_minted_to_treasury_by_day()
     # test_treasury_accrued_incentives()
     # test_user_lm_rewards_claimed()
-    # test_internal_external_addresses()
+    test_internal_external_addresses()
     # test_collector_atoken_transfers_by_day()
     # test_tx_classification()
     # test_display_names()

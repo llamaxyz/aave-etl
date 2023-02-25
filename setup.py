@@ -24,8 +24,8 @@ from subprocess import check_call
 # )
 
 setup(
-    name="financials",
-    packages=find_packages(exclude=["quickstart_gcp_tests","financial_tests"]),
+    name="aave_data",
+    packages=find_packages(exclude=["quickstart_gcp_tests","aave_data_tests"]),
     install_requires=[
         "dagster",
         "dagster-gcp",

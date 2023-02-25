@@ -8,17 +8,17 @@ from dagster import MultiPartitionKey, build_op_context
 from icecream import ic
 from pandas.testing import assert_frame_equal
 
-from financials.assets.data_warehouse import (
-    blocks_by_day,
-    atoken_measures_by_day,
-    non_atoken_measures_by_day,
-    user_rewards_by_day,
-    treasury_incentives_by_day,
-    token_prices_by_day
-    )
-from financials.financials_config import *  # pylint: disable=wildcard-import, unused-wildcard-import
+from aave_data.assets.financials.data_warehouse import (
+                blocks_by_day,
+                atoken_measures_by_day,
+                non_atoken_measures_by_day,
+                user_rewards_by_day,
+                treasury_incentives_by_day,
+                token_prices_by_day
+                )
+from aave_data.resources.financials_config import *  # pylint: disable=wildcard-import, unused-wildcard-import
 
-from financials.resources.helpers import (
+from aave_data.resources.helpers import (
     standardise_types
 )
 

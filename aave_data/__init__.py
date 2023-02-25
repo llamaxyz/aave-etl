@@ -16,9 +16,9 @@ from dagster import (
     ResourceDefinition, 
     ExperimentalWarning
 )
-from financials.assets import data_lake, data_warehouse
-from financials.assets.data_lake import market_day_multipartition
-from financials.resources.bigquery_io_manager import bigquery_io_manager
+from aave_data.assets.financials import data_lake, data_warehouse
+# from aave_data.assets.financials.data_lake import market_day_multipartition
+from aave_data.resources.bigquery_io_manager import bigquery_io_manager
 
 from dagster_gcp.gcs.io_manager import gcs_pickle_io_manager
 from dagster_gcp.gcs.resources import gcs_resource
@@ -68,8 +68,8 @@ warehouse_assets = load_assets_from_modules(
 # dbt config
 ########################
 
-DBT_PROJECT_DIR = file_relative_path(__file__, "../dbt_financials")
-DBT_PROFILES_DIR = file_relative_path(__file__, "../dbt_financials/config")
+DBT_PROJECT_DIR = file_relative_path(__file__, "../aave_dbt")
+DBT_PROFILES_DIR = file_relative_path(__file__, "../aave_dbt/config")
 
 ########################
 # logic for dev/prod environments

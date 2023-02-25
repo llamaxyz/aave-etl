@@ -19,7 +19,7 @@ from google.cloud.bigquery import Client, LoadJobConfig, DEFAULT_RETRY
 from icecream import ic
 from google.api_core.retry import Retry
 
-from financials.resources.helpers import standardise_types
+from aave_data.resources.helpers import standardise_types
 
 from dagster import (
     IOManager,

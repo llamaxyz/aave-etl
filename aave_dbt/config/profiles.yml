@@ -1,4 +1,4 @@
-dbt_financials:
+aave_dbt:
   outputs:
     dev:
       dataset: datamart
