@@ -7,11 +7,14 @@ from icecream import ic
 from subgrounds.subgrounds import Subgrounds
 from io import StringIO
 from web3 import Web3
+from time import sleep
 
 
 from financials.financials_config import * #pylint: disable=wildcard-import, unused-wildcard-import
 
-@op
+INITIAL_RETRY = 0.01 #seconds
+MAX_RETRIES = 10
+
 def get_market_tokens_at_block_messari(
         market: str,
         block_height: int,
@@ -72,7 +75,7 @@ def get_market_tokens_at_block_messari(
 
 
 
-@op
+
 def get_market_tokens_at_block_aave(
         market: str,
         block_height: int,
@@ -170,14 +173,17 @@ def get_token_transfers_from_covalent(start_block: int,
     # response = requests.get(covalent_api_url)#, auth=(API_KEY, API_KEY))
     #pylint: disable=E1137,E1101
     i = 0
+    delay = INITIAL_RETRY
     while True:
         response = requests.get(covalent_api_url, timeout=300)#, auth=(API_KEY, API_KEY))
         if response.status_code == requests.codes.ok:
             break
         i += 1
-        print(f"Request Error {response.status_code} {response.reason}, retry count {i}")
-        if i > 10:
+        if i > MAX_RETRIES:
             raise ValueError(f"Covalent token transfers API error count {i}, last error {response.status_code} {response.reason}.  Bailing out.")
+        sleep(delay)
+        delay *= 2
+        print(f"Request Error {response.status_code} {response.reason}, retry count {i}")
     #pylint: enable=E1137,E1101
   
     if len(response.text) > 0:
@@ -339,14 +345,17 @@ def get_events_by_topic_hash_from_covalent(start_block: int,
 
     #pylint: disable=E1137,E1101
     i = 0
+    delay = INITIAL_RETRY
     while True:
-        response = requests.get(covalent_api_url, timeout=300)
+        response = requests.get(covalent_api_url, timeout=300)#, auth=(API_KEY, API_KEY))
         if response.status_code == requests.codes.ok:
             break
         i += 1
+        if i > MAX_RETRIES:
+            raise ValueError(f"Covalent token transfers API error count {i}, last error {response.status_code} {response.reason}.  Bailing out.")
+        sleep(delay)
+        delay *= 2
         print(f"Request Error {response.status_code} {response.reason}, retry count {i}")
-        if i > 10:
-            raise ValueError(f"Covalent API error count {i}, last error {response.status_code} {response.reason}.  Bailing out.")
     #pylint: enable=E1137,E1101
 
     events = pd.DataFrame()
