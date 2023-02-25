@@ -78,7 +78,7 @@ def blocks_by_day(context, block_numbers_by_day) -> pd.DataFrame:
         "collector_atoken_transfers_by_day": AssetIn(key_prefix="financials_data_lake"),
         "v3_accrued_fees_by_day": AssetIn(key_prefix="financials_data_lake"),
         "v3_minted_to_treasury_by_day": AssetIn(key_prefix="financials_data_lake"),
-        "internal_external_addresses": AssetIn(key_prefix="financials_data_lake"),
+        "aave_internal_addresses": AssetIn(key_prefix="warehouse"),
     }
 )
 def atoken_measures_by_day(
@@ -87,7 +87,7 @@ def atoken_measures_by_day(
             collector_atoken_transfers_by_day,
             v3_accrued_fees_by_day,
             v3_minted_to_treasury_by_day,
-            internal_external_addresses
+            aave_internal_addresses
             ) -> pd.DataFrame:
     """
     Joins all measures relevant to an atoken into one table
@@ -153,7 +153,7 @@ def atoken_measures_by_day(
             transfers_in = transfers.loc[transfers['transfer_type']=='IN']
             transfers_out = transfers.loc[transfers['transfer_type']=='OUT']
             # transfer_class = internal_external_addresses.loc[internal_external_addresses['chain']==chain]
-            transfer_class = internal_external_addresses[['chain','contract_address','internal_external']].copy()
+            transfer_class = aave_internal_addresses[['chain','contract_address','internal_external']].copy()
 
             if not transfers_in.empty:
                     transfer_class_in = transfer_class.rename(columns={'contract_address':'from_address'})
@@ -223,14 +223,14 @@ def atoken_measures_by_day(
     ins={
         "non_atoken_balances_by_day": AssetIn(key_prefix="financials_data_lake"),
         "non_atoken_transfers_by_day": AssetIn(key_prefix="financials_data_lake"),
-        "internal_external_addresses": AssetIn(key_prefix="financials_data_lake"),
+        "aave_internal_addresses": AssetIn(key_prefix="warehouse"),
     }
 )
 def non_atoken_measures_by_day(
             context,
             non_atoken_balances_by_day,
             non_atoken_transfers_by_day,
-            internal_external_addresses
+            aave_internal_addresses
             ) -> pd.DataFrame:
     """
     Joins all measures relevant to the non-atokens into one table
@@ -278,7 +278,7 @@ def non_atoken_measures_by_day(
             transfers_in = transfers.loc[transfers['transfer_type']=='IN']
             transfers_out = transfers.loc[transfers['transfer_type']=='OUT']
             # transfer_class = internal_external_addresses.loc[internal_external_addresses['chain']==chain]
-            transfer_class = internal_external_addresses[['chain','contract_address','internal_external']].copy()
+            transfer_class = aave_internal_addresses[['chain','contract_address','internal_external']].copy()
 
             if not transfers_in.empty:
                     transfer_class_in = transfer_class.rename(columns={'contract_address':'from_address'})
@@ -496,6 +496,63 @@ def token_prices_by_day(
 
     return return_val
 
+
+@asset(
+    compute_kind='python',
+    group_name='data_warehouse',
+    code_version="1",
+    io_manager_key = 'data_warehouse_io_manager',
+    ins={
+        "market_tokens_by_day": AssetIn(key_prefix="financials_data_lake"),
+        "internal_external_addresses": AssetIn(key_prefix="financials_data_lake"),
+    }
+)
+def aave_internal_addresses(
+            context,
+            market_tokens_by_day,
+            internal_external_addresses
+            ) -> pd.DataFrame:
+    """
+    Takes the ouput of internal_external_addresses (from manual CSV upload)
+     and adds all atoken addresses to it
+    This is used to flag transactions as internal to Aave when there
+     are wrap/unrwap transactions with atoken contracts
+
+
+    Args:
+        context: dagster context object
+        market_tokens_by_day: the output of market_tokens_by_day
+        internal_external_addresses: the output of internal_external_addresses
+
+    Returns:
+        A dataframe of manual addresses from the CSV and all atokens
+
+    """
+    mc = []
+    for market in CONFIG_MARKETS.keys():
+        mc.append([market, CONFIG_MARKETS[market]['chain']])
+    mc = pd.DataFrame(mc, columns=['market','chain'])
+
+    atokens = market_tokens_by_day.merge(mc, on='market', how='left')
+    atokens = atokens[['chain','atoken_symbol','atoken']].copy()
+    atokens.drop_duplicates(inplace=True)
+    atokens.rename(columns={'atoken_symbol':'label', 'atoken':'contract_address'}, inplace=True)
+
+    atokens['internal_external'] = 'aave_internal'
+
+    return_val = pd.concat([internal_external_addresses, atokens], ignore_index=True)
+
+    return_val = standardise_types(return_val)
+
+    # ic(return_val.shape)
+    context.add_output_metadata(
+        {
+            "num_records": len(return_val),
+            "preview": MetadataValue.md(return_val.head().to_markdown()),
+        }
+    )
+
+    return return_val
 
 if __name__ == "__main__":
     # test_blocks_by_day()

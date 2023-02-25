@@ -8,14 +8,7 @@ from dagster import MultiPartitionKey, build_op_context
 from icecream import ic
 from pandas.testing import assert_frame_equal
 
-from aave_data.assets.financials.data_warehouse import (
-                blocks_by_day,
-                atoken_measures_by_day,
-                non_atoken_measures_by_day,
-                user_rewards_by_day,
-                treasury_incentives_by_day,
-                token_prices_by_day
-                )
+from aave_data.assets.financials.data_warehouse import *  # pylint: disable=wildcard-import, unused-wildcard-import
 from aave_data.resources.financials_config import *  # pylint: disable=wildcard-import, unused-wildcard-import
 
 from aave_data.resources.helpers import (
@@ -728,7 +721,76 @@ def test_token_prices_by_day():
 
     assert_frame_equal(result, expected, check_exact=True)
 
+def test_aave_internal_addresses():
+    """
+    Tests the loading of the aave internal addresses asset
+    """
 
+    context = build_op_context()
+
+    market_tokens_by_day_sample_output = pd.DataFrame(
+        {
+            "reserve": {
+                0: "0x4200000000000000000000000000000000000006",
+                1: "0x4200000000000000000000000000000000000006",
+            },
+            "name": {0: "Wrapped Ether", 1: "Wrapped Ether"},
+            "symbol": {0: "WETH", 1: "WETH"},
+            "decimals": {0: 18, 1: 18},
+            "atoken": {
+                0: "0xe50fa9b3c56ffb159cb0fca61f5c9d750e8128c8",
+                1: "0xe50fa9b3c56ffb159cb0fca61f5c9d750e8128c8",
+            },
+            "atoken_symbol": {0: "aOptWETH", 1: "aOptWETH"},
+            "pool": {
+                0: "0x794a61358d6845594f94dc1db02a252b5b4814ad",
+                1: "0x794a61358d6845594f94dc1db02a252b5b4814ad",
+            },
+            "market": {0: "optimism_v3", 1: "optimism_v3"},
+            "atoken_decimals": {0: 18, 1: 18},
+            "block_height": {0: 73293751, 1: 73293751},
+            "block_day": {
+                0: datetime(2022, 11, 27, 0, 0, 0),
+                1: datetime(2022, 11, 26, 0, 0, 0),
+            },
+        }
+    )
+
+    internal_external_sample_output = pd.DataFrame(
+        [
+            {
+                "chain": "arbitrum",
+                "label": "Arbitrum V3 Treasury",
+                "contract_address": "0x053d55f9b5af8694c503eb288a1b7e552f590710",
+                "internal_external": "aave_internal"
+            },
+        ]
+    )
+
+    expected = pd.DataFrame(
+        [
+            {
+                "chain": "arbitrum",
+                "label": "Arbitrum V3 Treasury",
+                "contract_address": "0x053d55f9b5af8694c503eb288a1b7e552f590710",
+                "internal_external": "aave_internal"
+            },
+            {
+                "chain": "optimism",
+                "label": "aOptWETH",
+                "contract_address": "0xe50fa9b3c56ffb159cb0fca61f5c9d750e8128c8",
+                "internal_external": "aave_internal"
+            }
+        ]
+    )
+    expected = standardise_types(expected)
+
+    result = aave_internal_addresses(context, market_tokens_by_day_sample_output, internal_external_sample_output)
+    result = result.loc[result.label.isin(['Arbitrum V3 Treasury','aOptWETH'])]
+    ic(expected)
+    ic(result)
+
+    assert_frame_equal(result, expected, check_exact=True)
 
 
 
@@ -738,6 +800,7 @@ if __name__ == "__main__":
     # test_atoken_measures_by_day()
     # test_non_atoken_measures_by_day()
     # test_user_rewards_by_day()
-    test_treasury_incentives_by_day()
+    # test_treasury_incentives_by_day()
     # test_atoken_measures_by_day()
     # test_token_prices_by_day()
+    test_aave_internal_addresses()
