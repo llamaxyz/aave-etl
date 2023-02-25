@@ -24,6 +24,7 @@ from icecream import ic
 from eth_abi.abi import decode
 from eth_utils.conversions import to_bytes
 from shroomdk import ShroomDK
+from time import sleep
 
 from financials.financials_config import * #pylint: disable=wildcard-import, unused-wildcard-import
 
@@ -41,6 +42,9 @@ if not sys.warnoptions:
     import warnings
     # warnings.simplefilter("ignore")
     warnings.filterwarnings("ignore", category=ExperimentalWarning)
+
+INITIAL_RETRY = 0.01 #seconds
+MAX_RETRIES = 10
 
 market_day_multipartition = MultiPartitionsDefinition(
     {
@@ -274,7 +278,24 @@ def aave_oracle_prices_by_day(context, market_tokens_by_day) -> pd.DataFrame:  #
             price_multiplier = 1
 
         # ic(price_multiplier)
-        response = oracle.functions.getAssetsPrices(reserves).call(block_identifier = block_height)
+        
+        # use exponential backoff for this call - large return values.  sometimes times out on RPC as ValueError
+        i = 0
+        delay_time = INITIAL_RETRY
+        while True:
+            try:
+                response = oracle.functions.getAssetsPrices(reserves).call(block_identifier = block_height)
+                break
+            except ValueError as e:
+                if i > MAX_RETRIES:
+                    raise e
+                print(f"Retry {i} web3 getAssetsPrices after {delay_time} seconds")
+                sleep(delay_time)
+                i += 1
+                delay_time *= 2
+                
+
+
         # ic(response)
 
         # create a dataframe with the price
