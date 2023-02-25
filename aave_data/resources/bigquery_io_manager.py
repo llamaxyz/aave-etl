@@ -5,6 +5,7 @@ import numpy as np
 from contextlib import contextmanager
 from datetime import datetime
 from typing import Any, Mapping, Optional, Sequence, Tuple, Union
+from time import sleep
 
 from pandas import DataFrame as PandasDataFrame
 # from pandas import read_sql
@@ -15,7 +16,7 @@ from pandas import DataFrame as PandasDataFrame
 
 import pandas_gbq 
 from google.oauth2 import service_account
-from google.cloud.bigquery import Client, LoadJobConfig, DEFAULT_RETRY
+from google.cloud.bigquery import Client, LoadJobConfig
 from icecream import ic
 from google.api_core.retry import Retry
 
@@ -38,6 +39,9 @@ from dagster import (
 
 
 BIGQUERY_DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+
+INITIAL_RETRY = 0.01 #seconds
+MAX_RETRIES = 10
 
 
 @io_manager(config_schema={
@@ -110,13 +114,24 @@ class BigQueryIOManager(IOManager):
             # enforced idempotency using delete-write pattern.  Used for partitioned assets, non-partitioned assets use overwrite.
             cleanup_query = self._get_cleanup_statement(table, dataset, partition_type, time_window, partition_key)
             # ic(cleanup_query)
-            try:
-                pd.read_gbq(cleanup_query, dialect='standard')
-            except pandas_gbq.exceptions.GenericGBQException as err:
-                # skip error if the table does not exist, write operation will create it
-                if not "Reason: 404" in str(err):
-                    raise pandas_gbq.exceptions.GenericGBQException(err)
 
+            delay_time = INITIAL_RETRY
+            while True:
+                try:
+                    pd.read_gbq(cleanup_query, dialect='standard')
+                    break
+                except pandas_gbq.exceptions.GenericGBQException as err:
+                    if not "Reason: 404" in str(err):
+                        raise pandas_gbq.exceptions.GenericGBQException(err)
+                    else:
+                        break
+                except Exception as e:
+                    if i > MAX_RETRIES:
+                        raise e
+                    context.log.warning(f"Retry {i} load_table_from_dataframe after {delay_time} seconds")
+                    sleep(delay_time)
+                    i += 1
+                    delay_time *= 2
 
             # ic(obj)
             # add a load timestamp to the table
@@ -130,16 +145,7 @@ class BigQueryIOManager(IOManager):
             obj._dagster_partition_key = obj._dagster_partition_key.astype(pd.StringDtype())
 
             if isinstance(obj, PandasDataFrame):
-                metadata = self._handle_pandas_output(obj, dataset, table)
-            # TODO fix this later for dbt
-            # elif obj is None:  # dbt
-            #     config = dict(SHARED_SNOWFLAKE_CONF)
-            #     config["schema"] = schema
-            #     with connect_snowflake(config=config) as con:
-            #         df = read_sql(f"SELECT * FROM {context.name} LIMIT 5", con=con)
-            #         num_rows = con.execute(f"SELECT COUNT(*) FROM {context.name}").fetchone()
-
-            #     metadata = {"data_sample": MetadataValue.md(df.to_markdown()), "rows": num_rows}
+                metadata = self._handle_pandas_output(context, obj, dataset, table)
             else:
                 raise Exception(
                     "BigQueryIOManager only supports pandas DataFrames"
@@ -168,23 +174,29 @@ class BigQueryIOManager(IOManager):
 
 
     def _handle_pandas_output(
-        self, obj: PandasDataFrame, dataset: str, table: str
+        self, context, obj: PandasDataFrame, dataset: str, table: str
     ) -> Mapping[str, Any]:
         obj = standardise_types(obj)
         # obj.info()
         # ic(obj[['symbol','usd_price']])
         # use the google-cloud-bigquery library to write the dataframe to bigquery
         # pandas-gbq hits rate limits when writing many small table updates
-        bqjob = self.client.load_table_from_dataframe(obj, f'{dataset}.{table}', job_config=LoadJobConfig(write_disposition='WRITE_APPEND'))
-        custom_retry = Retry(
-            initial=0.1,  # initial delay in seconds
-            maximum=60,  # maximum delay in seconds
-            multiplier=2,  # exponential backoff factor
-            deadline=120,  # maximum time to wait for the response in seconds
-            predicate=None  # function to determine which exceptions to retry on
-        )
-        # bqjob.result(retry=DEFAULT_RETRY)
-        bqjob.result(retry=custom_retry)
+        
+        i = 0
+        delay_time = INITIAL_RETRY
+        while True:
+            try:
+                bqjob = self.client.load_table_from_dataframe(obj, f'{dataset}.{table}', job_config=LoadJobConfig(write_disposition='WRITE_APPEND'))
+                bqjob.result()
+                break
+            except Exception as e:
+                if i > MAX_RETRIES:
+                    raise e
+                context.log.warning(f"Retry {i} load_table_from_dataframe after {delay_time} seconds")
+                sleep(delay_time)
+                i += 1
+                delay_time *= 2
+
 
         # obj.to_gbq(destination_table = f'{dataset}.{table}', if_exists = 'append', progress_bar = False, )
 
