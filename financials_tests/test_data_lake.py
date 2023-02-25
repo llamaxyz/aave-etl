@@ -131,7 +131,7 @@ def test_market_tokens_by_day():
     expected = standardise_types(expected)
 
     result = market_tokens_by_day(context, block_numbers_by_day_sample)
-    result = result[result.symbol.isin(['WBTC', 'WETH'])]  # type: ignore 
+    result = result[result.symbol.isin(['WBTC', 'WETH'])].reset_index(drop=True)  # type: ignore 
     # ic(result)
     # ic(expected)
 
@@ -1085,7 +1085,7 @@ if __name__ == "__main__":
     # test_eth_oracle_prices_by_day()
     # test_get_market_tokens_at_block_messari()
     # test_block_numbers_by_day()
-    # test_market_tokens_by_day()
+    test_market_tokens_by_day()
     # test_aave_oracle_prices_table()
     # test_market_tokens_table()
     # test_non_atoken_transfers_by_day()
@@ -1098,7 +1098,7 @@ if __name__ == "__main__":
     # test_internal_external_addresses()
     # test_collector_atoken_transfers_by_day()
     # test_tx_classification()
-    test_display_names()
+    # test_display_names()
     
     # pass
 
