@@ -15,8 +15,9 @@ from pandas import DataFrame as PandasDataFrame
 
 import pandas_gbq 
 from google.oauth2 import service_account
-from google.cloud.bigquery import Client, LoadJobConfig
+from google.cloud.bigquery import Client, LoadJobConfig, DEFAULT_RETRY
 from icecream import ic
+from google.api_core.retry import Retry
 
 from financials.resources.helpers import standardise_types
 
@@ -174,7 +175,9 @@ class BigQueryIOManager(IOManager):
         # ic(obj[['symbol','usd_price']])
         # use the google-cloud-bigquery library to write the dataframe to bigquery
         # pandas-gbq hits rate limits when writing many small table updates
-        self.client.load_table_from_dataframe(obj, f'{dataset}.{table}', job_config=LoadJobConfig(write_disposition='WRITE_APPEND'))
+        bqjob = self.client.load_table_from_dataframe(obj, f'{dataset}.{table}', job_config=LoadJobConfig(write_disposition='WRITE_APPEND'))
+        bqjob.result(retry=DEFAULT_RETRY)
+
         # obj.to_gbq(destination_table = f'{dataset}.{table}', if_exists = 'append', progress_bar = False, )
 
         return {
