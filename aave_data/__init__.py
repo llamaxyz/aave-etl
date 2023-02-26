@@ -164,7 +164,13 @@ resource_defs = {
                 "use_service_account_file": False,
             },
         ),
-        "dbt": dbt_cli_resource.configured({ "project_dir": DBT_PROJECT_DIR, "profiles_dir": DBT_PROFILES_DIR, "target": "prod"})
+        "dbt": dbt_cli_resource.configured(
+            {
+                "project_dir": DBT_PROJECT_DIR,
+                "profiles_dir": DBT_PROFILES_DIR,
+                "target": "prod"
+            }
+        )
     },
 }
 
@@ -179,9 +185,21 @@ dbt_assets = load_assets_from_dbt_project(
 # print(type(dbt_assets))
 
 
-financials_update_sensor = build_asset_reconciliation_sensor(
-    name="financials_update_sensor",
-    asset_selection=AssetSelection.all() - AssetSelection.keys('financials_data_lake/block_numbers_by_day'),# - AssetSelection.assets(*dbt_assets),
+financials_data_lake_sensor = build_asset_reconciliation_sensor(
+    name="financials_data_lake_sensor",
+    asset_selection=AssetSelection.groups('financials_data_lake') - AssetSelection.keys('financials_data_lake/block_numbers_by_day'),# - AssetSelection.assets(*dbt_assets),
+    minimum_interval_seconds=60*3
+)
+
+financials_warehouse_sensor = build_asset_reconciliation_sensor(
+    name="financials_warehouse_sensor",
+    asset_selection=AssetSelection.groups('warehouse'),
+    minimum_interval_seconds=60*3
+)
+
+dbt_sensor = build_asset_reconciliation_sensor(
+    name="dbt_sensor",
+    asset_selection=AssetSelection.assets(*dbt_assets),
     minimum_interval_seconds=60*3
 )
 
@@ -252,6 +270,6 @@ defs = Definitions(
     assets=[*financials_data_lake_assets, *warehouse_assets, *dbt_assets],
     # schedules=[financials_update_job_schedule]
     # jobs=[financials_update_job],
-    sensors=[financials_update_sensor],
+    sensors=[financials_data_lake_sensor, financials_warehouse_sensor, dbt_sensor],
     resources=resource_defs[dagster_deployment],
 )
