@@ -128,7 +128,7 @@ class BigQueryIOManager(IOManager):
                 except Exception as e:
                     if i > MAX_RETRIES:
                         raise e
-                    context.log.warning(f"Retry {i} load_table_from_dataframe after {delay_time} seconds")
+                    context.log.warning(f"Retry {i} cleanup read_gbq after {delay_time} seconds")
                     sleep(delay_time)
                     i += 1
                     delay_time *= 2
