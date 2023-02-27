@@ -688,8 +688,14 @@ def test_v3_accrued_fees_by_day():
             "block_day":{
                 0: datetime(2022,11,26,0,0,0, tzinfo=timezone.utc),
             },
-            "accrued_fees":{
+            "accrued_fees_scaled":{
                 0:43.39621,
+            },
+            "liquidity_index":{
+                0:1.009852,
+            },
+            "accrued_fees":{
+                0:43.823732,
             }
         }
     )
@@ -1091,11 +1097,11 @@ if __name__ == "__main__":
     # test_non_atoken_transfers_by_day()
     # test_collector_atoken_balances_by_day()
     # test_non_atoken_balances_by_day()
-    # test_v3_accrued_fees_by_day()
+    test_v3_accrued_fees_by_day()
     # test_v3_minted_to_treasury_by_day()
     # test_treasury_accrued_incentives()
     # test_user_lm_rewards_claimed()
-    test_internal_external_addresses()
+    # test_internal_external_addresses()
     # test_collector_atoken_transfers_by_day()
     # test_tx_classification()
     # test_display_names()

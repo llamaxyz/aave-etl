@@ -794,7 +794,9 @@ def v3_accrued_fees_by_day(context, market_tokens_by_day) -> pd.DataFrame: # typ
                 reserve_data = provider.functions.getReserveData(Web3.toChecksumAddress(row.reserve)).call(block_identifier=int(block_height))
                 # ic(row.symbol)
                 # ic(reserve_data)
-                accrued_fees = reserve_data[1] / pow(10, row.decimals)
+                accrued_fees_scaled = reserve_data[1] / pow(10, row.decimals)
+                liquidity_index = reserve_data[9] / pow(10, 27)
+                accrued_fees = accrued_fees_scaled * liquidity_index
                 # ic(accrued_fees)
                 output_row = {
                     'market': market,
@@ -804,6 +806,8 @@ def v3_accrued_fees_by_day(context, market_tokens_by_day) -> pd.DataFrame: # typ
                     'atoken_symbol': row.atoken_symbol,
                     'block_height': block_height,
                     'block_day': partition_datetime.replace(tzinfo=timezone.utc),
+                    'accrued_fees_scaled': accrued_fees_scaled,
+                    'liquidity_index': liquidity_index,
                     'accrued_fees': accrued_fees
                 }
                 fees_row = pd.DataFrame(output_row, index=[0])
