@@ -102,6 +102,7 @@ from token_measures_reserves t
 , token_level_calcs_staging as (
 -- apply the fix for double transfer on liqs on V3 - PR682
 -- V3 mainnet has aave-v3-core==3.0.1 deployed from inception which contains PR682
+-- only apply to the buggy v3 markets prior to the fix implementation
 select 
   collector 
   , chain
@@ -134,7 +135,7 @@ select
 from balances_prices
 where 1=1
   and end_balance is not null
-  and market != 'ethereum_v3'
+  and market in ('arbitrum_v3','avax_v3','fantom_v3','harmony_v3','optimism_v3','polygon_v3')
 union all 
 select 
   collector 
@@ -165,7 +166,7 @@ select
 from balances_prices
 where 1=1
   and end_balance is not null
-  and market = 'ethereum_v3'
+  and market not in ('arbitrum_v3','avax_v3','fantom_v3','harmony_v3','optimism_v3','polygon_v3')
 )
 
 , token_level_calcs as (
