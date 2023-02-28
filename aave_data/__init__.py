@@ -209,12 +209,10 @@ def get_multipartition_keys_with_dimension_value(
     """
     matching_keys = []
     for partition_key in partition_def.get_partition_keys():
-        # context.log.info(partition_key)
-        # keys_by_dimension = partition_key.keys_by_dimension()
+
         date, market = partition_key.split("|")
         if all(
             [
-                # keys_by_dimension.get(dimension, None) == value
                 date == value
                 for dimension, value in dimension_values.items()
             ]
@@ -224,15 +222,14 @@ def get_multipartition_keys_with_dimension_value(
 
 
 @schedule(
-    cron_schedule="15 * * * *",
+    cron_schedule="0 2 * * *",
     job=financials_root_job,
     execution_timezone='UTC',
     name="financials_root_schedule",
 )
 def financials_root_schedule(context):
-    # context.log.info(daily_partition)
     time_partitions = daily_partition.get_partition_keys(context.scheduled_execution_time)
-    # context.log.info(f"Time partitions: {time_partitions}")
+
     # Run for the latest time partition. Prior partitions will have been handled by prior ticks.
     curr_date = time_partitions[-1]
     context.log.info(f"Constructing run schedule for current date: {curr_date}")
