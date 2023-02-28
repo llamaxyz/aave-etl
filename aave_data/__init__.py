@@ -2,23 +2,24 @@
 import json
 import os
 import sys
+from icecream import ic
 
 from dagster import (
     load_assets_from_modules,
     Definitions,
     define_asset_job,
     AssetSelection,
-    ScheduleDefinition,
-    PartitionScheduleDefinition,
-    build_schedule_from_partitioned_job,
+    schedule,
     build_asset_reconciliation_sensor,
-    fs_io_manager,
-    ResourceDefinition, 
-    ExperimentalWarning
+    fs_io_manager, 
+    ExperimentalWarning,
+    MultiPartitionsDefinition,
+    DailyPartitionsDefinition
 )
 from aave_data.assets.financials import data_lake, data_warehouse
-# from aave_data.assets.financials.data_lake import market_day_multipartition
+from aave_data.assets.financials.data_lake import market_day_multipartition
 from aave_data.resources.bigquery_io_manager import bigquery_io_manager
+from aave_data.resources.financials_config import FINANCIAL_PARTITION_START_DATE
 
 from dagster_gcp.gcs.io_manager import gcs_pickle_io_manager
 from dagster_gcp.gcs.resources import gcs_resource
@@ -29,40 +30,12 @@ from dagster_dbt import dbt_cli_resource, load_assets_from_dbt_project
 from google.oauth2 import service_account
 from google.cloud import storage
 
+
+
 if not sys.warnoptions:
     import warnings
     # warnings.simplefilter("ignore")
     warnings.filterwarnings("ignore", category=ExperimentalWarning)
-
-
-# financial_assets = load_assets_from_modules(
-#     # modules=[financials]
-#     modules=[data_lake, data_warehouse]
-#     # modules=[data_lake_minimal]
-# )
-
-financials_data_lake_assets = load_assets_from_modules(
-    modules=[data_lake],
-    key_prefix="financials_data_lake",
-    group_name="financials_data_lake"
-)
-
-warehouse_assets = load_assets_from_modules(
-    modules=[data_warehouse],
-    key_prefix="warehouse",
-    group_name="warehouse"
-)
-
-# financials_update_job = define_asset_job(
-#     name='financials_update_job',
-#     selection=AssetSelection.keys('block_numbers_by_day')
-# )
-
-# financials_update_job = define_asset_job(
-#     name='financials_update_job',
-#     selection=AssetSelection.keys('block_numbers_by_day'),
-#     partitions_def=market_day_multipartition
-# )
 
 
 
@@ -174,6 +147,22 @@ resource_defs = {
     },
 }
 
+############################################
+# Assets
+############################################
+
+
+financials_data_lake_assets = load_assets_from_modules(
+    modules=[data_lake],
+    key_prefix="financials_data_lake",
+    group_name="financials_data_lake"
+)
+
+warehouse_assets = load_assets_from_modules(
+    modules=[data_warehouse],
+    key_prefix="warehouse",
+    group_name="warehouse"
+)
 
 
 dbt_assets = load_assets_from_dbt_project(
@@ -182,94 +171,167 @@ dbt_assets = load_assets_from_dbt_project(
     # partitions_def=market_day_multipartition
 )
 
-# print(type(dbt_assets))
+############################################
+# Jobs
+############################################
 
+# unpartitioned_data_lake_assets = [
+#     'financials_data_lake/tx_classification',
+#     'financials_data_lake/display_names',
+#     'financials_data_lake/internal_external_addresses'
+# ]
 
-financials_data_lake_sensor = build_asset_reconciliation_sensor(
-    name="financials_data_lake_sensor",
-    asset_selection=AssetSelection.groups('financials_data_lake') - AssetSelection.keys('financials_data_lake/block_numbers_by_day'),# - AssetSelection.assets(*dbt_assets),
-    minimum_interval_seconds=60*3
-)
-
-financials_warehouse_sensor = build_asset_reconciliation_sensor(
-    name="financials_warehouse_sensor",
-    asset_selection=AssetSelection.groups('warehouse'),
-    minimum_interval_seconds=60*3
-)
-
-dbt_sensor = build_asset_reconciliation_sensor(
-    name="dbt_sensor",
-    asset_selection=AssetSelection.assets(*dbt_assets),
-    minimum_interval_seconds=60*3
-)
-
-####################
-# config for data lake in gcs storage buckets, not used
-####################
-
-# if dagster_deployment == 'local_filesystem':
-#     # dev on local machine, files stored on local filesystem
-#     resource_defs = {
-#         "data_lake_io_manager": fs_io_manager,
-#     }
-# elif dagster_deployment == 'local_cloud':
-#     # dev on local machine, files stored in GCS dev bucket and BQ dev tables
-#     service_account_creds = os.environ['AAVE_ETL_DEV_BIGQUERY_SERVICE_ACCOUNT_CREDENTIALS']
-#     gcs_credentials = service_account.Credentials.from_service_account_info(json.loads(service_account_creds))
-#     storage_client = storage.Client(credentials=gcs_credentials)
-#     resource_defs = {
-#         "data_lake_io_manager": gcs_pickle_io_manager.configured(
-#             {
-#                 "gcs_bucket": "llama_aave_dev_datalake",
-#                 "gcs_prefix": "financials"
-#             }
-#         ),
-#         "data_lake_io_manager": gcs_pickle_io_manager.configured(
-#             {
-#                 "gcs_bucket": "llama_aave_dev_datalake",
-#                 "gcs_prefix": "financials"
-#             }
-#         ),
-#         "gcs": ResourceDefinition.hardcoded_resource(storage_client)
-#     }
-# elif dagster_deployment == 'prod':
-#     # running on dagster cloud in prod GCS bucket and BQ env
-#     service_account_creds = os.environ['AAVE_ETL_PROD_BIGQUERY_SERVICE_ACCOUNT_CREDENTIALS']
-#     gcs_credentials = service_account.Credentials.from_service_account_info(json.loads(service_account_creds))
-#     storage_client = storage.Client(credentials=gcs_credentials)
-#     resource_defs = {
-#         "data_lake_io_manager": gcs_pickle_io_manager.configured(
-#             {
-#                 "gcs_bucket": "llama_aave_prod_datalake",
-#                 "gcs_prefix": "financials"
-#             }
-#         ),
-#         "data_lake_io_manager": gcs_pickle_io_manager.configured(
-#             {
-#                 "gcs_bucket": "llama_aave_dev_datalake",
-#                 "gcs_prefix": "financials"
-#             }
-#         ),
-#         "gcs": ResourceDefinition.hardcoded_resource(storage_client)
-#     }
-# else:
-#     errmsg = "Environment variable DAGSTER_DEPLOYMENT must be set to either 'local_filesystem', 'local_cloud', or 'prod'"
-#     raise EnvironmentError(errmsg)
-
-
-    
-# financials_update_job_schedule = ScheduleDefinition(
-#     name="financials_update_job_schedule", job=financials_update_job, cron_schedule="6 * * * *"
+# financials_data_lake_update_job = define_asset_job(
+#     name='financials_data_lake_update_job',
+#     selection=AssetSelection.groups('financials_data_lake') - AssetSelection.keys(*unpartitioned_data_lake_assets),
+#     partitions_def=market_day_multipartition
 # )
 
-# todo need to figure out how to define a partitoned schedule
-# financials_update_job_schedule = build_schedule_from_partitioned_job(financials_update_job)
+# Updates block_numbers_by_day and thus triggers all downstream jobs via the reconciliation sensor
+financials_root_job = define_asset_job(
+    name='financials_root_job',
+    selection=AssetSelection.keys('financials_data_lake/block_numbers_by_day'),
+    partitions_def=market_day_multipartition
+)
+
+############################################
+# Schedules
+############################################
+
+daily_partition = DailyPartitionsDefinition(start_date=FINANCIAL_PARTITION_START_DATE)
+
+def get_multipartition_keys_with_dimension_value(
+    partition_def: MultiPartitionsDefinition, 
+    dimension_values: dict,
+):
+    """ Helper function for schedule
+        Returns a list of partition keys that match the given dimension values
+    """
+    matching_keys = []
+    for partition_key in partition_def.get_partition_keys():
+        # context.log.info(partition_key)
+        # keys_by_dimension = partition_key.keys_by_dimension()
+        date, market = partition_key.split("|")
+        if all(
+            [
+                # keys_by_dimension.get(dimension, None) == value
+                date == value
+                for dimension, value in dimension_values.items()
+            ]
+        ):
+            matching_keys.append(partition_key)
+    return matching_keys
+
+
+@schedule(
+    cron_schedule="15 * * * *",
+    job=financials_root_job,
+    execution_timezone='UTC',
+    name="financials_root_schedule",
+)
+def financials_root_schedule(context):
+    # context.log.info(daily_partition)
+    time_partitions = daily_partition.get_partition_keys(context.scheduled_execution_time)
+    # context.log.info(f"Time partitions: {time_partitions}")
+    # Run for the latest time partition. Prior partitions will have been handled by prior ticks.
+    curr_date = time_partitions[-1]
+    context.log.info(f"Constructing run schedule for current date: {curr_date}")
+    for multipartition_key in get_multipartition_keys_with_dimension_value(
+        market_day_multipartition, {"date": curr_date}
+    ):
+        context.log.info(f"Generating run request for partition {multipartition_key}")
+        yield financials_root_job.run_request_for_partition(
+            partition_key=multipartition_key,
+            run_key=multipartition_key,
+        )
+
+
+####################################################
+# Sensor Code - not working pending sensor performance improvements
+############################################
+#
+# # break assets up into chunks to avoid sensor timeout
+# data_lake_chunk_1 = [
+#     'financials_data_lake/market_tokens_by_day',
+#     # 'financials_data_lake/treasury_accrued_incentives_by_day',
+#     # 'financials_data_lake/non_atoken_balances_by_day',
+#     # 'financials_data_lake/non_atoken_transfers_by_day',
+#     # 'financials_data_lake/user_lm_rewards_claimed',
+#     ]
+# data_lake_chunk_2 = [
+#     'financials_data_lake/aave_oracle_prices_by_day',
+#     'financials_data_lake/collector_atoken_balances_by_day',
+#     'financials_data_lake/collector_atoken_transfers_by_day',
+#     'financials_data_lake/v3_accrued_fees_by_day',
+#     'financials_data_lake/v3_minted_to_treasury_by_day',
+#     'financials_data_lake/tx_classification',
+#     'financials_data_lake/display_names',
+#     'financials_data_lake/internal_external_addresses'
+#     ]
+# data_lake_chunk_3 = [
+#     'financials_data_lake/aave_oracle_prices_by_day',
+#     'financials_data_lake/collector_atoken_balances_by_day',
+#     'financials_data_lake/collector_atoken_transfers_by_day',
+#     'financials_data_lake/v3_accrued_fees_by_day',
+#     'financials_data_lake/v3_minted_to_treasury_by_day',
+#     ]
+# data_lake_chunk_4 = [
+#     'financials_data_lake/tx_classification',
+#     'financials_data_lake/display_names',
+#     'financials_data_lake/internal_external_addresses'
+# ]
+
+# financials_data_lake_sensor = build_asset_reconciliation_sensor(
+#     name="financials_data_lake_sensor",
+#     asset_selection=AssetSelection.groups('financials_data_lake') - AssetSelection.keys('financials_data_lake/block_numbers_by_day'),# - AssetSelection.assets(*dbt_assets),
+#     minimum_interval_seconds=60*3
+# )
+
+# financials_warehouse_sensor = build_asset_reconciliation_sensor(
+#     name="financials_warehouse_sensor",
+#     asset_selection=AssetSelection.groups('warehouse'),
+#     minimum_interval_seconds=60*3
+# )
+
+# dbt_sensor = build_asset_reconciliation_sensor(
+#     name="dbt_sensor",
+#     asset_selection=AssetSelection.assets(*dbt_assets),
+#     minimum_interval_seconds=60*3
+# )
+# # both_list = minimal_list.append(exclude_list)
+# minimal_sensor = build_asset_reconciliation_sensor(
+#     name="minimal_sensor",
+#     asset_selection=AssetSelection.keys(*data_lake_chunk_1),
+#     # asset_selection=AssetSelection.groups('financials_data_lake') - AssetSelection.keys(*exclude_list) - AssetSelection.keys('financials_data_lake/block_numbers_by_day'),
+#     minimum_interval_seconds=60*3
+# )
+#####################################################################
 
 
 defs = Definitions(
     assets=[*financials_data_lake_assets, *warehouse_assets, *dbt_assets],
-    # schedules=[financials_update_job_schedule]
-    # jobs=[financials_update_job],
-    sensors=[financials_data_lake_sensor, financials_warehouse_sensor, dbt_sensor],
+    jobs=[financials_root_job],
+    schedules = [financials_root_schedule],
+    # sensors=[financials_data_lake_sensor, financials_warehouse_sensor, dbt_sensor, minimal_sensor],
     resources=resource_defs[dagster_deployment],
 )
+
+
+
+
+# from dagster import  build_sensor_context, DagsterInstance
+# if __name__ == "__main__":
+
+#     # you may need to change this line to get your prod dagster instance
+#     with DagsterInstance.get() as instance:
+#         sensor = build_asset_reconciliation_sensor(AssetSelection.groups('financials_data_lake') - AssetSelection.keys('financials_data_lake/block_numbers_by_day'))
+#         cursor = sensor.evaluate_tick(
+#             build_sensor_context(
+#                 instance=instance,
+#                 repository_def=defs,
+#             )
+#         )
+    # context = build_schedule_context()
+    # pass
+    # schedules = schedule_def(context)
+    # print(schedule_def)
