@@ -175,6 +175,7 @@ select
   , chain
   , market
   , token 
+  -- aPAX renamed to aUSDP - subgraph returns aPAX
   , case when token = '0x2e8f4bdbe3d47d7d7de490437aea9915d930f1a3' then 'aUSDP' else symbol end as symbol
   , underlying_reserve 
   , case when token = '0x8e870d67f660d95d5be530380d0ec0bd388289e1' then 'aUSDP' else underlying_reserve_symbol end as underlying_reserve_symbol
