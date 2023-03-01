@@ -1443,6 +1443,49 @@ def display_names(context) -> pd.DataFrame:
 
     return names
 
+
+@asset(
+    compute_kind="python",
+    #group_name='data_lake',
+    io_manager_key = 'data_lake_io_manager',
+    code_version="1",
+)
+def balance_group_lists(context) -> pd.DataFrame:
+    """
+    Returns a dataframe of token groupings used in reports
+    
+    Args:
+        context: Dagster context object
+    Returns:
+        A dataframe of token groupings used in reports
+    Raises:
+        EnvironmentError: if the DAGSTER_DEPLOYMENT environment variable is not set correctly
+
+    """
+
+    from aave_data import dagster_deployment
+
+    if dagster_deployment in ('local_filesystem','local_cloud'):
+        url = 'https://storage.googleapis.com/llama_aave_dev_public/aave_token_balance_group_lists.csv'
+    elif dagster_deployment == 'prod':
+        url = 'https://storage.googleapis.com/llama_aave_prod_public/aave_token_balance_group_lists.csv'
+    else:
+        errmsg = "Environment variable DAGSTER_DEPLOYMENT must be set to either 'local_filesystem', 'local_cloud', or 'prod'"
+        raise EnvironmentError(errmsg)
+
+
+    names = pd.read_csv(url, engine='python', quoting=3)
+    names = standardise_types(names)
+
+    context.add_output_metadata(
+        {
+            "num_records": len(names),
+            # "preview": MetadataValue.md(names.to_markdown()),
+        }
+    )
+
+    return names
+
 #######################################
 # Test assets for the io manager
 

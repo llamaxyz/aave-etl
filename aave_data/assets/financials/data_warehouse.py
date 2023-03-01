@@ -554,14 +554,97 @@ def aave_internal_addresses(
 
     return return_val
 
-if __name__ == "__main__":
+@asset(
+    compute_kind='python',
+    code_version="1",
+    io_manager_key = 'data_warehouse_io_manager',
+    ins={
+        "market_tokens_by_day": AssetIn(key_prefix="financials_data_lake"),
+        "balance_group_lists": AssetIn(key_prefix="financials_data_lake"),
+    }
+)
+def balance_group_lookup(
+            context,
+            market_tokens_by_day,
+            balance_group_lists
+            ) -> pd.DataFrame:
+    """
+    
+    
+
+
+    Args:
+        context: dagster context object
+        market_tokens_by_day: the output of market_tokens_by_day
+        internal_external_addresses: the output of internal_external_addresses
+
+    Returns:
+        A dataframe of manual addresses from the CSV and all atokens
+
+    """
+    mc = []
+    for market in CONFIG_MARKETS.keys():
+        mc.append([market, CONFIG_MARKETS[market]['chain']])
+    mc = pd.DataFrame(mc, columns=['market','chain'])
+
+    # build the tokens table
+    return_val = market_tokens_by_day[['market','atoken','atoken_symbol','reserve','symbol',]].copy().drop_duplicates()
+    # add the V1 tokens as native reserves
+    v1_tokens = return_val.loc[return_val.market == 'ethereum_v1'].copy()
+    v1_tokens.atoken = v1_tokens.reserve
+    return_val = pd.concat([return_val, v1_tokens])
+    # add the non-atokens
+    non_atokens = pd.DataFrame()
+    for market in CONFIG_TOKENS.keys():
+        for contract in CONFIG_TOKENS[market].keys():
+            for token in CONFIG_TOKENS[market][contract]['tokens'].keys():
+                token_row = pd.DataFrame(
+                    [
+                        {
+                            'market': market,
+                            'atoken': CONFIG_TOKENS[market][contract]['tokens'][token]['address'],
+                            'atoken_symbol': token,
+                            'reserve': CONFIG_TOKENS[market][contract]['tokens'][token]['address'],
+                            'symbol': token,
+                        }
+                    ]
+                )
+                non_atokens = pd.concat([non_atokens, token_row])
+    non_atokens = non_atokens.drop_duplicates()
+    return_val = pd.concat([return_val, non_atokens])
+    # merge the chain names
+    return_val = return_val.merge(mc, on='market', how='left')
+    # get the list of balance groups
+    # groups = {}
+    for col in balance_group_lists.columns:
+        token_list = balance_group_lists[col].dropna().tolist()
+        # todo fix the next line, it's overwriting everything except the last column
+        return_val['balance_group'] = np.where(return_val['atoken_symbol'].isin(token_list), col, 'other_token')
+    
+    return_val['stable_class'] = np.where(return_val['balance_group'].isin(['DAI','USDC','USDT','other_stables']), 'stablecoin', 'unstablecoin')
+
+
+    return_val = standardise_types(return_val)
+
+    # ic(return_val.shape)
+    context.add_output_metadata(
+        {
+            "num_records": len(return_val),
+            "preview": MetadataValue.md(return_val.head().to_markdown()),
+        }
+    )
+
+    return return_val
+
+# if __name__ == "__main__":
     # test_blocks_by_day()
     # test_atoken_measures_by_day()
-    import pandas as pd
-    poly = pd.read_pickle('/workspaces/aave-etl/storage/collector_atoken_transfers_by_day/2023-01-19|polygon_v3')
-    wbtc = poly.loc[poly.transfers_contract_symbol == 'aPolWBTC']
-    ic(wbtc)
-    print(wbtc.to_dict())
+    # import pandas as pd
+    # poly = pd.read_pickle('/workspaces/aave-etl/storage/collector_atoken_transfers_by_day/2023-01-19|polygon_v3')
+    # wbtc = poly.loc[poly.transfers_contract_symbol == 'aPolWBTC']
+    # ic(wbtc)
+    # print(wbtc.to_dict())
+
 
 
 
