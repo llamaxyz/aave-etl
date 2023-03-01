@@ -614,14 +614,17 @@ def balance_group_lookup(
     return_val = pd.concat([return_val, non_atokens])
     # merge the chain names
     return_val = return_val.merge(mc, on='market', how='left')
-    # get the list of balance groups
-    # groups = {}
+    
+    # get the list of balance groups and assign them
+    return_val['balance_group'] = pd.NA
     for col in balance_group_lists.columns:
         token_list = balance_group_lists[col].dropna().tolist()
         # todo fix the next line, it's overwriting everything except the last column
-        return_val['balance_group'] = np.where(return_val['atoken_symbol'].isin(token_list), col, 'other_token')
+        return_val['balance_group'] = np.where(return_val['atoken_symbol'].isin(token_list), col, return_val['balance_group'])
     
+    return_val['balance_group'] = np.where(return_val['balance_group'].isna(), 'Other Token', return_val['balance_group'])
     return_val['stable_class'] = np.where(return_val['balance_group'].isin(['DAI','USDC','USDT','other_stables']), 'stablecoin', 'unstablecoin')
+    return_val['balance_group'] = np.where(return_val['balance_group'] == 'other_stables', 'Other Stables', return_val['balance_group'])
 
 
     return_val = standardise_types(return_val)
