@@ -809,6 +809,89 @@ def test_v3_minted_to_treasury_by_day():
     ic(result)
     assert_frame_equal(result, expected, check_exact=True, check_like=True)  # type: ignore
 
+def test_v3_accrued_fees_by_day():
+    """
+    Tests the collector token transfers by day asset
+    """
+
+    pkey = MultiPartitionKey(
+        {
+            "date": '2022-11-26',
+            "market": 'polygon_v3'
+        }
+    )  # type: ignore
+
+    context = build_op_context(partition_key=pkey)
+
+    market_tokens_by_day_sample_output = pd.DataFrame(
+        {
+            "reserve": {
+                0: "0x2791bca1f2de4661ed88a30c99a7a9449aa84174",
+            },
+            "name": {0: "USD Coin (PoS)"},
+            "symbol": {0: "USDC",},
+            "decimals": {0: 6,},
+            "atoken": {
+                0: "0x625e7708f30ca75bfd92586e17077590c60eb4cd",
+            },
+            "atoken_symbol": {0: "aPolUSDC",},
+            "pool": {
+                0: "0x794a61358d6845594f94dc1db02a252b5b4814ad",
+            },
+            "market": {0: "polygon_v3",},
+            "atoken_decimals": {0: 6,},
+            "block_height": {0: 36068925,},
+            "block_day": {
+                0: datetime(2022, 11, 26, 0, 0, 0),
+            },
+        }
+    )
+    market_tokens_by_day_sample_output = standardise_types(market_tokens_by_day_sample_output)
+
+    expected = pd.DataFrame(
+        {
+            "market":{
+                0:"polygon_v3",
+            },
+            "reserve":{
+                0:"0x2791bca1f2de4661ed88a30c99a7a9449aa84174",
+            },
+            "symbol":{
+                0:"USDC",
+            },
+            "atoken":{
+                0:"0x625e7708f30ca75bfd92586e17077590c60eb4cd",
+            },
+            "atoken_symbol":{
+                0:"aPolUSDC",
+            },
+            "block_height":{
+                0:36068925,
+            },
+            "block_day":{
+                0: datetime(2022,11,26,0,0,0, tzinfo=timezone.utc),
+            },
+            "accrued_fees_scaled":{
+                0:43.39621,
+            },
+            "liquidity_index":{
+                0:1.009852,
+            },
+            "accrued_fees":{
+                0:43.823732,
+            }
+        }
+    )
+    expected = standardise_types(expected)
+    ic(expected)
+
+    result = v3_accrued_fees_by_day(context, market_tokens_by_day_sample_output)
+    ic(result)
+    
+    assert_frame_equal(result, expected, check_exact=True)  # type: ignore
+
+
+
 def test_treasury_accrued_incentives():
     """
     Tests the treasury_accrued_incentives asset on both aave_v3 and aave_v2 (including null returns)
@@ -1097,8 +1180,9 @@ if __name__ == "__main__":
     # test_non_atoken_transfers_by_day()
     # test_collector_atoken_balances_by_day()
     # test_non_atoken_balances_by_day()
-    test_v3_accrued_fees_by_day()
+    # test_v3_accrued_fees_by_day()
     # test_v3_minted_to_treasury_by_day()
+    test_v3_minted_to_treasury_by_day_2()
     # test_treasury_accrued_incentives()
     # test_user_lm_rewards_claimed()
     # test_internal_external_addresses()

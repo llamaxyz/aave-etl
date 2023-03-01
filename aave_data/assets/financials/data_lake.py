@@ -893,6 +893,7 @@ def v3_minted_to_treasury_by_day(context, block_numbers_by_day, market_tokens_by
         if not minted_to_treasury.empty:
             # Decode the data & topic1 fields from the log events
             # pylint: disable=E1136
+            minted_to_treasury = minted_to_treasury.loc[~minted_to_treasury.raw_log_topics_0.isna()]
             minted_to_treasury['minted_to_treasury_amount'] = minted_to_treasury.apply(
                 lambda row: decode(['uint256'], to_bytes(hexstr = row.raw_log_data))[0],
                 axis=1)
@@ -940,7 +941,6 @@ def v3_minted_to_treasury_by_day(context, block_numbers_by_day, market_tokens_by
                 chain_id,
                 mint_topic_hash
             )
-
             # decoded data in covalent is unreliable due to int->float conversions and incorrect ABI
             # filter for the tx_hash in the minted_to_treasury dataframe
             # then grab the raw log data and decode it here
