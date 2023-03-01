@@ -37,6 +37,7 @@ select
   , tokens_out_internal
   , 0 as minted_to_treasury_amount
   , 0 as minted_amount
+-- from warehouse.non_atoken_measures_by_day
 from  {{ source('warehouse','non_atoken_measures_by_day')}}
 )
 
@@ -294,11 +295,14 @@ select
   , t.currency
   , d.display_chain
   , d.display_name
+  , c.label as collector_label
 from long_format l
   -- left join financials_data_lake.tx_classification t on (l.measure = t.measure)
   -- left join financials_data_lake.display_names d on (l.collector = d.collector and l.chain = d.chain and l.market = d.market)
-  left join {{ source('financials_data_lake','tx_classification')}} t on (l.measure = t.measure)
-  left join {{ source('financials_data_lake','display_names')}} d on (l.collector = d.collector and l.chain = d.chain and l.market = d.market)
+  -- left join warehouse.aave_internal_addresses c on (l.collector = c.contract_address and l.chain = c.chain)
+  left join {{ source('financials_data_lake','tx_classification') }} t on (l.measure = t.measure)
+  left join {{ source('financials_data_lake','display_names') }} d on (l.collector = d.collector and l.chain = d.chain and l.market = d.market)
+  left join {{ ref('aave_atokens') }} d on (l.collector = d.collector and l.chain = d.chain and l.market = d.market)
 where t.measure_type is not null
 order by display_chain, display_name, block_day, symbol
 
