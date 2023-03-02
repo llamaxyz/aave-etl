@@ -175,7 +175,7 @@ def get_token_transfers_from_covalent(start_block: int,
     i = 0
     delay = INITIAL_RETRY
     while True:
-        response = requests.get(covalent_api_url, timeout=300)#, auth=(API_KEY, API_KEY))
+        response = requests.get(covalent_api_url, timeout=900)#, auth=(API_KEY, API_KEY))
         if response.status_code == requests.codes.ok:
             break
         i += 1
