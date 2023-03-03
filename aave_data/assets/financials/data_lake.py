@@ -366,6 +366,7 @@ def collector_atoken_transfers_by_day(context, market_tokens_by_day, block_numbe
     for collector in collectors:
         for row in market_tokens_by_day.itertuples():
             # ic(row)
+            context.log.info(f"atoken: {row.atoken_symbol}")
             if market == 'ethereum_v1':
                 token = row.reserve
             else:
@@ -377,7 +378,6 @@ def collector_atoken_transfers_by_day(context, market_tokens_by_day, block_numbe
                 collector,
                 token
             )
-            context.log.info(f"atoken: {row.atoken_symbol}")
             if not row_transfers.empty:
                 row_transfers['market'] = market
                 row_transfers['collector'] = collector
