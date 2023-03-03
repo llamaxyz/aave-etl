@@ -1182,7 +1182,7 @@ if __name__ == "__main__":
     # test_non_atoken_balances_by_day()
     # test_v3_accrued_fees_by_day()
     # test_v3_minted_to_treasury_by_day()
-    test_v3_minted_to_treasury_by_day_2()
+    # test_v3_minted_to_treasury_by_day_2()
     # test_treasury_accrued_incentives()
     # test_user_lm_rewards_claimed()
     # test_internal_external_addresses()
@@ -1190,6 +1190,6 @@ if __name__ == "__main__":
     # test_tx_classification()
     # test_display_names()
     
-    # pass
+    pass
 
 

@@ -278,28 +278,35 @@ def financials_root_schedule(context):
 #     'financials_data_lake/internal_external_addresses'
 # ]
 
-# financials_data_lake_sensor = build_asset_reconciliation_sensor(
-#     name="financials_data_lake_sensor",
-#     asset_selection=AssetSelection.groups('financials_data_lake') - AssetSelection.keys('financials_data_lake/block_numbers_by_day'),# - AssetSelection.assets(*dbt_assets),
-#     minimum_interval_seconds=60*3
-# )
+financials_data_lake_sensor = build_asset_reconciliation_sensor(
+    name="financials_data_lake_sensor",
+    asset_selection=AssetSelection.groups('financials_data_lake') - AssetSelection.keys('financials_data_lake/block_numbers_by_day'),# - AssetSelection.assets(*dbt_assets),
+    minimum_interval_seconds=60*3
+)
 
-# financials_warehouse_sensor = build_asset_reconciliation_sensor(
-#     name="financials_warehouse_sensor",
-#     asset_selection=AssetSelection.groups('warehouse'),
-#     minimum_interval_seconds=60*3
-# )
+financials_warehouse_sensor = build_asset_reconciliation_sensor(
+    name="financials_warehouse_sensor",
+    asset_selection=AssetSelection.groups('warehouse'),
+    minimum_interval_seconds=60*3
+)
 
-# dbt_sensor = build_asset_reconciliation_sensor(
-#     name="dbt_sensor",
-#     asset_selection=AssetSelection.assets(*dbt_assets),
-#     minimum_interval_seconds=60*3
-# )
+dbt_sensor = build_asset_reconciliation_sensor(
+    name="dbt_sensor",
+    asset_selection=AssetSelection.assets(*dbt_assets),
+    minimum_interval_seconds=60*3
+)
 # # both_list = minimal_list.append(exclude_list)
-# minimal_sensor = build_asset_reconciliation_sensor(
-#     name="minimal_sensor",
-#     asset_selection=AssetSelection.keys(*data_lake_chunk_1),
-#     # asset_selection=AssetSelection.groups('financials_data_lake') - AssetSelection.keys(*exclude_list) - AssetSelection.keys('financials_data_lake/block_numbers_by_day'),
+minimal_sensor = build_asset_reconciliation_sensor(
+    name="minimal_sensor",
+    asset_selection=AssetSelection.keys('financials_data_lake/market_tokens_by_day'),
+    # asset_selection=AssetSelection.groups('financials_data_lake') - AssetSelection.keys(*exclude_list) - AssetSelection.keys('financials_data_lake/block_numbers_by_day'),
+    # asset_selection=AssetSelection.groups('financials_data_lake'),
+    minimum_interval_seconds=60*3
+)
+# financials_sensor = build_asset_reconciliation_sensor(
+#     name="financials_sensor",
+#     # asset_selection=AssetSelection.keys(*data_lake_chunk_1),
+#     asset_selection=AssetSelection.all() - AssetSelection.keys('financials_data_lake/block_numbers_by_day'),
 #     minimum_interval_seconds=60*3
 # )
 #####################################################################
@@ -309,7 +316,7 @@ defs = Definitions(
     assets=[*financials_data_lake_assets, *warehouse_assets, *dbt_assets],
     jobs=[financials_root_job],
     schedules = [financials_root_schedule],
-    # sensors=[financials_data_lake_sensor, financials_warehouse_sensor, dbt_sensor, minimal_sensor],
+    sensors=[financials_data_lake_sensor, financials_warehouse_sensor, dbt_sensor, minimal_sensor],
     resources=resource_defs[dagster_deployment],
 )
 
