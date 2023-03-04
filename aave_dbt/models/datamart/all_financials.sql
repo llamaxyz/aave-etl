@@ -306,7 +306,7 @@ from long_format l
   -- left join warehouse.balance_group_lookup b on (l.market = b.market and l.token = b.atoken)
   left join {{ source('financials_data_lake','tx_classification') }} t on (l.measure = t.measure)
   left join {{ source('financials_data_lake','display_names') }} d on (l.collector = d.collector and l.chain = d.chain and l.market = d.market)
-  left join {{ ref('aave_atokens') }} d on (l.collector = d.collector and l.chain = d.chain and l.market = d.market)
+  left join {{ ref('aave_atokens') }} c on (l.collector = d.collector and l.chain = d.chain and l.market = d.market)
   left join  {{ source('warehouse','balance_group_lookup') }} b on (l.market = b.market and l.token = b.atoken)
 where t.measure_type is not null
 order by display_chain, display_name, block_day, symbol
