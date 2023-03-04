@@ -374,14 +374,25 @@ def collector_atoken_transfers_by_day(context, market_tokens_by_day, block_numbe
             else:
                 token = row.atoken
             
-            if chain in ['polygon','ethereum','optimism']:
-                row_transfers = get_token_transfers_from_alchemy(
+            if chain in ['polygon','ethereum','optimism','arbitrum']:
+                try:
+                    row_transfers = get_token_transfers_from_alchemy(
+                        start_block,
+                        end_block,
+                        block_day,
+                        chain,
+                        collector,
+                        token                    
+                    )
+                except TypeError:
+                    # fall back to covalent if alchemy fails
+                    # catches an edge case where a new atoken doesn't have metadata in the alchemy API response yet
+                    row_transfers = get_token_transfers_from_covalent(
                     start_block,
                     end_block,
-                    block_day,
-                    chain,
+                    chain_id,
                     collector,
-                    token                    
+                    token
                 )
             else:
                 row_transfers = get_token_transfers_from_covalent(

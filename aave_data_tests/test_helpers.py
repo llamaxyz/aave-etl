@@ -341,8 +341,19 @@ def test_get_token_transfers_from_alchemy():
         "polygon",
         '0x7734280a4337f37fbf4651073db7c28c80b339e9',
         '0x1a13f4ca1d028320a707d99520abfefca3998b7f'
-        )
-    # ic(result_polygon_usd)
+        ) 
+    # try:
+    #     result_arb_usd = get_token_transfers_from_alchemy(
+    #         65886486,
+    #         66206359,
+    #         datetime(2023, 3, 2, 0, 0, 0, tzinfo=timezone.utc),
+    #         "arbitrum",
+    #         '0x053d55f9b5af8694c503eb288a1b7e552f590710',
+    #         '0x513c7e3a9c69ca3e22550ef58ac1c0088e918fff'
+    #         )
+    # except TypeError:
+    #     result_arb_usd = pd.DataFrame()
+    # ic(result_arb_usd)
     assert_frame_equal(result, expected, check_exact=True, check_like=True)
     assert_frame_equal(result_polygon_usd, expected_polygon_usd, check_exact=True, check_like=True)
 

@@ -405,7 +405,11 @@ def get_token_transfers_from_alchemy(start_block: int,
             }
         )
         transfers['transfers_contract_name'] = transfers.transfers_contract_symbol
-        transfers.transfers_contract_decimals = transfers.transfers_contract_decimals.apply(lambda x: Web3.toInt(hexstr=x))
+        try:
+            transfers.transfers_contract_decimals = transfers.transfers_contract_decimals.apply(lambda x: Web3.toInt(hexstr=x))
+        except TypeError:
+            # catch the edge case where a new token doesn't return the metadata from the API.  Raise & handle in the calling function.
+            raise
         transfers['block_day'] = block_day
         transfers['start_block'] = start_block
         transfers['end_block'] = end_block
