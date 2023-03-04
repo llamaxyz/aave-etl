@@ -374,7 +374,7 @@ def collector_atoken_transfers_by_day(context, market_tokens_by_day, block_numbe
             else:
                 token = row.atoken
             
-            if chain in ['polygon','ethereum','optimism','arbitrum']:
+            if chain in ['polygon','ethereum','optimism']:
                 row_transfers = get_token_transfers_from_alchemy(
                     start_block,
                     end_block,
