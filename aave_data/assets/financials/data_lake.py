@@ -538,6 +538,9 @@ def collector_atoken_balances_by_day(context, market_tokens_by_day, block_number
     context.log.info(f"market: {market}")
     context.log.info(f"date: {date}")
 
+    context.log.info(f"market tokens shape: {market_tokens_by_day.shape}")
+    context.log.info(f"collectors: {collectors}")
+
     balances = pd.DataFrame()
     for collector in collectors:
         for row in market_tokens_by_day.itertuples():
