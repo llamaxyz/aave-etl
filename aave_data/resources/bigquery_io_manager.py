@@ -266,7 +266,7 @@ class BigQueryIOManager(IOManager):
                     partition_key
         )
         # ic(sql)
-        context.log.info(f"query: {sql}")
+        # context.log.info(f"query: {sql}")
         try:
             result = pd.read_gbq(sql, use_bqstorage_api=True)
         except pandas_gbq.exceptions.GenericGBQException as err:
