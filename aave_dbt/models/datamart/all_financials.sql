@@ -289,6 +289,7 @@ unpivot(value for measure in (start_balance_usd, end_balance_usd, start_accrued_
 )
 
 
+
 select
   l.*
   , t.measure_type 
@@ -296,13 +297,17 @@ select
   , d.display_chain
   , d.display_name
   , c.label as collector_label
+  , b.balance_group
+  , b.stable_class
 from long_format l
   -- left join financials_data_lake.tx_classification t on (l.measure = t.measure)
   -- left join financials_data_lake.display_names d on (l.collector = d.collector and l.chain = d.chain and l.market = d.market)
   -- left join warehouse.aave_internal_addresses c on (l.collector = c.contract_address and l.chain = c.chain)
+  -- left join warehouse.balance_group_lookup b on (l.market = b.market and l.token = b.atoken)
   left join {{ source('financials_data_lake','tx_classification') }} t on (l.measure = t.measure)
   left join {{ source('financials_data_lake','display_names') }} d on (l.collector = d.collector and l.chain = d.chain and l.market = d.market)
   left join {{ ref('aave_atokens') }} d on (l.collector = d.collector and l.chain = d.chain and l.market = d.market)
+  left join  {{ source('warehouse','balance_group_lookup') }} b on (l.market = b.market and l.token = b.atoken)
 where t.measure_type is not null
 order by display_chain, display_name, block_day, symbol
 

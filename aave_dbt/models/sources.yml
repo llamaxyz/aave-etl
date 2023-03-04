@@ -15,4 +15,5 @@ sources:
       - name: non_atoken_measures_by_day
       - name: treasury_incentives_by_day
       - name: user_rewards_by_day
+      - name: balance_group_lookup
       
