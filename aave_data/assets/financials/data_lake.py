@@ -32,6 +32,7 @@ from aave_data.resources.helpers import (
     get_market_tokens_at_block_messari,
     get_market_tokens_at_block_aave,
     get_token_transfers_from_covalent,
+    get_token_transfers_from_alchemy,
     get_erc20_balance_of,
     get_scaled_balance_of,
     get_events_by_topic_hash_from_covalent,
@@ -340,8 +341,8 @@ def collector_atoken_transfers_by_day(context, market_tokens_by_day, block_numbe
     """
 
     # iterate through the atokens & call the covalent API then assemble the results into a dataframe
-    start_block = block_numbers_by_day.block_height.values[0]
-    end_block = block_numbers_by_day.end_block.values[0]
+    start_block = int(block_numbers_by_day.block_height.values[0])
+    end_block = int(block_numbers_by_day.end_block.values[0])
     # market = context.partition_key.keys_by_dimension['market']
     # date = context.partition_key.keys_by_dimension['date']
     date, market = context.partition_key.split("|")
@@ -361,6 +362,7 @@ def collector_atoken_transfers_by_day(context, market_tokens_by_day, block_numbe
 
     context.log.info(f"market: {market}")
     context.log.info(f"date: {date}")
+    block_day = block_numbers_by_day.block_day.values[0]
 
     transfers = pd.DataFrame()
     for collector in collectors:
@@ -371,13 +373,24 @@ def collector_atoken_transfers_by_day(context, market_tokens_by_day, block_numbe
                 token = row.reserve
             else:
                 token = row.atoken
-            row_transfers = get_token_transfers_from_covalent(
-                start_block,
-                end_block,
-                chain_id,
-                collector,
-                token
-            )
+            
+            if chain in ['polygon','ethereum','optimism','arbitrum']:
+                row_transfers = get_token_transfers_from_alchemy(
+                    start_block,
+                    end_block,
+                    block_day,
+                    chain,
+                    collector,
+                    token                    
+                )
+            else:
+                row_transfers = get_token_transfers_from_covalent(
+                    start_block,
+                    end_block,
+                    chain_id,
+                    collector,
+                    token
+                )
             if not row_transfers.empty:
                 row_transfers['market'] = market
                 row_transfers['collector'] = collector

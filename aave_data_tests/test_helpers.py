@@ -12,6 +12,7 @@ from aave_data.resources.helpers import (
                             get_market_tokens_at_block_aave,
                             get_market_tokens_at_block_messari,
                             get_token_transfers_from_covalent,
+                            get_token_transfers_from_alchemy,
                             get_events_by_topic_hash_from_covalent,
                             standardise_types
                               )
@@ -231,6 +232,120 @@ def test_get_token_transfers_from_covalent():
     
     assert_frame_equal(result, expected, check_exact=True, check_like=True)
 
+def test_get_token_transfers_from_alchemy():
+    """Tests the alchemy token transfers function against a reference response"""
+    
+    expected = pd.DataFrame(
+        {
+            "transfers_transfer_type":{
+                0:"IN",
+                1:"OUT"
+            },
+            "transfers_from_address":{
+                0:"0x0000000000000000000000000000000000000000",
+                1:"0x464c71f6c2f760dda6093dcb91c24c39e5d6e18c"
+            },
+            "transfers_to_address":{
+                0:"0x464c71f6c2f760dda6093dcb91c24c39e5d6e18c",
+                1:"0x04f90d449d4f8316edd6ef4f963b657f8444a4ca"
+            },
+            "transfers_contract_address":{
+                0:"0xbcca60bb61934080951369a648fb03df4f96263c",
+                1:"0xbcca60bb61934080951369a648fb03df4f96263c"
+            },
+            "transfers_contract_name":{
+                0:"aUSDC",
+                1:"aUSDC"
+            },
+            "transfers_contract_decimals":{
+                0:6,
+                1:6
+            },
+            "transfers_contract_symbol":{
+                0:"aUSDC",
+                1:"aUSDC"
+            },
+            "block_day":{
+                0: datetime(2022, 11, 26, 0, 0, 0, tzinfo=timezone.utc),
+                1: datetime(2022, 11, 26, 0, 0, 0, tzinfo=timezone.utc)
+            },
+            "amount_transferred":{
+                0:2924.196349,
+                1:25077.808782
+            },
+            "start_block":{
+                0:16050438,
+                1:16050438
+            },
+            "end_block":{
+                0:16057596,
+                1:16057596
+            }
+        }
+    )
+    expected = standardise_types(expected)
+
+    # tests the case where > 1000 rows are returned from the API and pagination is required
+    expected_polygon_usd = pd.DataFrame(
+        {
+            "transfers_transfer_type":{
+                0:"IN",
+            },
+            "transfers_from_address":{
+                0:"0x0000000000000000000000000000000000000000",
+            },
+            "transfers_to_address":{
+                0:"0x7734280a4337f37fbf4651073db7c28c80b339e9",
+            },
+            "transfers_contract_address":{
+                0:"0x1a13f4ca1d028320a707d99520abfefca3998b7f",
+            },
+            "transfers_contract_name":{
+                0:"amUSDC",
+            },
+            "transfers_contract_decimals":{
+                0:6,
+            },
+            "transfers_contract_symbol":{
+                0:"amUSDC",
+            },
+            "block_day":{
+                0: datetime(2023, 1, 24, 0, 0, 0, tzinfo=timezone.utc),
+            },
+            "amount_transferred":{
+                0:181.969631,
+            },
+            "start_block":{
+                0:38448179,
+            },
+            "end_block":{
+                0:38487931,
+            }
+        }
+    )
+    expected_polygon_usd = standardise_types(expected_polygon_usd)
+    # ic(expected)
+
+    result = get_token_transfers_from_alchemy(
+        16050438,
+        16057596,
+        datetime(2022, 11, 26, 0, 0, 0, tzinfo=timezone.utc),
+        "ethereum",
+        '0x464C71f6c2F760DdA6093dCB91C24c39e5d6e18c',
+        '0xbcca60bb61934080951369a648fb03df4f96263c'
+        )
+    result_polygon_usd = get_token_transfers_from_alchemy(
+        38448179,
+        38487931,
+        datetime(2023, 1, 24, 0, 0, 0, tzinfo=timezone.utc),
+        "polygon",
+        '0x7734280a4337f37fbf4651073db7c28c80b339e9',
+        '0x1a13f4ca1d028320a707d99520abfefca3998b7f'
+        )
+    # ic(result_polygon_usd)
+    assert_frame_equal(result, expected, check_exact=True, check_like=True)
+    assert_frame_equal(result_polygon_usd, expected_polygon_usd, check_exact=True, check_like=True)
+
 def test_get_erc20_balance_of():
     """
     Tests the erc20 balance of function against a reference response
@@ -392,4 +507,5 @@ if __name__ == "__main__":
     # test_get_token_transfers_from_covalent()
     # test_get_events_by_topic_hash_from_covalent()
     # test_standarise_types()
-    test_get_scaled_balance_of()
+    # test_get_scaled_balance_of()
+    test_get_token_transfers_from_alchemy()

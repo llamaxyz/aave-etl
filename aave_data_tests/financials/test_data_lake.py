@@ -1186,10 +1186,10 @@ if __name__ == "__main__":
     # test_treasury_accrued_incentives()
     # test_user_lm_rewards_claimed()
     # test_internal_external_addresses()
-    # test_collector_atoken_transfers_by_day()
+    test_collector_atoken_transfers_by_day()
     # test_tx_classification()
     # test_display_names()
     
-    pass
+    # pass
 
 
