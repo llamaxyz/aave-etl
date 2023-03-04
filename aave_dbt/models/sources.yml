@@ -16,4 +16,5 @@ sources:
       - name: treasury_incentives_by_day
       - name: user_rewards_by_day
       - name: balance_group_lookup
+      - name: aave_internal_addresses
       
