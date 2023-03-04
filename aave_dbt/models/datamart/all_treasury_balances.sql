@@ -23,7 +23,7 @@ select
 from {{ref('all_financials')}}
 where 1=1
   and measure in ('start_balance_usd', 'start_accrued_fees_usd')
-  and collector_label = 'Ethereum V2 Incentives Controller' -- excluded from treasury holdings, included in protocol holdings
+  and collector_label != 'Ethereum V2 Incentives Controller' -- excluded from treasury holdings, included in protocol holdings
   and currency = 'usd'
 )
 
@@ -39,7 +39,7 @@ select
 from {{ref('all_financials')}}
 where 1=1
   and measure in ('start_balance', 'start_accrued_fees')
-  and collector_label = 'Ethereum V2 Incentives Controller' -- excluded from treasury holdings, included in protocol holdings
+  and collector_label != 'Ethereum V2 Incentives Controller' -- excluded from treasury holdings, included in protocol holdings
   and currency = 'native'
 )
 
@@ -70,3 +70,4 @@ from usd_balance u
     u.token = n.token and
     u.measure = n.measure
   )
+order by market, collector_label, symbol, block_day
