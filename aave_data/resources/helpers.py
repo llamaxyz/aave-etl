@@ -9,6 +9,7 @@ from io import StringIO
 from web3 import Web3
 from time import sleep
 from subgrounds.pagination.pagination import PaginationError
+from random import randint
 
 
 from aave_data.resources.financials_config import * #pylint: disable=wildcard-import, unused-wildcard-import
@@ -195,7 +196,8 @@ def get_token_transfers_from_covalent(start_block: int,
         i += 1
         if i > MAX_RETRIES:
             raise ValueError(f"Covalent token transfers API error count {i}, last error {response.status_code} {response.reason}.  Bailing out.")
-        sleep(delay)
+        rand_delay = randint(0, 250) / 1000
+        sleep(delay + rand_delay)
         delay *= 2
         print(f"Request Error {response.status_code} {response.reason}, retry count {i}")
     #pylint: enable=E1137,E1101
@@ -313,7 +315,8 @@ def get_token_transfers_from_alchemy(start_block: int,
         i += 1
         if i > MAX_RETRIES:
             raise ValueError(f"Alchemy token transfers API error count {i}, last error {response.status_code} {response.reason}.  Bailing out.")
-        sleep(delay)
+        rand_delay = randint(0, 250) / 1000
+        sleep(delay + rand_delay)
         delay *= 2
         print(f"Request Error {response.status_code} {response.reason}, retry count {i}")
     #pylint: enable=E1137,E1101
@@ -331,7 +334,8 @@ def get_token_transfers_from_alchemy(start_block: int,
             i += 1
             if i > MAX_RETRIES:
                 raise ValueError(f"Alchemy token transfers API error count {i}, last error {response.status_code} {response.reason}.  Bailing out.")
-            sleep(delay)
+            rand_delay = randint(0, 250) / 1000
+            sleep(delay + rand_delay)
             delay *= 2
             print(f"Request Error {response.status_code} {response.reason}, retry count {i}")
 
@@ -372,7 +376,8 @@ def get_token_transfers_from_alchemy(start_block: int,
         i += 1
         if i > MAX_RETRIES:
             raise ValueError(f"Alchemy token transfers API error count {i}, last error {response.status_code} {response.reason}.  Bailing out.")
-        sleep(delay)
+        rand_delay = randint(0, 250) / 1000
+        sleep(delay + rand_delay)
         delay *= 2
         print(f"Request Error {response.status_code} {response.reason}, retry count {i}")
     #pylint: enable=E1137,E1101
@@ -390,7 +395,8 @@ def get_token_transfers_from_alchemy(start_block: int,
             i += 1
             if i > MAX_RETRIES:
                 raise ValueError(f"Alchemy token transfers API error count {i}, last error {response.status_code} {response.reason}.  Bailing out.")
-            sleep(delay)
+            rand_delay = randint(0, 250) / 1000
+            sleep(delay + rand_delay)
             delay *= 2
             print(f"Request Error {response.status_code} {response.reason}, retry count {i}")
 
@@ -493,9 +499,36 @@ def get_erc20_balance_of(
     token_contract = w3.eth.contract(address=Web3.toChecksumAddress(token), abi=ERC20_ABI)
 
     if block_height > 0:
-        balance_raw = token_contract.functions.balanceOf(Web3.toChecksumAddress(address)).call(block_identifier=int(block_height))
+        i = 0
+        delay = INITIAL_RETRY
+        while True:
+            try:
+                balance_raw = token_contract.functions.balanceOf(Web3.toChecksumAddress(address)).call(block_identifier=int(block_height))
+                break
+            except:
+                i += 1
+                if i > MAX_RETRIES:
+                    raise ValueError(f"RPC error count {i}, last error {response.status_code} {response.reason}.  Bailing out.")
+                rand_delay = randint(0, 250) / 1000
+                sleep(delay + rand_delay)
+                delay *= 2
+                print(f"Request Error {response.status_code} {response.reason}, retry count {i}")
     else:
-        balance_raw = token_contract.functions.balanceOf(Web3.toChecksumAddress(address)).call()
+        i = 0
+        delay = INITIAL_RETRY
+        while True:
+            try:
+                balance_raw = token_contract.functions.balanceOf(Web3.toChecksumAddress(address)).call()
+                break
+            except:
+                i += 1
+                if i > MAX_RETRIES:
+                    raise ValueError(f"RPC error count {i}, last error {response.status_code} {response.reason}.  Bailing out.")
+                rand_delay = randint(0, 250) / 1000
+                sleep(delay + rand_delay)
+                delay *= 2
+                print(f"Request Error {response.status_code} {response.reason}, retry count {i}")
+        
 
     balance = balance_raw / pow(10, token_decimals)
 
@@ -530,9 +563,35 @@ def get_scaled_balance_of(
     token_contract = w3.eth.contract(address=Web3.toChecksumAddress(token), abi=ERC20_ABI)
 
     if block_height > 0:
-        balance_raw = token_contract.functions.scaledBalanceOf(Web3.toChecksumAddress(address)).call(block_identifier=int(block_height))
+        i = 0
+        delay = INITIAL_RETRY
+        while True:
+            try:
+                balance_raw = token_contract.functions.scaledBalanceOf(Web3.toChecksumAddress(address)).call(block_identifier=int(block_height))
+                break
+            except:
+                i += 1
+                if i > MAX_RETRIES:
+                    raise ValueError(f"RPC error count {i}, last error {response.status_code} {response.reason}.  Bailing out.")
+                rand_delay = randint(0, 250) / 1000
+                sleep(delay + rand_delay)
+                delay *= 2
+                print(f"Request Error {response.status_code} {response.reason}, retry count {i}")
     else:
-        balance_raw = token_contract.functions.scaledBalanceOf(Web3.toChecksumAddress(address)).call()
+        i = 0
+        delay = INITIAL_RETRY
+        while True:
+            try:
+                balance_raw = token_contract.functions.scaledBalanceOf(Web3.toChecksumAddress(address)).call()
+                break
+            except:
+                i += 1
+                if i > MAX_RETRIES:
+                    raise ValueError(f"RPC error count {i}, last error {response.status_code} {response.reason}.  Bailing out.")
+                rand_delay = randint(0, 250) / 1000
+                sleep(delay + rand_delay)
+                delay *= 2
+                print(f"Request Error {response.status_code} {response.reason}, retry count {i}")
 
     balance = balance_raw / pow(10, token_decimals)
 
@@ -574,7 +633,8 @@ def get_events_by_topic_hash_from_covalent(start_block: int,
         i += 1
         if i > MAX_RETRIES:
             raise ValueError(f"Covalent token transfers API error count {i}, last error {response.status_code} {response.reason}.  Bailing out.")
-        sleep(delay)
+        rand_delay = randint(0, 250) / 1000
+        sleep(delay + rand_delay)
         delay *= 2
         print(f"Request Error {response.status_code} {response.reason}, retry count {i}")
     #pylint: enable=E1137,E1101
