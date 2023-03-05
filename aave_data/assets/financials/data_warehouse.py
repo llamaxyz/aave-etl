@@ -299,8 +299,8 @@ def non_atoken_measures_by_day(
                        
 
             # aggregate transfers to collector
-            transfers = transfers[['market','chain','contract_address','block_day','tokens_in_external','tokens_in_internal','tokens_out_external','tokens_out_internal']]
-            transfers = transfers.groupby(['market','chain','contract_address','block_day']).sum().reset_index() 
+            transfers = transfers[['market','chain','contract_address','token','block_day','tokens_in_external','tokens_in_internal','tokens_out_external','tokens_out_internal']]
+            transfers = transfers.groupby(['market','chain','contract_address','token','block_day']).sum().reset_index() 
 
             # join transfers to main table
             return_val = return_val.merge(transfers, how='left')
