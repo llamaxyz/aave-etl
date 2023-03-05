@@ -7,7 +7,7 @@ sources:
       - name: block_numbers_by_day
       - name: tx_classification
       - name: display_names
-      # - name: internal_external_addresses
+      - name: aave_oracle_prices_by_day
   - name: warehouse
     tables:
       - name: atoken_measures_by_day

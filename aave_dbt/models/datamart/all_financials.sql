@@ -96,8 +96,10 @@ select
   -- , coalesce(r.sm_stkABPT_owed, 0) as sm_stkABPT_owed
   -- , coalesce(r.lm_aave_v2_owed, 0) as lm_aave_v2_owed
 from token_measures_reserves t 
-  left join financials_data_lake.aave_oracle_prices_by_day p on (t.underlying_reserve = p.reserve and t.block_day = p.block_day and t.market = p.market)
-  left join warehouse.user_rewards_by_day r on (t.market = r.market and t.block_day = r.block_day and t.collector = r.vault_address and t.token = r.token_address)
+  -- left join financials_data_lake.aave_oracle_prices_by_day p on (t.underlying_reserve = p.reserve and t.block_day = p.block_day and t.market = p.market)
+  -- left join warehouse.user_rewards_by_day r on (t.market = r.market and t.block_day = r.block_day and t.collector = r.vault_address and t.token = r.token_address)
+  left join {{ source('financials_data_lake','aave_oracle_prices_by_day')}} p on (t.underlying_reserve = p.reserve and t.block_day = p.block_day and t.market = p.market)
+  left join {{ source('warehouse','user_rewards_by_day')}} r on (t.market = r.market and t.block_day = r.block_day and t.collector = r.vault_address and t.token = r.token_address)
 )
 
 , token_level_calcs_staging as (
