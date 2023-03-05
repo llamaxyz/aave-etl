@@ -296,12 +296,16 @@ def aave_oracle_prices_by_day(context, market_tokens_by_day) -> pd.DataFrame:  #
                 delay_time *= 2
                 
 
-
         # ic(response)
 
         # create a dataframe with the price
         return_val = market_tokens_by_day[['reserve','symbol','market','block_height','block_day']].copy()
         return_val['usd_price'] = pd.Series(response, name='usd_price').astype('Float64') * price_multiplier # type: ignore
+
+        # for ethereum_v1, ETH doesn't use the WETH address.  Overwrite the price here to fix
+        if market == 'ethereum_v1':
+            return_val.loc[return_val['reserve'] == '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2', 'usd_price'] = eth_usd_price
+
 
         return_val = standardise_types(return_val)
 
