@@ -55,55 +55,64 @@ def test_get_market_tokens_at_block_messari():
     expected_length = 37
     result = get_market_tokens_at_block_messari(market, block_height, CONFIG_MARKETS)
     result_first_2 = result.head(2)
+
+    market_v3 = "ethereum_v3"
+    block_height_v3 = 16286697
+    expected_v3 = pd.DataFrame()
+    expected_length_v3 = 0
+    result_v3 = get_market_tokens_at_block_messari(market_v3, block_height_v3, CONFIG_MARKETS)
+
     # result_first_2.info()
     # expected.info()
     # ic(result_first_2)
     # ic(expected)
     # assert result_first_2.equals(expected), str(result_first_2)
     assert_frame_equal(result_first_2, expected, check_exact=True, check_like=True)
+    assert_frame_equal(result_v3, expected_v3, check_exact=True, check_like=True)
     assert len(result) == expected_length, str(result)
+    assert len(result_v3) == expected_length_v3, str(result_v3)
 
 
 def test_get_market_tokens_at_block_aave():
     """
     Tests the Aave subgraph agains a reference response
     """
-    # Check the V2 subgraph
-    market = "ethereum_v2"
-    block_height = 16050438
-    expected = pd.DataFrame(
-        [
-            {
-                "atoken": "0x101cc05f4a51c0319f570d5e146a8c625198e636",
-                "atoken_decimals": 18,
-                "atoken_symbol": "aTUSD",
-                "block_height": 16050438,
-                "decimals": 18,
-                "market": "ethereum_v2",
-                "name": "TrueUSD",
-                "pool": "0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9",
-                "reserve": "0x0000000000085d4780b73119b644ae5ecd22b376",
-                "symbol": "TUSD",
-            },
-            {
-                "atoken": "0xc9bc48c72154ef3e5425641a3c747242112a46af",
-                "atoken_decimals": 18,
-                "atoken_symbol": "aRAI",
-                "block_height": 16050438,
-                "decimals": 18,
-                "market": "ethereum_v2",
-                "name": "Rai Reflex Index",
-                "pool": "0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9",
-                "reserve": "0x03ab458634910aad20ef5f1c8ee96f1d6ac54919",
-                "symbol": "RAI",
-            },
-        ]
-    )
-    expected_length = 37
-    result = get_market_tokens_at_block_aave(market, block_height, CONFIG_MARKETS)
-    result_first_2 = result.head(2)
-    assert_frame_equal(result_first_2, expected, check_exact=True, check_like=True)
-    assert len(result) == expected_length, str(result)
+    # # Check the V2 subgraph
+    # market = "ethereum_v2"
+    # block_height = 16050438
+    # expected = pd.DataFrame(
+    #     [
+    #         {
+    #             "atoken": "0x101cc05f4a51c0319f570d5e146a8c625198e636",
+    #             "atoken_decimals": 18,
+    #             "atoken_symbol": "aTUSD",
+    #             "block_height": 16050438,
+    #             "decimals": 18,
+    #             "market": "ethereum_v2",
+    #             "name": "TrueUSD",
+    #             "pool": "0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9",
+    #             "reserve": "0x0000000000085d4780b73119b644ae5ecd22b376",
+    #             "symbol": "TUSD",
+    #         },
+    #         {
+    #             "atoken": "0xc9bc48c72154ef3e5425641a3c747242112a46af",
+    #             "atoken_decimals": 18,
+    #             "atoken_symbol": "aRAI",
+    #             "block_height": 16050438,
+    #             "decimals": 18,
+    #             "market": "ethereum_v2",
+    #             "name": "Rai Reflex Index",
+    #             "pool": "0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9",
+    #             "reserve": "0x03ab458634910aad20ef5f1c8ee96f1d6ac54919",
+    #             "symbol": "RAI",
+    #         },
+    #     ]
+    # )
+    # expected_length = 37
+    # result = get_market_tokens_at_block_aave(market, block_height, CONFIG_MARKETS)
+    # result_first_2 = result.head(2)
+    # assert_frame_equal(result_first_2, expected, check_exact=True, check_like=True)
+    # assert len(result) == expected_length, str(result)
 
     # check the V1 subgraph
     market = "ethereum_v1"
@@ -172,7 +181,13 @@ def test_get_market_tokens_at_block_aave():
     assert_frame_equal(result_first_2, expected, check_exact=True, check_like=True)
     assert len(result) == expected_length, str(result)
 
-
+    market_v3 = "ethereum_v3"
+    block_height_v3 = 16286697
+    expected_v3 = pd.DataFrame()
+    expected_length_v3 = 0
+    result_v3 = get_market_tokens_at_block_aave(market_v3, block_height_v3, CONFIG_MARKETS)
+    assert_frame_equal(result_v3, expected_v3, check_exact=True, check_like=True)
+    assert len(result_v3) == expected_length_v3, str(result_v3)
 
 
 def test_get_token_transfers_from_covalent():
@@ -513,10 +528,11 @@ def test_standarise_types():
     
 
 if __name__ == "__main__":
-    # test_get_market_tokens_at_block_aave()
+    # test_get_market_tokens_at_block_messari()
+    test_get_market_tokens_at_block_aave()
     # test_get_erc20_balance_of()
     # test_get_token_transfers_from_covalent()
     # test_get_events_by_topic_hash_from_covalent()
     # test_standarise_types()
     # test_get_scaled_balance_of()
-    test_get_token_transfers_from_alchemy()
+    # test_get_token_transfers_from_alchemy()

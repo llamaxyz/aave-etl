@@ -8,6 +8,7 @@ from subgrounds.subgrounds import Subgrounds
 from io import StringIO
 from web3 import Web3
 from time import sleep
+from subgrounds.pagination.pagination import PaginationError
 
 
 from aave_data.resources.financials_config import * #pylint: disable=wildcard-import, unused-wildcard-import
@@ -45,11 +46,17 @@ def get_market_tokens_at_block_messari(
     markets = subgraph.Query.markets(  # type: ignore
         block={'number': block_height},
     )
-
-    subgraph_data = sg.query_df([
-        markets.inputToken,
-        markets.outputToken
-    ])
+    try:
+        subgraph_data = sg.query_df([
+            markets.inputToken,
+            markets.outputToken
+        ])
+    except PaginationError as e:
+        if 'data starting at block number' in str(e):
+            # ic(f'Pagination error: {e}')
+            subgraph_data =  pd.DataFrame()
+        else:
+            raise e
     
     if not subgraph_data.empty:
         subgraph_data.columns = [col.removeprefix( # type: ignore
@@ -119,13 +126,20 @@ def get_market_tokens_at_block_aave(
                     subgraph.Pool.lendingPool == pool_id,  # type: ignore
                 ]
             )
-    subgraph_data = sg.query_df([
-            pools.reserves.underlyingAsset,
-            pools.reserves.name,
-            pools.reserves.symbol,
-            pools.reserves.decimals,
-            pools.reserves.aToken.id
-        ])
+    try:
+        subgraph_data = sg.query_df([
+                pools.reserves.underlyingAsset,
+                pools.reserves.name,
+                pools.reserves.symbol,
+                pools.reserves.decimals,
+                pools.reserves.aToken.id
+            ])
+    except PaginationError as e:
+        if 'data starting at block number' in str(e):
+            # ic(f'Pagination error: {e}')
+            subgraph_data =  pd.DataFrame()
+        else:
+            raise e
 
     if not subgraph_data.empty:
         subgraph_data.columns = [col.removeprefix( # type: ignore
