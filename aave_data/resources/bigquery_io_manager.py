@@ -118,7 +118,7 @@ class BigQueryIOManager(IOManager):
             delay_time = INITIAL_RETRY
             while True:
                 try:
-                    pd.read_gbq(cleanup_query, dialect='standard')
+                    pd.read_gbq(cleanup_query, dialect='standard', use_bqstorage_api=True)
                     break
                 except pandas_gbq.exceptions.GenericGBQException as err:
                     if not "Reason: 404" in str(err):
@@ -268,7 +268,7 @@ class BigQueryIOManager(IOManager):
         # ic(sql)
         # context.log.info(f"query: {sql}")
         try:
-            result = pd.read_gbq(sql, use_bqstorage_api=True)
+            result = pd.read_gbq(sql, dialect='standard', use_bqstorage_api=True)
         except pandas_gbq.exceptions.GenericGBQException as err:
             # skip error if the table does not exist
             if "Reason: 404 Not found: Table" in str(err):
