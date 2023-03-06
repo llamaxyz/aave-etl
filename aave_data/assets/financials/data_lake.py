@@ -822,7 +822,21 @@ def v3_accrued_fees_by_day(context, market_tokens_by_day) -> pd.DataFrame: # typ
             provider = w3.eth.contract(address=provider_address, abi=provider_abi)
             
             for row in market_tokens_by_day.itertuples():
-                reserve_data = provider.functions.getReserveData(Web3.toChecksumAddress(row.reserve)).call(block_identifier=int(block_height))
+                i = 0
+                delay = INITIAL_RETRY
+                while True:
+                    try:
+                        reserve_data = provider.functions.getReserveData(Web3.toChecksumAddress(row.reserve)).call(block_identifier=int(block_height))
+                        break
+                    except Exception as e:
+                        i += 1
+                        if i > MAX_RETRIES:
+                            raise ValueError(f"RPC error count {i}, last error {e.message}.  Bailing out.")
+                        rand_delay = randint(0, 250) / 1000
+                        sleep(delay + rand_delay)
+                        delay *= 2
+                        print(f"Request Error {e.message}, retry count {i}")
+                
                 # ic(row.symbol)
                 # ic(reserve_data)
                 accrued_fees_scaled = reserve_data[1] / pow(10, row.decimals)

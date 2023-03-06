@@ -505,14 +505,14 @@ def get_erc20_balance_of(
             try:
                 balance_raw = token_contract.functions.balanceOf(Web3.toChecksumAddress(address)).call(block_identifier=int(block_height))
                 break
-            except:
+            except Exception as e:
                 i += 1
                 if i > MAX_RETRIES:
-                    raise ValueError(f"RPC error count {i}, last error {response.status_code} {response.reason}.  Bailing out.")
+                    raise ValueError(f"RPC error count {i}, last error {e.message}.  Bailing out.")
                 rand_delay = randint(0, 250) / 1000
                 sleep(delay + rand_delay)
                 delay *= 2
-                print(f"Request Error {response.status_code} {response.reason}, retry count {i}")
+                print(f"Request Error {e.message}, retry count {i}")
     else:
         i = 0
         delay = INITIAL_RETRY
@@ -520,14 +520,14 @@ def get_erc20_balance_of(
             try:
                 balance_raw = token_contract.functions.balanceOf(Web3.toChecksumAddress(address)).call()
                 break
-            except:
+            except Exception as e:
                 i += 1
                 if i > MAX_RETRIES:
-                    raise ValueError(f"RPC error count {i}, last error {response.status_code} {response.reason}.  Bailing out.")
+                    raise ValueError(f"RPC error count {i}, last error {e.message}.  Bailing out.")
                 rand_delay = randint(0, 250) / 1000
                 sleep(delay + rand_delay)
                 delay *= 2
-                print(f"Request Error {response.status_code} {response.reason}, retry count {i}")
+                print(f"Request Error {e.message}, retry count {i}")
         
 
     balance = balance_raw / pow(10, token_decimals)
@@ -569,14 +569,14 @@ def get_scaled_balance_of(
             try:
                 balance_raw = token_contract.functions.scaledBalanceOf(Web3.toChecksumAddress(address)).call(block_identifier=int(block_height))
                 break
-            except:
+            except Exception as e:
                 i += 1
                 if i > MAX_RETRIES:
-                    raise ValueError(f"RPC error count {i}, last error {response.status_code} {response.reason}.  Bailing out.")
+                    raise ValueError(f"RPC error count {i}, last error {e.message}.  Bailing out.")
                 rand_delay = randint(0, 250) / 1000
                 sleep(delay + rand_delay)
                 delay *= 2
-                print(f"Request Error {response.status_code} {response.reason}, retry count {i}")
+                print(f"Request Error {e.message}, retry count {i}")
     else:
         i = 0
         delay = INITIAL_RETRY
@@ -584,14 +584,14 @@ def get_scaled_balance_of(
             try:
                 balance_raw = token_contract.functions.scaledBalanceOf(Web3.toChecksumAddress(address)).call()
                 break
-            except:
+            except Exception as e:
                 i += 1
                 if i > MAX_RETRIES:
-                    raise ValueError(f"RPC error count {i}, last error {response.status_code} {response.reason}.  Bailing out.")
+                    raise ValueError(f"RPC error count {i}, last error {e.message}.  Bailing out.")
                 rand_delay = randint(0, 250) / 1000
                 sleep(delay + rand_delay)
                 delay *= 2
-                print(f"Request Error {response.status_code} {response.reason}, retry count {i}")
+                print(f"Request Error {e.message}, retry count {i}")
 
     balance = balance_raw / pow(10, token_decimals)
 
