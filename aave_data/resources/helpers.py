@@ -572,11 +572,11 @@ def get_scaled_balance_of(
             except Exception as e:
                 i += 1
                 if i > MAX_RETRIES:
-                    raise ValueError(f"RPC error count {i}, last error {e.message}.  Bailing out.")
+                    raise ValueError(f"RPC error count {i}, last error {str(e)}.  Bailing out.")
                 rand_delay = randint(0, 250) / 1000
                 sleep(delay + rand_delay)
                 delay *= 2
-                print(f"Request Error {e.message}, retry count {i}")
+                print(f"Request Error {str(e)}, retry count {i}")
     else:
         i = 0
         delay = INITIAL_RETRY
@@ -587,11 +587,11 @@ def get_scaled_balance_of(
             except Exception as e:
                 i += 1
                 if i > MAX_RETRIES:
-                    raise ValueError(f"RPC error count {i}, last error {e.message}.  Bailing out.")
+                    raise ValueError(f"RPC error count {i}, last error {str(e)}.  Bailing out.")
                 rand_delay = randint(0, 250) / 1000
                 sleep(delay + rand_delay)
                 delay *= 2
-                print(f"Request Error {e.message}, retry count {i}")
+                print(f"Request Error {str(e)}, retry count {i}")
 
     balance = balance_raw / pow(10, token_decimals)
 
