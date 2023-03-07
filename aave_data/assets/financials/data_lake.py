@@ -831,11 +831,11 @@ def v3_accrued_fees_by_day(context, market_tokens_by_day) -> pd.DataFrame: # typ
                     except Exception as e:
                         i += 1
                         if i > MAX_RETRIES:
-                            raise ValueError(f"RPC error count {i}, last error {e.message}.  Bailing out.")
+                            raise ValueError(f"RPC error count {i}, last error {str(e)}.  Bailing out.")
                         rand_delay = randint(0, 250) / 1000
                         sleep(delay + rand_delay)
                         delay *= 2
-                        context.log.info(f"Request Error {e.message}, retry count {i}")
+                        context.log.info(f"Request Error {str(e)}, retry count {i}")
                 
                 # ic(row.symbol)
                 # ic(reserve_data)
