@@ -290,7 +290,7 @@ def aave_oracle_prices_by_day(context, market_tokens_by_day) -> pd.DataFrame:  #
             except ValueError as e:
                 if i > MAX_RETRIES:
                     raise e
-                print(f"Retry {i} web3 getAssetsPrices after {delay_time} seconds")
+                context.log.info(f"Retry {i} web3 getAssetsPrices after {delay_time} seconds")
                 sleep(delay_time)
                 i += 1
                 delay_time *= 2
@@ -835,7 +835,7 @@ def v3_accrued_fees_by_day(context, market_tokens_by_day) -> pd.DataFrame: # typ
                         rand_delay = randint(0, 250) / 1000
                         sleep(delay + rand_delay)
                         delay *= 2
-                        print(f"Request Error {e.message}, retry count {i}")
+                        context.log.info(f"Request Error {e.message}, retry count {i}")
                 
                 # ic(row.symbol)
                 # ic(reserve_data)
