@@ -14,7 +14,8 @@ from dagster import (
     fs_io_manager, 
     ExperimentalWarning,
     MultiPartitionsDefinition,
-    DailyPartitionsDefinition
+    DailyPartitionsDefinition,
+    ScheduleDefinition
 )
 from aave_data.assets.financials import data_lake, data_warehouse
 from aave_data.assets.financials.data_lake import market_day_multipartition
@@ -213,6 +214,23 @@ data_lake_chunk_3 = [
 #     partitions_def=market_day_multipartition
 # )
 
+financials_data_lake_partitioned_job = define_asset_job(
+    name='financials_data_lake_partitioned',
+    selection=AssetSelection.groups('financials_data_lake') - AssetSelection.keys(*data_lake_chunk_3),
+    partitions_def=market_day_multipartition
+)
+
+financials_data_lake_unpartitioned_job = define_asset_job(
+    name='financials_data_lake_unpartitioned',
+    selection=AssetSelection.keys(*data_lake_chunk_3),
+    partitions_def=market_day_multipartition
+)
+
+warehouse_datamart_job = define_asset_job(
+    name='warehouse_datamart',
+    selection=AssetSelection.groups('warehouse', 'datamart'),
+)
+
 # Updates block_numbers_by_day and thus triggers all downstream jobs via the reconciliation sensor
 financials_root_job = define_asset_job(
     name='financials_root_job',
@@ -286,6 +304,40 @@ def financials_root_schedule(context):
             run_key=multipartition_key,
         )
 
+@schedule(
+    cron_schedule="0 2 * * *",
+    job=financials_data_lake_partitioned_job,
+    execution_timezone='UTC',
+    name="financials_data_lake_partitioned_schedule",
+)
+def financials_data_lake_partitioned_schedule(context):
+    time_partitions = daily_partition.get_partition_keys(context.scheduled_execution_time)
+
+    # Run for the latest time partition. Prior partitions will have been handled by prior ticks.
+    curr_date = time_partitions[-1]
+    context.log.info(f"Constructing run schedule for current date: {curr_date}")
+    for multipartition_key in get_multipartition_keys_with_dimension_value(
+        market_day_multipartition, {"date": curr_date}
+    ):
+        context.log.info(f"Generating run request for partition {multipartition_key}")
+        yield financials_data_lake_partitioned_job.run_request_for_partition(
+            partition_key=multipartition_key,
+            run_key=multipartition_key,
+        )
+
+financials_data_lake_unpartitioned_schedule = ScheduleDefinition(
+    job = financials_data_lake_unpartitioned_job,
+    cron_schedule="0 2 * * *",
+    execution_timezone='UTC',
+    name="financials_data_lake_unpartitioned_schedule"
+    )
+
+warehouse_datamart_schedule = ScheduleDefinition(
+    job = warehouse_datamart_job,
+    cron_schedule="30 2 * * *",
+    execution_timezone='UTC',
+    name="warehouse_datamart_schedule"
+    )
 
 ####################################################
 # Sensor Code - not working pending sensor performance improvements
@@ -358,8 +410,21 @@ minimal_sensor = build_asset_reconciliation_sensor(
 
 defs = Definitions(
     assets=[*financials_data_lake_assets, *warehouse_assets, *dbt_assets],
-    jobs=[financials_root_job, financials_chunk1_job, financials_chunk2_job, financials_chunk3_job],
-    schedules = [financials_root_schedule],
+    jobs=[
+          financials_root_job,
+          financials_chunk1_job,
+          financials_chunk2_job,
+          financials_chunk3_job,
+          financials_data_lake_unpartitioned_job,
+          financials_data_lake_partitioned_job,
+          warehouse_datamart_job
+          ],
+    schedules = [
+        financials_root_schedule,
+        warehouse_datamart_schedule,
+        financials_data_lake_unpartitioned_schedule,
+        financials_data_lake_partitioned_schedule
+        ],
     sensors=[financials_data_lake_sensor, financials_warehouse_sensor, dbt_sensor, minimal_sensor],
     resources=resource_defs[dagster_deployment],
 )
