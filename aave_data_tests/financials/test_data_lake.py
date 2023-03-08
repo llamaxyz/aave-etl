@@ -23,7 +23,8 @@ from aave_data.assets.financials.data_lake import (aave_oracle_prices_by_day,
                                                     user_lm_rewards_claimed,
                                                     internal_external_addresses,
                                                     tx_classification,
-                                                    display_names
+                                                    display_names,
+                                                    streaming_payments_state,
                                                     )
 # from financials.assets import data_lake
 # from financials.
@@ -1166,6 +1167,66 @@ def test_display_names():
 
     assert_frame_equal(result.head(1), expected, check_exact=True)
 
+def test_streaming_payments_state():
+    """
+    Tests the streaming_payments_state asset
+    """
+    pkey_eth = MultiPartitionKey(
+        {
+            "date": '2022-11-26',
+            "market": 'ethereum_v2'
+        }
+    )  # type: ignore
+
+    context_eth = build_op_context(partition_key=pkey_eth)
+
+    block_numbers_by_day_sample_output = pd.DataFrame(
+        [
+            {
+                'block_day': datetime(2022,11,26,0,0,0),
+                'block_time': datetime(2022,11,26,0,0,0),
+                'block_height': 16050438,
+                'end_block': 16057596,
+                'chain': 'ethereum',
+                'market': 'ethereum_v2',
+            }
+        ]
+    )
+    block_numbers_by_day_sample_output = standardise_types(block_numbers_by_day_sample_output)
+
+    expected = pd.DataFrame(
+        [
+            {
+                'deposit_day': datetime(2022,5,7,0,0,0),
+                'contract_address': '0x25f2226b597e8f9514b3f68f00f494cf4f286491',
+                'recipient': '0xb812d0944f8f581dfaa3a93dda0d22ecef51a9cf',
+                'sender': '0x25f2226b597e8f9514b3f68f00f494cf4f286491',
+                'token_address': '0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9',
+                'stream_id': 100000, 
+                'start_time_s': 1651946694,
+                'stop_time_s': 1690826694,
+                'stream_rate': 0.000324074074074076,
+                'symbol': 'AAVE',
+                'decimals': 18,
+                'start_time': datetime(2022,5,7,18,4,54),
+                'stop_time': datetime(2023,7,31,18,4,54),
+                'deposit': 12600.0,
+                'claims': 3657.6338425926147,
+                'vested': 5690.904722,
+                'unvested': 6909.095278,
+                'unclaimed': 2033.2708794073856,
+            }
+        ]
+    )
+    expected = standardise_types(expected)
+
+    result = streaming_payments_state(context_eth, block_numbers_by_day_sample_output)
+
+    ic(result)
+    assert_frame_equal(result.head(1), expected, check_exact=True)
+
+
+
 if __name__ == "__main__":
     # ic(list(CONFIG_CHAINS.keys()))
     # ic(get_block_number_at_datetime('ethereum', datetime(2022, 11, 26, 0, 0, 0)))
@@ -1186,9 +1247,10 @@ if __name__ == "__main__":
     # test_treasury_accrued_incentives()
     # test_user_lm_rewards_claimed()
     # test_internal_external_addresses()
-    test_collector_atoken_transfers_by_day()
+    # test_collector_atoken_transfers_by_day()
     # test_tx_classification()
     # test_display_names()
+    test_streaming_payments_state()
     
     # pass
 

@@ -1537,6 +1537,149 @@ def balance_group_lists(context) -> pd.DataFrame:
 
     return names
 
+@asset(
+    # partitions_def=v3_market_day_multipartition,
+    # partitions_def=market_day_multipartition,
+    compute_kind="python",
+    #group_name='data_lake',
+    code_version="1",
+    io_manager_key = 'data_lake_io_manager',
+    ins={
+        "block_numbers_by_day": AssetIn(key_prefix="financials_data_lake"),
+    }
+)
+def streaming_payments_state(context, block_numbers_by_day):
+    """
+    Gets the streaming payments from the Eth treasury and ecosystem reserve
+
+    Uses an SQL query to give the state of the streams up to the current date
+
+    Not working - timeouts from flipside API
+    Args:
+        context: dagster context object
+        block_numbers_by_day: block numbers at the start and end of the day for the chain
+
+    Returns:
+        A dataframe with each stream and the amount of tokens that have been streamed to date
+
+    """
+
+    # date, market = context.partition_key.split("|")
+    # chain = CONFIG_MARKETS[market]['chain']
+    # partition_datetime = datetime.strptime(date, '%Y-%m-%d')
+
+    # context.log.info(f"market: {market}")
+    # context.log.info(f"date: {date}")
+
+    # start_block = block_numbers_by_day.block_height.values[0]
+    end_block = block_numbers_by_day.loc[block_numbers_by_day.market == 'ethereum_v2'].end_block.max()
+    ic(end_block)
+    
+    # define the Flipside query
+    sql = f"""
+        with create_streams as (
+        select 
+        date_trunc('day', block_timestamp) as deposit_day
+        , block_number
+        , contract_address
+        , decoded_log:deposit::int as deposit_raw
+        , decoded_log:recipient as recipient
+        , decoded_log:sender as sender
+        , decoded_log:startTime::int as start_time_s
+        , decoded_log:stopTime::int as stop_time_s
+        , decoded_log:streamId::int as stream_id
+        , decoded_log:tokenAddress as token_address
+        , to_timestamp_ntz(start_time_s) as start_time
+        , to_timestamp_ntz(stop_time_s) as stop_time
+        , deposit_raw / (stop_time_s - start_time_s) as stream_rate
+        from ethereum.core.fact_decoded_event_logs
+        where 1=1
+        and contract_address in ('0x25f2226b597e8f9514b3f68f00f494cf4f286491','0x464c71f6c2f760dda6093dcb91c24c39e5d6e18c')
+        and block_timestamp > '2022-05-06' -- this is the date of the first stream
+        and event_name = 'CreateStream'
+        and block_number <= {end_block}
+        )
+
+        , withdraw_streams as (
+        select 
+        contract_address
+        , decoded_log:recipient as recipient
+        , decoded_log:streamId::int as stream_id
+        , sum(decoded_log:amount::int) as amount
+        from ethereum.core.fact_decoded_event_logs
+        where 1=1
+        and contract_address in ('0x25f2226b597e8f9514b3f68f00f494cf4f286491','0x464c71f6c2f760dda6093dcb91c24c39e5d6e18c')
+        and block_timestamp > '2022-05-06'
+        and event_name = 'WithdrawFromStream'
+        and block_number <= {end_block}
+        group by 1,2,3
+        order by contract_address, stream_id
+        )
+
+        , tokens as (
+        select 
+        address
+        , symbol
+        , decimals
+        from ethereum.core.dim_contracts
+        where address in (select distinct token_address from create_streams)
+        )
+
+        select
+        c.deposit_day
+        , c.contract_address
+        , c.deposit_raw --/ pow(10, t.decimals) as deposit
+        , c.recipient
+        , c.sender
+        , c.token_address
+        , c.stream_id
+        , c.start_time_s
+        , c.stop_time_s
+        , c.stream_rate
+        , coalesce(w.amount, 0) as claims_raw --/ pow(10, t.decimals) as claims
+        , t.symbol
+        , t.decimals
+        from create_streams c 
+        left join withdraw_streams w on (c.contract_address = w.contract_address and c.stream_id = w.stream_id)
+        left join tokens t on (c.token_address = t.address)
+        order by c.contract_address, c.stream_id
+
+        """
+
+    # initialise the query
+    sdk = ShroomDK(FLIPSIDE_API_KEY)
+    query_result = sdk.query(sql, timeout_minutes=3)
+    
+    streams = pd.DataFrame(data=query_result.rows, columns=[x.lower() for x in query_result.columns])
+    streams.deposit_day = pd.to_datetime(streams.deposit_day, utc=True)
+
+    streams['start_time'] = pd.to_datetime(streams.start_time_s, unit = 's', utc=True)
+    streams['stop_time'] = pd.to_datetime(streams.stop_time_s, unit = 's', utc=True)
+    streams['deposit'] = streams.deposit_raw / 10 ** streams.decimals
+    streams['claims'] = streams.claims_raw / 10 ** streams.decimals
+    streams.claims = streams.claims.astype(float)
+    streams['stream_rate'] = streams.stream_rate / 10 ** streams.decimals
+    current_time = (block_numbers_by_day.loc[block_numbers_by_day.market == 'ethereum_v2'].block_day.max() + timedelta(days=1)).timestamp()
+    streams['current_time'] = current_time
+    streams['vested_proportion'] = streams.apply(lambda x: max(min(x.current_time, x.stop_time_s) - x.start_time_s, 0), axis=1)
+    streams['vested'] = streams.vested_proportion * streams.stream_rate
+    streams['unvested'] = streams.deposit - streams.vested
+    streams['unclaimed'] = streams.vested - streams.claims
+
+
+    streams = streams.drop(columns=['deposit_raw', 'claims_raw', 'vested_proportion', 'current_time'])
+    # streams = streams.drop(columns=['deposit_raw', 'claims_raw'])
+    streams = standardise_types(streams)
+    
+    context.add_output_metadata(
+        {
+            "num_records": len(streams),
+            "preview": MetadataValue.md(streams.head().to_markdown()),
+        }
+    )
+
+    return streams
+
 # @asset(
 #     # partitions_def=v3_market_day_multipartition,
 #     # partitions_def=market_day_multipartition,
@@ -1548,144 +1691,7 @@ def balance_group_lists(context) -> pd.DataFrame:
 #         "block_numbers_by_day": AssetIn(key_prefix="financials_data_lake"),
 #     }
 # )
-# def streaming_payments_state_flipside(context, block_numbers_by_day):
-#     """
-#     Gets the streaming payments from the Eth treasury and ecosystem reserve
-
-#     Uses an SQL query to give the state of the streams up to the current date
-
-#     Args:
-#         context: dagster context object
-#         block_numbers_by_day: block numbers at the start and end of the day for the chain
-
-#     Returns:
-#         A dataframe with each stream and the amount of tokens that have been streamed to date
-
-#     """
-
-#     # date, market = context.partition_key.split("|")
-#     # chain = CONFIG_MARKETS[market]['chain']
-#     # partition_datetime = datetime.strptime(date, '%Y-%m-%d')
-
-#     # context.log.info(f"market: {market}")
-#     # context.log.info(f"date: {date}")
-
-#     # start_block = block_numbers_by_day.block_height.values[0]
-#     end_block = block_numbers_by_day.loc[block_numbers_by_day.market == 'ethereum_v2'].end_block.max()
-#     ic(end_block)
-    
-#     # define the Flipside query
-#     sql = f"""
-#         with create_streams as (
-#         select 
-#         date_trunc('day', block_timestamp) as deposit_day
-#         , block_number
-#         , contract_address
-#         , decoded_log:deposit::int as deposit_raw
-#         , decoded_log:recipient as recipient
-#         , decoded_log:sender as sender
-#         , decoded_log:startTime::int as start_time_s
-#         , decoded_log:stopTime::int as stop_time_s
-#         , decoded_log:streamId::int as stream_id
-#         , decoded_log:tokenAddress as token_address
-#         , to_timestamp_ntz(start_time_s) as start_time
-#         , to_timestamp_ntz(stop_time_s) as stop_time
-#         , deposit_raw / (stop_time_s - start_time_s) as stream_rate
-#         from ethereum.core.fact_decoded_event_logs
-#         where 1=1
-#         and contract_address in ('0x25f2226b597e8f9514b3f68f00f494cf4f286491','0x464c71f6c2f760dda6093dcb91c24c39e5d6e18c')
-#         and block_timestamp > '2022-05-06' -- this is the date of the first stream
-#         and event_name = 'CreateStream'
-#         and block_number <= {end_block}
-#         )
-
-#         , withdraw_streams as (
-#         select 
-#         contract_address
-#         , decoded_log:recipient as recipient
-#         , decoded_log:streamId::int as stream_id
-#         , sum(decoded_log:amount::int) as amount
-#         from ethereum.core.fact_decoded_event_logs
-#         where 1=1
-#         and contract_address in ('0x25f2226b597e8f9514b3f68f00f494cf4f286491','0x464c71f6c2f760dda6093dcb91c24c39e5d6e18c')
-#         and block_timestamp > '2022-05-06'
-#         and event_name = 'WithdrawFromStream'
-#         and block_number <= {end_block}
-#         group by 1,2,3
-#         order by contract_address, stream_id
-#         )
-
-#         , tokens as (
-#         select 
-#         address
-#         , symbol
-#         , decimals
-#         from ethereum.core.dim_contracts
-#         where address in (select distinct token_address from create_streams)
-#         )
-
-#         select
-#         c.deposit_day
-#         , c.contract_address
-#         , c.deposit_raw --/ pow(10, t.decimals) as deposit
-#         , c.recipient
-#         , c.sender
-#         , c.token_address
-#         , c.stream_id
-#         , c.start_time_s
-#         , c.stop_time_s
-#         , c.stream_rate
-#         , coalesce(w.amount, 0) as claims_raw --/ pow(10, t.decimals) as claims
-#         , t.symbol
-#         , t.decimals
-#         from create_streams c 
-#         left join withdraw_streams w on (c.contract_address = w.contract_address and c.stream_id = w.stream_id)
-#         left join tokens t on (c.token_address = t.address)
-#         order by c.contract_address, c.stream_id
-
-#         """
-
-#     # initialise the query
-#     sdk = ShroomDK(FLIPSIDE_API_KEY)
-#     query_result = sdk.query(sql, timeout_minutes=3)
-    
-#     streams = pd.DataFrame(data=query_result.rows, columns=[x.lower() for x in query_result.columns])
-#     streams.deposit_day = pd.to_datetime(streams.deposit_day, utc=True)
-
-
-#     streams['deposit'] = streams.deposit_raw / 10 ** streams.decimals
-#     streams['claims'] = streams.claims_raw / 10 ** streams.decimals
-#     streams['stream_rate'] = streams.stream_rate / 10 ** streams.decimals
-#     current_time = (block_numbers_by_day.loc[block_numbers_by_day.market == 'ethereum_v2'].block_day.max() + timedelta(days=1)).timestamp()
-#     streams['current_time'] = current_time
-#     streams['vested_proportion'] = streams.apply(lambda x: min(x.current_time, x.stop_time_s) - x.start_time_s, axis=1)
-#     streams['vested'] = streams.vested_proportion * streams.stream_rate
-#     streams['unvested'] = streams.deposit - streams.vested
-
-#     streams = streams.drop(columns=['deposit_raw', 'claims_raw', 'vested_proportion', 'current_time'])
-#     streams = standardise_types(streams)
-    
-#     context.add_output_metadata(
-#         {
-#             "num_records": len(streams),
-#             "preview": MetadataValue.md(streams.head().to_markdown()),
-#         }
-#     )
-
-#     return streams
-
-# @asset(
-#     # partitions_def=v3_market_day_multipartition,
-#     # partitions_def=market_day_multipartition,
-#     compute_kind="python",
-#     #group_name='data_lake',
-#     code_version="1",
-#     io_manager_key = 'data_lake_io_manager',
-#     ins={
-#         "block_numbers_by_day": AssetIn(key_prefix="financials_data_lake"),
-#     }
-# )
-# def streaming_payments_state(context, block_numbers_by_day):
+# def streaming_payments_state_covalent(context, block_numbers_by_day):
 #     """
 #     Gets the streaming payments from the Eth treasury and ecosystem reserve
 

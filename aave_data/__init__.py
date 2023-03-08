@@ -190,12 +190,13 @@ data_lake_chunk_2 = [
     'financials_data_lake/v3_minted_to_treasury_by_day',
 
     ]
-data_lake_chunk_3 = [
+data_lake_unpartitioned_assets = [
     'financials_data_lake/tx_classification',
     'financials_data_lake/display_names',
     'financials_data_lake/internal_external_addresses',
     'financials_data_lake/balance_group_lists',
     'financials_data_lake/streams_metadata',
+    'financials_data_lake/streaming_payments_state',
     ]
 # data_lake_chunk_4 = [
 #     'financials_data_lake/tx_classification',
@@ -217,13 +218,13 @@ data_lake_chunk_3 = [
 
 financials_data_lake_partitioned_job = define_asset_job(
     name='financials_data_lake_partitioned',
-    selection=AssetSelection.groups('financials_data_lake') - AssetSelection.keys(*data_lake_chunk_3),
+    selection=AssetSelection.groups('financials_data_lake') - AssetSelection.keys(*data_lake_unpartitioned_assets),
     partitions_def=market_day_multipartition
 )
 
 financials_data_lake_unpartitioned_job = define_asset_job(
     name='financials_data_lake_unpartitioned',
-    selection=AssetSelection.keys(*data_lake_chunk_3),
+    selection=AssetSelection.keys(*data_lake_unpartitioned_assets),
     partitions_def=market_day_multipartition
 )
 
@@ -253,7 +254,7 @@ financials_chunk2_job = define_asset_job(
 
 financials_chunk3_job = define_asset_job(
     name='financials_chunk3_job',
-    selection=AssetSelection.keys(*data_lake_chunk_3),
+    selection=AssetSelection.keys(*data_lake_unpartitioned_assets),
     partitions_def=market_day_multipartition
 )
 
