@@ -228,6 +228,11 @@ def aave_oracle_prices_by_day(context, market_tokens_by_day) -> pd.DataFrame:  #
         context.log.info(f"date: {date}")
         context.log.info(f"block_height: {block_height}")
 
+        # the AMM oracle borks in this block range due to one bad asset, move it a few & live with a minor shift in time
+        if market == 'aave_amm' and (block_height in range(14993520, 15000397)):
+            block_height = 15000397
+
+
         # Get the eth price from the chainlink oracle if the Aave oracle price is denominated in eth
         if CONFIG_MARKETS[market]['oracle_base_currency'] == 'wei':
             w3 = Web3(Web3.HTTPProvider(CONFIG_CHAINS['ethereum']['web3_rpc_url']))
@@ -1532,7 +1537,313 @@ def balance_group_lists(context) -> pd.DataFrame:
 
     return names
 
-#######################################
+# @asset(
+#     # partitions_def=v3_market_day_multipartition,
+#     # partitions_def=market_day_multipartition,
+#     compute_kind="python",
+#     #group_name='data_lake',
+#     code_version="1",
+#     io_manager_key = 'data_lake_io_manager',
+#     ins={
+#         "block_numbers_by_day": AssetIn(key_prefix="financials_data_lake"),
+#     }
+# )
+# def streaming_payments_state_flipside(context, block_numbers_by_day):
+#     """
+#     Gets the streaming payments from the Eth treasury and ecosystem reserve
+
+#     Uses an SQL query to give the state of the streams up to the current date
+
+#     Args:
+#         context: dagster context object
+#         block_numbers_by_day: block numbers at the start and end of the day for the chain
+
+#     Returns:
+#         A dataframe with each stream and the amount of tokens that have been streamed to date
+
+#     """
+
+#     # date, market = context.partition_key.split("|")
+#     # chain = CONFIG_MARKETS[market]['chain']
+#     # partition_datetime = datetime.strptime(date, '%Y-%m-%d')
+
+#     # context.log.info(f"market: {market}")
+#     # context.log.info(f"date: {date}")
+
+#     # start_block = block_numbers_by_day.block_height.values[0]
+#     end_block = block_numbers_by_day.loc[block_numbers_by_day.market == 'ethereum_v2'].end_block.max()
+#     ic(end_block)
+    
+#     # define the Flipside query
+#     sql = f"""
+#         with create_streams as (
+#         select 
+#         date_trunc('day', block_timestamp) as deposit_day
+#         , block_number
+#         , contract_address
+#         , decoded_log:deposit::int as deposit_raw
+#         , decoded_log:recipient as recipient
+#         , decoded_log:sender as sender
+#         , decoded_log:startTime::int as start_time_s
+#         , decoded_log:stopTime::int as stop_time_s
+#         , decoded_log:streamId::int as stream_id
+#         , decoded_log:tokenAddress as token_address
+#         , to_timestamp_ntz(start_time_s) as start_time
+#         , to_timestamp_ntz(stop_time_s) as stop_time
+#         , deposit_raw / (stop_time_s - start_time_s) as stream_rate
+#         from ethereum.core.fact_decoded_event_logs
+#         where 1=1
+#         and contract_address in ('0x25f2226b597e8f9514b3f68f00f494cf4f286491','0x464c71f6c2f760dda6093dcb91c24c39e5d6e18c')
+#         and block_timestamp > '2022-05-06' -- this is the date of the first stream
+#         and event_name = 'CreateStream'
+#         and block_number <= {end_block}
+#         )
+
+#         , withdraw_streams as (
+#         select 
+#         contract_address
+#         , decoded_log:recipient as recipient
+#         , decoded_log:streamId::int as stream_id
+#         , sum(decoded_log:amount::int) as amount
+#         from ethereum.core.fact_decoded_event_logs
+#         where 1=1
+#         and contract_address in ('0x25f2226b597e8f9514b3f68f00f494cf4f286491','0x464c71f6c2f760dda6093dcb91c24c39e5d6e18c')
+#         and block_timestamp > '2022-05-06'
+#         and event_name = 'WithdrawFromStream'
+#         and block_number <= {end_block}
+#         group by 1,2,3
+#         order by contract_address, stream_id
+#         )
+
+#         , tokens as (
+#         select 
+#         address
+#         , symbol
+#         , decimals
+#         from ethereum.core.dim_contracts
+#         where address in (select distinct token_address from create_streams)
+#         )
+
+#         select
+#         c.deposit_day
+#         , c.contract_address
+#         , c.deposit_raw --/ pow(10, t.decimals) as deposit
+#         , c.recipient
+#         , c.sender
+#         , c.token_address
+#         , c.stream_id
+#         , c.start_time_s
+#         , c.stop_time_s
+#         , c.stream_rate
+#         , coalesce(w.amount, 0) as claims_raw --/ pow(10, t.decimals) as claims
+#         , t.symbol
+#         , t.decimals
+#         from create_streams c 
+#         left join withdraw_streams w on (c.contract_address = w.contract_address and c.stream_id = w.stream_id)
+#         left join tokens t on (c.token_address = t.address)
+#         order by c.contract_address, c.stream_id
+
+#         """
+
+#     # initialise the query
+#     sdk = ShroomDK(FLIPSIDE_API_KEY)
+#     query_result = sdk.query(sql, timeout_minutes=3)
+    
+#     streams = pd.DataFrame(data=query_result.rows, columns=[x.lower() for x in query_result.columns])
+#     streams.deposit_day = pd.to_datetime(streams.deposit_day, utc=True)
+
+
+#     streams['deposit'] = streams.deposit_raw / 10 ** streams.decimals
+#     streams['claims'] = streams.claims_raw / 10 ** streams.decimals
+#     streams['stream_rate'] = streams.stream_rate / 10 ** streams.decimals
+#     current_time = (block_numbers_by_day.loc[block_numbers_by_day.market == 'ethereum_v2'].block_day.max() + timedelta(days=1)).timestamp()
+#     streams['current_time'] = current_time
+#     streams['vested_proportion'] = streams.apply(lambda x: min(x.current_time, x.stop_time_s) - x.start_time_s, axis=1)
+#     streams['vested'] = streams.vested_proportion * streams.stream_rate
+#     streams['unvested'] = streams.deposit - streams.vested
+
+#     streams = streams.drop(columns=['deposit_raw', 'claims_raw', 'vested_proportion', 'current_time'])
+#     streams = standardise_types(streams)
+    
+#     context.add_output_metadata(
+#         {
+#             "num_records": len(streams),
+#             "preview": MetadataValue.md(streams.head().to_markdown()),
+#         }
+#     )
+
+#     return streams
+
+# @asset(
+#     # partitions_def=v3_market_day_multipartition,
+#     # partitions_def=market_day_multipartition,
+#     compute_kind="python",
+#     #group_name='data_lake',
+#     code_version="1",
+#     io_manager_key = 'data_lake_io_manager',
+#     ins={
+#         "block_numbers_by_day": AssetIn(key_prefix="financials_data_lake"),
+#     }
+# )
+# def streaming_payments_state(context, block_numbers_by_day):
+#     """
+#     Gets the streaming payments from the Eth treasury and ecosystem reserve
+
+#     Uses an SQL query to give the state of the streams up to the current date
+
+#     Args:
+#         context: dagster context object
+#         block_numbers_by_day: block numbers at the start and end of the day for the chain
+
+#     Returns:
+#         A dataframe with each stream and the amount of tokens that have been streamed to date
+
+#     """
+
+#     # date, market = context.partition_key.split("|")
+#     # chain = CONFIG_MARKETS[market]['chain']
+#     # partition_datetime = datetime.strptime(date, '%Y-%m-%d')
+
+#     # context.log.info(f"market: {market}")
+#     # context.log.info(f"date: {date}")
+
+#     # start_block = block_numbers_by_day.block_height.values[0]
+#     start_block = 14731284
+#     end_block = block_numbers_by_day.loc[block_numbers_by_day.market == 'ethereum_v2'].end_block.max()
+#     ic(end_block)
+    
+#     # get the createStreams events
+#     create_stream_topic_hash = '0x7b01d409597969366dc268d7f957a990d1ca3d3449baf8fb45db67351aecfe78'
+#     withdraw_stream_topic_hash = '0x36c3ab437e6a424ed25dc4bfdeb62706aa06558660fab2dab229d2555adaf89c'
+
+#      #break block range up in to < 1m chunks - limitation on Covalent API 
+#     max_query_block_range = 1000000 # max size of 1000000
+#     chunks = list(range(start_block, end_block, max_query_block_range))
+#     # print(chunks)
+#     chunks.append(end_block)
+#     start_blocks = chunks[:-1]
+#     start_blocks = [block[1] if block[0] == 0 else block[1] + 1 for block in enumerate(start_blocks)]
+#     end_blocks = chunks[1:]
+
+#     create_stream_events = pd.DataFrame()
+#     withdraw_stream_events = pd.DataFrame()
+#     # iterate over the 1m block chunks & combine back into one df
+#     for blocks in zip(start_blocks, end_blocks):
+#         # print(f"getting covalent data from {blocks[0]} to {blocks[1]}")
+#         create_stream_events_element = get_events_by_topic_hash_from_covalent(
+#             start_block=blocks[0],
+#             end_block=blocks[1],
+#             chain_id=1,
+#             topic_hash=create_stream_topic_hash,
+#         )
+#         withdraw_stream_events_element = get_events_by_topic_hash_from_covalent(
+#             start_block=blocks[0],
+#             end_block=blocks[1],
+#             chain_id=1,
+#             topic_hash=withdraw_stream_topic_hash,
+#         )
+#         # print(minted_to_treasury_events_element)
+
+#         create_stream_events = pd.concat([create_stream_events, create_stream_events_element], axis=0, ignore_index=True)
+#         withdraw_stream_events = pd.concat([withdraw_stream_events, withdraw_stream_events_element], axis=0, ignore_index=True)
+
+    
+#     create_stream_events = create_stream_events.loc[create_stream_events.sender_address.isin(['0x25f2226b597e8f9514b3f68f00f494cf4f286491','0x464c71f6c2f760dda6093dcb91c24c39e5d6e18c'])]
+#     withdraw_stream_events = withdraw_stream_events.loc[withdraw_stream_events.sender_address.isin(['0x25f2226b597e8f9514b3f68f00f494cf4f286491','0x464c71f6c2f760dda6093dcb91c24c39e5d6e18c'])]
+
+#     create_stream_events.to_csv('create.csv')
+#     withdraw_stream_events.to_csv('withdraw.csv')
+#     create_stream_events['block_day'] = create_stream_events.block_signed_at.dt.floor('D')
+#     create_stream_events.info()
+
+#     create_stream_events = create_stream_events[
+#         [
+#             'block_day',
+#             'sender_address',
+#             'tx_hash',
+#             'log_offset'
+#             'decoded_params_name',
+#             'decoded_params_value',
+#         ]
+#     ]
+#     create_stream_events = create_stream_events.rename(
+#         {
+#             'sender_address':'contract_address',
+#             'decoded_params_name': 'param_name',
+#             'decoded_params_value': 'param_value'
+#         }, axis=1)
+
+#     create_stream_events.pivot(index = 'contract_address',columns = 'param_name', values = 'param_value')
+
+#     create_stream_events.pivot_table(index = ['contract_address', 'block_day','tx_hash'],columns = 'param_name', values = 'param_value')
+#     pass
+
+    # streams = pd.DataFrame(data=query_result.rows, columns=[x.lower() for x in query_result.columns])
+    # streams.deposit_day = pd.to_datetime(streams.deposit_day, utc=True)
+
+
+    # streams['deposit'] = streams.deposit_raw / 10 ** streams.decimals
+    # streams['claims'] = streams.claims_raw / 10 ** streams.decimals
+    # streams['stream_rate'] = streams.stream_rate / 10 ** streams.decimals
+    # current_time = (block_numbers_by_day.loc[block_numbers_by_day.market == 'ethereum_v2'].block_day.max() + timedelta(days=1)).timestamp()
+    # streams['current_time'] = current_time
+    # streams['vested_proportion'] = streams.apply(lambda x: min(x.current_time, x.stop_time_s) - x.start_time_s, axis=1)
+    # streams['vested'] = streams.vested_proportion * streams.stream_rate
+    # streams['unvested'] = streams.deposit - streams.vested
+
+    # streams = streams.drop(columns=['deposit_raw', 'claims_raw', 'vested_proportion', 'current_time'])
+    # streams = standardise_types(streams)
+    
+    # context.add_output_metadata(
+    #     {
+    #         "num_records": len(streams),
+    #         "preview": MetadataValue.md(streams.head().to_markdown()),
+    #     }
+    # )
+
+    # return streams
+
+@asset(
+    compute_kind="python",
+    #group_name='data_lake',
+    io_manager_key = 'data_lake_io_manager',
+    code_version="1",
+)
+def streams_metadata(context) -> pd.DataFrame:
+    """
+    Returns a dataframe from a hosted metadata csv
+    
+    Args:
+        context: Dagster context object
+    Returns:
+        A dataframe streams metadata
+    Raises:
+        EnvironmentError: if the DAGSTER_DEPLOYMENT environment variable is not set correctly
+
+    """
+
+    from aave_data import dagster_deployment
+
+    if dagster_deployment in ('local_filesystem','local_cloud'):
+        url = 'https://storage.googleapis.com/llama_aave_dev_public/streams_metadata.csv'
+    elif dagster_deployment == 'prod':
+        url = 'https://storage.googleapis.com/llama_aave_prod_public/streams_metadata.csv'
+    else:
+        errmsg = "Environment variable DAGSTER_DEPLOYMENT must be set to either 'local_filesystem', 'local_cloud', or 'prod'"
+        raise EnvironmentError(errmsg)
+
+
+    streams = pd.read_csv(url, engine='python', quoting=3)
+    streams = standardise_types(streams)
+
+    context.add_output_metadata(
+        {
+            "num_records": len(streams),
+            # "preview": MetadataValue.md(names.to_markdown()),
+        }
+    )
+
+    return streams
 # Test assets for the io manager
 
 
