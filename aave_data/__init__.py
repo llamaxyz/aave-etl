@@ -194,7 +194,8 @@ data_lake_chunk_3 = [
     'financials_data_lake/tx_classification',
     'financials_data_lake/display_names',
     'financials_data_lake/internal_external_addresses',
-    'financials_data_lake/balance_group_lists'
+    'financials_data_lake/balance_group_lists',
+    'financials_data_lake/streams_metadata',
     ]
 # data_lake_chunk_4 = [
 #     'financials_data_lake/tx_classification',
