@@ -1538,10 +1538,7 @@ def balance_group_lists(context) -> pd.DataFrame:
     return names
 
 @asset(
-    # partitions_def=v3_market_day_multipartition,
-    # partitions_def=market_day_multipartition,
     compute_kind="python",
-    #group_name='data_lake',
     code_version="1",
     io_manager_key = 'data_lake_io_manager',
     ins={
@@ -1554,7 +1551,6 @@ def streaming_payments_state(context, block_numbers_by_day):
 
     Uses an SQL query to give the state of the streams up to the current date
 
-    Not working - timeouts from flipside API
     Args:
         context: dagster context object
         block_numbers_by_day: block numbers at the start and end of the day for the chain
@@ -1840,6 +1836,8 @@ def streams_metadata(context) -> pd.DataFrame:
 
 
     streams = pd.read_csv(url, engine='python', quoting=3)
+    streams.upfront_native = streams.upfront_native.astype(float)
+    streams.bonus_native = streams.bonus_native.astype(float)
     streams = standardise_types(streams)
 
     context.add_output_metadata(
