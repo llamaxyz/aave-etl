@@ -29,6 +29,7 @@ with atoken_prices as (
     and block_day = (select max(block_day) from {{ source('warehouse','token_prices_by_day') }} )
 )
 
+
 select 
   m.vendor_label
   , m.stream_label
@@ -37,19 +38,18 @@ select
   , m.token
   , m.stream_id
   , m.symbol
-  , case when m.symbol = 'AAVE' then 'AAVE' else 'stables' end as token_type
-  , s.deposit as total_payment_native
-  , s.vested as vested_native
-  , s.unvested as unvested_native
-  , s.claims as claimed_native
-  , s.unclaimed as unclaimed_native
+  , m.term
+  , 'https://app.aave.com/governance/proposal/?proposalId=' || m.proposal_id as proposal_url
+  , coalesce(s.deposit_day, '1970-01-01') as stream_create_date
+  , coalesce(s.start_time, '1970-01-01') as stream_start_time
+  , coalesce(s.stop_time, '1970-01-01') as stream_stop_time
+  , coalesce(s.deposit, 0) as total_payment_native
+  , coalesce(s.vested, 0) as vested_native
+  , coalesce(s.unvested, 0) as unvested_native
+  , coalesce(s.claims, 0) as claimed_native
+  , coalesce(s.unclaimed, 0) as unclaimed_native
   , m.upfront_native
-  , m.bonus_native
-  , s.deposit * coalesce(a.usd_price, r.usd_price) as total_payment_usd
-  , s.vested * coalesce(a.usd_price, r.usd_price) as vested_usd
-  , s.unvested * coalesce(a.usd_price, r.usd_price) as unvested_usd
-  , s.claims * coalesce(a.usd_price, r.usd_price) as claimed_usd
-  , s.unclaimed * coalesce(a.usd_price, r.usd_price) as unclaimed_usd
+  , m.bonus_usd / coalesce(a.usd_price, r.usd_price) as bonus_native
   , coalesce(a.usd_price, r.usd_price) as usd_price
 -- from financials_data_lake.streams_metadata m
 from {{ source('financials_data_lake','streams_metadata')}} m
