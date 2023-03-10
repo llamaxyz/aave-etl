@@ -1837,7 +1837,7 @@ def streams_metadata(context) -> pd.DataFrame:
 
     streams = pd.read_csv(url, engine='python', quoting=3)
     streams.upfront_native = streams.upfront_native.astype(float)
-    streams.bonus_native = streams.bonus_native.astype(float)
+    streams.bonus_usd = streams.bonus_usd.astype(float)
     streams = standardise_types(streams)
 
     context.add_output_metadata(
