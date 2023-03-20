@@ -1644,7 +1644,7 @@ def streaming_payments_state(context, block_numbers_by_day):
 
     # initialise the query
     sdk = ShroomDK(FLIPSIDE_API_KEY)
-    query_result = sdk.query(sql, timeout_minutes=3)
+    query_result = sdk.query(sql, timeout_minutes=10)
     
     streams = pd.DataFrame(data=query_result.rows, columns=[x.lower() for x in query_result.columns])
     streams.deposit_day = pd.to_datetime(streams.deposit_day, utc=True)
