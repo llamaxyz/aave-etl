@@ -263,12 +263,12 @@ def aave_oracle_prices_by_day(context, market_tokens_by_day) -> pd.DataFrame:  #
 
         # collect the reserve tokens into a list for the web3 contract call
         reserves = list(market_tokens_by_day['reserve'].values)
-        reserves = [Web3.toChecksumAddress(reserve) for reserve in reserves]
+        reserves = [Web3.to_checksum_address(reserve) for reserve in reserves]
         # ic(reserves)
 
         #initialise web3 and the oracle contract
         w3 = Web3(Web3.HTTPProvider(CONFIG_CHAINS[chain]['web3_rpc_url']))
-        oracle_address = Web3.toChecksumAddress(CONFIG_MARKETS[market]['oracle'])
+        oracle_address = Web3.to_checksum_address(CONFIG_MARKETS[market]['oracle'])
         oracle = w3.eth.contract(address=oracle_address, abi=oracle_abi)
 
         # get the price multiplier for the oracle price
@@ -822,7 +822,7 @@ def v3_accrued_fees_by_day(context, market_tokens_by_day) -> pd.DataFrame: # typ
                     },
                 ]
             
-            provider_address = Web3.toChecksumAddress(CONFIG_MARKETS[market]['protocol_data_provider'])
+            provider_address = Web3.to_checksum_address(CONFIG_MARKETS[market]['protocol_data_provider'])
             #initialise Web3 and provider contract
             w3 = Web3(Web3.HTTPProvider(CONFIG_CHAINS[chain]['web3_rpc_url']))
             provider = w3.eth.contract(address=provider_address, abi=provider_abi)
@@ -832,7 +832,7 @@ def v3_accrued_fees_by_day(context, market_tokens_by_day) -> pd.DataFrame: # typ
                 delay = INITIAL_RETRY
                 while True:
                     try:
-                        reserve_data = provider.functions.getReserveData(Web3.toChecksumAddress(row.reserve)).call(block_identifier=int(block_height))
+                        reserve_data = provider.functions.getReserveData(Web3.to_checksum_address(row.reserve)).call(block_identifier=int(block_height))
                         break
                     except Exception as e:
                         i += 1
@@ -1155,9 +1155,9 @@ def treasury_accrued_incentives_by_day(context, block_numbers_by_day) -> pd.Data
     else:
         # initialise web3
         web3 = Web3(Web3.HTTPProvider(CONFIG_CHAINS[chain]['web3_rpc_url']))
-        collector_contract = Web3.toChecksumAddress(CONFIG_MARKETS[market]['collector'])
+        collector_contract = Web3.to_checksum_address(CONFIG_MARKETS[market]['collector'])
         block_height = int(block_numbers_by_day['block_height'].values[0])
-        incentives_controller_address = Web3.toChecksumAddress(CONFIG_MARKETS[market]['incentives_controller'])
+        incentives_controller_address = Web3.to_checksum_address(CONFIG_MARKETS[market]['incentives_controller'])
 
         
 

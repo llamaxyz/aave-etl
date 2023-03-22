@@ -40,6 +40,8 @@ setup(
         "requests",
         "subgrounds",  # API for accessing subgraphs easily
         "shroomdk",  # API for accessing shroom Flipside Crypto data tables via SQL
+        # "web3==6.0.0", # installed in dagster_cloud_post_install.sh due to version clash with multicall
+        # "multicall==0.7.1" # installed in dagster_cloud_post_install.sh due to version clash with web3
     ],
     extras_require={"dev": ["dagit", "pytest"]},
 )

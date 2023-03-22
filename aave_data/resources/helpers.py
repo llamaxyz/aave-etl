@@ -496,14 +496,14 @@ def get_erc20_balance_of(
        
     #initialise Web3 and token contract
     w3 = Web3(Web3.HTTPProvider(CONFIG_CHAINS[chain]['web3_rpc_url']))
-    token_contract = w3.eth.contract(address=Web3.toChecksumAddress(token), abi=ERC20_ABI)
+    token_contract = w3.eth.contract(address=Web3.to_checksum_address(token), abi=ERC20_ABI)
 
     if block_height > 0:
         i = 0
         delay = INITIAL_RETRY
         while True:
             try:
-                balance_raw = token_contract.functions.balanceOf(Web3.toChecksumAddress(address)).call(block_identifier=int(block_height))
+                balance_raw = token_contract.functions.balanceOf(Web3.to_checksum_address(address)).call(block_identifier=int(block_height))
                 break
             except Exception as e:
                 i += 1
@@ -518,7 +518,7 @@ def get_erc20_balance_of(
         delay = INITIAL_RETRY
         while True:
             try:
-                balance_raw = token_contract.functions.balanceOf(Web3.toChecksumAddress(address)).call()
+                balance_raw = token_contract.functions.balanceOf(Web3.to_checksum_address(address)).call()
                 break
             except Exception as e:
                 i += 1
@@ -560,14 +560,14 @@ def get_scaled_balance_of(
        
     #initialise Web3 and token contract
     w3 = Web3(Web3.HTTPProvider(CONFIG_CHAINS[chain]['web3_rpc_url']))
-    token_contract = w3.eth.contract(address=Web3.toChecksumAddress(token), abi=ERC20_ABI)
+    token_contract = w3.eth.contract(address=Web3.to_checksum_address(token), abi=ERC20_ABI)
 
     if block_height > 0:
         i = 0
         delay = INITIAL_RETRY
         while True:
             try:
-                balance_raw = token_contract.functions.scaledBalanceOf(Web3.toChecksumAddress(address)).call(block_identifier=int(block_height))
+                balance_raw = token_contract.functions.scaledBalanceOf(Web3.to_checksum_address(address)).call(block_identifier=int(block_height))
                 break
             except Exception as e:
                 i += 1
@@ -582,7 +582,7 @@ def get_scaled_balance_of(
         delay = INITIAL_RETRY
         while True:
             try:
-                balance_raw = token_contract.functions.scaledBalanceOf(Web3.toChecksumAddress(address)).call()
+                balance_raw = token_contract.functions.scaledBalanceOf(Web3.to_checksum_address(address)).call()
                 break
             except Exception as e:
                 i += 1
