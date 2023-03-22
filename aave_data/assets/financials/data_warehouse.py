@@ -449,6 +449,12 @@ def token_prices_by_day(
     Returns the prices of all tokens on the day, collated from the Aave oracle
       and other sources
 
+    Price rank field from config is used to pick one price when multiple are available on 
+    the same chain.  For example, USDC is in v1, v2, v3, rwa, arc on ethereum.
+    Similar situation for WAVAX on avax v2 and v3.  Aave oracles don't always
+    return the same prices because some are in wei and some in usd.  Wei prices
+    are converted using eth/usd from mainnet.
+
 
     Args:
         context: dagster context object
