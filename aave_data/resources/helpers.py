@@ -10,6 +10,7 @@ from web3 import Web3
 from time import sleep
 from subgrounds.pagination.pagination import PaginationError
 from random import randint
+from multicall import Call, Multicall
 
 
 from aave_data.resources.financials_config import * #pylint: disable=wildcard-import, unused-wildcard-import
@@ -426,7 +427,7 @@ def get_token_transfers_from_alchemy(start_block: int,
         )
         transfers['transfers_contract_name'] = transfers.transfers_contract_symbol
         try:
-            transfers.transfers_contract_decimals = transfers.transfers_contract_decimals.apply(lambda x: Web3.toInt(hexstr=x))
+            transfers.transfers_contract_decimals = transfers.transfers_contract_decimals.apply(lambda x: Web3.to_int(hexstr=x))
         except TypeError:
             # catch the edge case where a new token doesn't return the metadata from the API.  Raise & handle in the calling function.
             raise
@@ -690,7 +691,12 @@ def standardise_types(df: pd.DataFrame) -> pd.DataFrame:
         
     return df
 
-# def get_v3_reserve_data() -> pd.DataFrame:
+# def get_v3_reserve_data(
+#     market: str,
+#     chain: str,
+#     reserve: str,
+#     block_height: Optional[int] = 0
+# ) -> pd.DataFrame:
 #     """
 #     Calls v3 protocol data provider contracts at the specified block height
 #     and returns a dataframe of reserve configuration and state data.
@@ -710,6 +716,91 @@ def standardise_types(df: pd.DataFrame) -> pd.DataFrame:
 
 #     """
 
+#     #initialise Web3 and token contract
+#     # ic(CONFIG_CHAINS[chain]['web3_rpc_url'])
+#     w3 = Web3(Web3.HTTPProvider(CONFIG_CHAINS[chain]['web3_rpc_url']))
+#     # token_contract = w3.eth.contract(address=Web3.to_checksum_address(token), abi=ERC20_ABI)
+#     data_provider = CONFIG_MARKETS[market]['protocol_data_provider']
+#     # ic(data_provider)
+
+#     reserve = Web3.to_checksum_address(reserve)
+#     # setup multicall
+
+#     def passthrough(x):
+#         return x
+#     def res_caps(x):
+#         ic(type(x))
+#         ic(x)
+#         return x[0], x[1]
+
+#     reserve_config_data_schema = [
+#         ['decimals', None],
+#         ['ltv', None],
+#         ['liquidation_threshold', None],
+#         ['liquidation_bonus', None],
+#         ['reserve_factor', None],
+#         ['usage_as_collateral_enabled', None],
+#         ['borrowing_enabled', None],
+#         ['stable_borrow_rate_enabled', None],
+#         ['is_active', None],
+#         ['is_frozen', None],
+#     ]
+#     # todo 
+#     # reserve_caps_schema = [['borrow_cap', None], ['supply_cap', None]]
+#     reserve_caps_schema = [['borrow_cap', None], ['supply_cap', None]]
+
+#     multi = Multicall(
+#         [
+#             # Call(data_provider, ['getPaused(address)(bool)', reserve], [['getPaused', None]]),
+#             # Call(data_provider, ['getInterestRateStrategyAddress(address)(address)', reserve], [('irStrategyAddress', None)]),
+#             # Call(data_provider, ['getDebtCeiling(address)(uint256)', reserve], [('getDebtCeiling', None)]),
+#             Call(data_provider, ['getReserveConfigurationData(address)((uint256,uint256,uint256,uint256,uint256,bool,bool,bool,bool,bool))', reserve], [['res_config', None]]),
+#             Call(data_provider, ['getReserveCaps(address)(uint256,uint256)', reserve], reserve_caps_schema),
+#         ],
+#         _w3 = w3,
+#         # block_id = block_height
+#     )
+
+#     out = multi()
+
+#     ic(out)
+
+#     # if block_height > 0:
+#     #     i = 0
+#     #     delay = INITIAL_RETRY
+#     #     while True:
+#     #         try:
+#     #             balance_raw = token_contract.functions.balanceOf(Web3.to_checksum_address(address)).call(block_identifier=int(block_height))
+#     #             break
+#     #         except Exception as e:
+#     #             i += 1
+#     #             if i > MAX_RETRIES:
+#     #                 raise ValueError(f"RPC error count {i}, last error {str(e)}.  Bailing out.")
+#     #             rand_delay = randint(0, 250) / 1000
+#     #             sleep(delay + rand_delay)
+#     #             delay *= 2
+#     #             print(f"Request Error {str(e)}, retry count {i}")
+#     # else:
+#     #     i = 0
+#     #     delay = INITIAL_RETRY
+#     #     while True:
+#     #         try:
+#     #             balance_raw = token_contract.functions.balanceOf(Web3.to_checksum_address(address)).call()
+#     #             break
+#     #         except Exception as e:
+#     #             i += 1
+#     #             if i > MAX_RETRIES:
+#     #                 raise ValueError(f"RPC error count {i}, last error {str(e)}.  Bailing out.")
+#     #             rand_delay = randint(0, 250) / 1000
+#     #             sleep(delay + rand_delay)
+#     #             delay *= 2
+#     #             print(f"Request Error {str(e)}, retry count {i}")
+        
+
+#     # balance = balance_raw / pow(10, token_decimals)
+
+#     # return balance 
+
 #     return pd.DataFrame()
 
 
@@ -723,14 +814,10 @@ if __name__ == "__main__":
     # print(out.to_dict())
     # ic(out)
 
-    balance = get_erc20_balance_of('0x464C71f6c2F760DdA6093dCB91C24c39e5d6e18c', '0xbcca60bb61934080951369a648fb03df4f96263c', 6, 'ethereum')#, block_height=16057596)
+    # balance = get_erc20_balance_of('0x464C71f6c2F760DdA6093dCB91C24c39e5d6e18c', '0xbcca60bb61934080951369a648fb03df4f96263c', 6, 'ethereum')#, block_height=16057596)
 
     # balance = get_erc20_balance_of('0x8a020d92d6b119978582be4d3edfdc9f7b28bf31', '0x191c10aa4af7c30e871e70c95db0e4eb77237530', 6, 'harmony', block_height=34443481)
-    ic(balance)
+    # ic(balance)
     # mtt = get_events_by_topic_hash_from_covalent(15154950, 15154960, 43114, '0x794a61358D6845594F94dc1DB02A252b5b4814aD', '0xbfa21aa5d5f9a1f0120a95e7c0749f389863cbdbfff531aa7339077a5bc919de')
+    get_v3_reserve_data('ethereum_v3','ethereum','0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2', 16057596)
 
-    # ic(mtt)
-
-    # mtt.to_csv('mtt.csv')
-
-    # print(mtt.head(1).to_dict())
