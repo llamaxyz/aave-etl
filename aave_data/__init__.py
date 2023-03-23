@@ -225,7 +225,7 @@ financials_data_lake_partitioned_job = define_asset_job(
 financials_data_lake_unpartitioned_job = define_asset_job(
     name='financials_data_lake_unpartitioned',
     selection=AssetSelection.keys(*data_lake_unpartitioned_assets),
-    partitions_def=market_day_multipartition
+    # partitions_def=market_day_multipartition
 )
 
 warehouse_datamart_job = define_asset_job(
