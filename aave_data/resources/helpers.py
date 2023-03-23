@@ -288,8 +288,8 @@ def get_token_transfers_from_alchemy(start_block: int,
         "method": "alchemy_getAssetTransfers",
         "params": [
             {
-                "fromBlock": Web3.toHex(start_block),
-                "toBlock": Web3.toHex(end_block),
+                "fromBlock": Web3.to_hex(start_block),
+                "toBlock": Web3.to_hex(end_block),
                 "toAddress": address,
                 "contractAddresses": [token],
                 "category": ["erc20"],
@@ -349,8 +349,8 @@ def get_token_transfers_from_alchemy(start_block: int,
         "method": "alchemy_getAssetTransfers",
         "params": [
             {
-                "fromBlock": Web3.toHex(start_block),
-                "toBlock": Web3.toHex(end_block),
+                "fromBlock": Web3.to_hex(start_block),
+                "toBlock": Web3.to_hex(end_block),
                 "fromAddress": address,
                 "contractAddresses": [token],
                 "category": ["erc20"],
@@ -689,6 +689,30 @@ def standardise_types(df: pd.DataFrame) -> pd.DataFrame:
             df[col] = df[col].str.lower()
         
     return df
+
+# def get_v3_reserve_data() -> pd.DataFrame:
+#     """
+#     Calls v3 protocol data provider contracts at the specified block height
+#     and returns a dataframe of reserve configuration and state data.
+#     Uses multicall to minimise RPC hits.
+
+
+#     Args:
+#         market:
+#         chain:
+#         reserve:
+#         block_height:
+
+
+#     Returns:
+#         pd.DataFrame: identical dataframe with dtypes set
+
+
+#     """
+
+#     return pd.DataFrame()
+
+
 
 if __name__ == "__main__":
     # wbtc = get_token_transfers_from_covalent(16050438, 16057596, 1, '0x464C71f6c2F760DdA6093dCB91C24c39e5d6e18c', '0xbcca60bb61934080951369a648fb03df4f96263c')
