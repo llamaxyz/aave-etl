@@ -175,21 +175,21 @@ dbt_assets = load_assets_from_dbt_project(
 ############################################
 # Jobs
 ############################################
-data_lake_chunk_1 = [
-    'financials_data_lake/market_tokens_by_day',
-    'financials_data_lake/treasury_accrued_incentives_by_day',
-    'financials_data_lake/non_atoken_balances_by_day',
-    'financials_data_lake/non_atoken_transfers_by_day',
-    'financials_data_lake/user_lm_rewards_claimed',
-    ]
-data_lake_chunk_2 = [
-    'financials_data_lake/aave_oracle_prices_by_day',
-    'financials_data_lake/collector_atoken_balances_by_day',
-    'financials_data_lake/collector_atoken_transfers_by_day',
-    'financials_data_lake/v3_accrued_fees_by_day',
-    'financials_data_lake/v3_minted_to_treasury_by_day',
+# data_lake_chunk_1 = [
+#     'financials_data_lake/market_tokens_by_day',
+#     'financials_data_lake/treasury_accrued_incentives_by_day',
+#     'financials_data_lake/non_atoken_balances_by_day',
+#     'financials_data_lake/non_atoken_transfers_by_day',
+#     'financials_data_lake/user_lm_rewards_claimed',
+#     ]
+# data_lake_chunk_2 = [
+#     'financials_data_lake/aave_oracle_prices_by_day',
+#     'financials_data_lake/collector_atoken_balances_by_day',
+#     'financials_data_lake/collector_atoken_transfers_by_day',
+#     'financials_data_lake/v3_accrued_fees_by_day',
+#     'financials_data_lake/v3_minted_to_treasury_by_day',
 
-    ]
+#     ]
 data_lake_unpartitioned_assets = [
     'financials_data_lake/tx_classification',
     'financials_data_lake/display_names',
@@ -240,23 +240,23 @@ financials_root_job = define_asset_job(
     partitions_def=market_day_multipartition
 )
 
-financials_chunk1_job = define_asset_job(
-    name='financials_chunk1_job',
-    selection=AssetSelection.keys(*data_lake_chunk_1),
-    partitions_def=market_day_multipartition
-)
+# financials_chunk1_job = define_asset_job(
+#     name='financials_chunk1_job',
+#     selection=AssetSelection.keys(*data_lake_chunk_1),
+#     partitions_def=market_day_multipartition
+# )
 
-financials_chunk2_job = define_asset_job(
-    name='financials_chunk2_job',
-    selection=AssetSelection.keys(*data_lake_chunk_2),
-    partitions_def=market_day_multipartition
-)
+# financials_chunk2_job = define_asset_job(
+#     name='financials_chunk2_job',
+#     selection=AssetSelection.keys(*data_lake_chunk_2),
+#     partitions_def=market_day_multipartition
+# )
 
-financials_chunk3_job = define_asset_job(
-    name='financials_chunk3_job',
-    selection=AssetSelection.keys(*data_lake_unpartitioned_assets),
-    partitions_def=market_day_multipartition
-)
+# financials_chunk3_job = define_asset_job(
+#     name='financials_chunk3_job',
+#     selection=AssetSelection.keys(*data_lake_unpartitioned_assets),
+#     partitions_def=market_day_multipartition
+# )
 
 ############################################
 # Schedules
@@ -414,9 +414,9 @@ defs = Definitions(
     assets=[*financials_data_lake_assets, *warehouse_assets, *dbt_assets],
     jobs=[
           financials_root_job,
-          financials_chunk1_job,
-          financials_chunk2_job,
-          financials_chunk3_job,
+        #   financials_chunk1_job,
+        #   financials_chunk2_job,
+        #   financials_chunk3_job,
           financials_data_lake_unpartitioned_job,
           financials_data_lake_partitioned_job,
           warehouse_datamart_job
