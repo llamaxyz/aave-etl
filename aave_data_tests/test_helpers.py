@@ -602,7 +602,15 @@ def test_get_raw_reserve_data():
         "scaled_accrued_to_treasury": 0,
         "unbacked_atokens": 0,
     },
+    "reserve_emode_category": 0,
+    "borrow_cap": 0,
+    "supply_cap": 0,
     "is_paused": False,
+    "siloed_borrowing": False,
+    "liquidation_protocol_fee": 0,
+    "unbacked_mint_cap": 0,
+    "debt_ceiling": 0,
+    "debt_ceiling_decimals": 2,
     }
 
     v1_expected = {
@@ -633,6 +641,15 @@ def test_get_raw_reserve_data():
         "unbacked_atokens": 0,
     },
     "is_frozen": True,
+    "reserve_emode_category": 0,
+    "borrow_cap": 0,
+    "supply_cap": 0,
+    "is_paused": False,
+    "siloed_borrowing": False,
+    "liquidation_protocol_fee": 0,
+    "unbacked_mint_cap": 0,
+    "debt_ceiling": 0,
+    "debt_ceiling_decimals": 2,
     }
 
     v3_result = get_raw_reserve_data('ethereum_v3','ethereum','0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2', 18, 16902116)

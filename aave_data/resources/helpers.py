@@ -817,6 +817,18 @@ def get_raw_reserve_data(
         
     reserve_caps_schema = [['borrow_cap', None], ['supply_cap', None]]
 
+    v3_empty_reserve_data = {
+        "reserve_emode_category": 0,
+        "borrow_cap": 0,
+        "supply_cap": 0,
+        "is_paused": False,
+        "siloed_borrowing": False,
+        "liquidation_protocol_fee": 0,
+        "unbacked_mint_cap": 0,
+        "debt_ceiling": 0,
+        "debt_ceiling_decimals": 2,
+    }
+
     # calls common across v2 and v3 markets
     common_calls = [
         Call(data_provider, ['getReserveConfigurationData(address)((uint256,uint256,uint256,uint256,uint256,bool,bool,bool,bool,bool))', reserve], [['reserve_config', reserve_config_handler]]),
@@ -849,7 +861,7 @@ def get_raw_reserve_data(
         Call(core, ['getReserveIsFreezed(address)(bool)', reserve], [['is_frozen', None]]),
     ]
 
-    # create multicall object
+    # create multicall object and merge v3 fields if on v1 or v
     if CONFIG_MARKETS[market]['version'] == 3:
         multi = Multicall(
             [   
@@ -899,7 +911,11 @@ def get_raw_reserve_data(
     # out_df = pd.DataFrame(out)
 
     # ic(multicall_output)
-    # print(multicall_output)
+    if CONFIG_MARKETS[market]['version'] != 3:
+        # merge v3 fields which are missing in earlier versions
+        multicall_output = multicall_output | v3_empty_reserve_data
+
+    print(multicall_output)
 
     return multicall_output
 
