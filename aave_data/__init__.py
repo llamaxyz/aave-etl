@@ -18,7 +18,7 @@ from dagster import (
     ScheduleDefinition
 )
 from aave_data.assets.financials import data_lake, data_warehouse
-from aave_data.assets.protocol import protocol_data_lake
+from aave_data.assets.protocol import protocol_data_lake, protocol_data_warehouse
 from aave_data.assets.financials.data_lake import market_day_multipartition
 from aave_data.resources.bigquery_io_manager import bigquery_io_manager
 from aave_data.resources.financials_config import FINANCIAL_PARTITION_START_DATE
@@ -186,7 +186,7 @@ protocol_data_lake_assets = load_assets_from_modules(
 )
 
 warehouse_assets = load_assets_from_modules(
-    modules=[data_warehouse],
+    modules=[data_warehouse, protocol_data_warehouse],
     key_prefix="warehouse",
     group_name="warehouse"
 )
