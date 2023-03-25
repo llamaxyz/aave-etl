@@ -18,9 +18,11 @@ from dagster import (
     ScheduleDefinition
 )
 from aave_data.assets.financials import data_lake, data_warehouse
+from aave_data.assets.protocol import protocol_data_lake
 from aave_data.assets.financials.data_lake import market_day_multipartition
 from aave_data.resources.bigquery_io_manager import bigquery_io_manager
 from aave_data.resources.financials_config import FINANCIAL_PARTITION_START_DATE
+
 
 from dagster_gcp.gcs.io_manager import gcs_pickle_io_manager
 from dagster_gcp.gcs.resources import gcs_resource
@@ -84,6 +86,15 @@ resource_defs = {
                 "use_service_account_file": True,
             },
         ),
+        "protocol_data_lake_io_manager": bigquery_io_manager.configured(
+            {
+                "project": "aave-dev",
+                "dataset": "protocol_data_lake",
+                "service_account_creds": creds_env_var,
+                "service_account_file" : creds_file,
+                "use_service_account_file": True,
+            },
+        ),
         "data_warehouse_io_manager": bigquery_io_manager.configured(
             {
                 "project": "aave-dev",
@@ -118,6 +129,15 @@ resource_defs = {
                 "service_account_creds": creds_env_var,
                 "service_account_file" : creds_file,
                 "use_service_account_file": False,
+            },
+        ),
+        "protocol_data_lake_io_manager": bigquery_io_manager.configured(
+            {
+                "project": "aave-prod",
+                "dataset": "protocol_data_lake",
+                "service_account_creds": creds_env_var,
+                "service_account_file" : creds_file,
+                "use_service_account_file": True,
             },
         ),
         "data_warehouse_io_manager": bigquery_io_manager.configured(
@@ -157,6 +177,12 @@ financials_data_lake_assets = load_assets_from_modules(
     modules=[data_lake],
     key_prefix="financials_data_lake",
     group_name="financials_data_lake"
+)
+
+protocol_data_lake_assets = load_assets_from_modules(
+    modules=[protocol_data_lake],
+    key_prefix="protocol_data_lake",
+    group_name="protocol_data_lake"
 )
 
 warehouse_assets = load_assets_from_modules(
@@ -403,7 +429,7 @@ minimal_sensor = build_asset_reconciliation_sensor(
 )
 # financials_sensor = build_asset_reconciliation_sensor(
 #     name="financials_sensor",
-#     # asset_selection=AssetSelection.keys(*data_lake_chunk_1),
+#     # asset_selection=AssetSelection.keys(*data_lake_chunk_1), 
 #     asset_selection=AssetSelection.all() - AssetSelection.keys('financials_data_lake/block_numbers_by_day'),
 #     minimum_interval_seconds=60*3
 # )
@@ -411,7 +437,7 @@ minimal_sensor = build_asset_reconciliation_sensor(
 
 
 defs = Definitions(
-    assets=[*financials_data_lake_assets, *warehouse_assets, *dbt_assets],
+    assets=[*financials_data_lake_assets, *protocol_data_lake_assets, *warehouse_assets, *dbt_assets],
     jobs=[
           financials_root_job,
         #   financials_chunk1_job,

@@ -1235,7 +1235,7 @@ if __name__ == "__main__":
     # test_eth_oracle_prices_by_day()
     # test_get_market_tokens_at_block_messari()
     # test_block_numbers_by_day()
-    # test_market_tokens_by_day()
+    test_market_tokens_by_day()
     # test_aave_oracle_prices_table()
     # test_market_tokens_table()
     # test_non_atoken_transfers_by_day()
@@ -1250,7 +1250,7 @@ if __name__ == "__main__":
     # test_collector_atoken_transfers_by_day()
     # test_tx_classification()
     # test_display_names()
-    test_streaming_payments_state()
+    # test_streaming_payments_state()
     
     # pass
 
