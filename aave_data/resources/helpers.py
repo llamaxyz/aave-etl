@@ -915,13 +915,11 @@ def get_raw_reserve_data(
         # merge v3 fields which are missing in earlier versions
         multicall_output = multicall_output | v3_empty_reserve_data
 
-    print(multicall_output)
+    # print(multicall_output)
 
     return multicall_output
 
 def raw_reserve_to_dataframe(
-        reserve: str,
-        block_height: int,
         raw_reserve: dict,
 ) -> pd.DataFrame():
     """
@@ -945,14 +943,7 @@ def raw_reserve_to_dataframe(
     del raw_reserve['reserve_data']
     other_params = pd.DataFrame(raw_reserve, index=[0])
 
-    return_val = pd.DataFrame([
-        {
-            'reserve': reserve,
-            'block_height': block_height,
-        }
-    ])
-
-    return_val = pd.concat([return_val, reserve_config, reserve_data, other_params], axis=1)
+    return_val = pd.concat([reserve_config, reserve_data, other_params], axis=1)
 
     return return_val
 
