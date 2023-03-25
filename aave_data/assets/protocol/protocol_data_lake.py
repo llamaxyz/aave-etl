@@ -112,12 +112,12 @@ def protocol_data_by_day(
             # add the row to the return value dataframe
             protocol_data = pd.concat([protocol_data, protocol_row], axis=0)
     
-    # fix these values up here - more difficult to do in helper function
-    protocol_data.debt_ceiling = protocol_data.debt_ceiling / 10 ** protocol_data.debt_ceiling_decimals
-    protocol_data.debt_ceiling = protocol_data.debt_ceiling.astype(int)
-    protocol_data.liquidation_protocol_fee = protocol_data.liquidation_protocol_fee / 10000
+        # fix these values up here - more difficult to do in helper function
+        protocol_data.debt_ceiling = protocol_data.debt_ceiling / 10 ** protocol_data.debt_ceiling_decimals
+        protocol_data.debt_ceiling = protocol_data.debt_ceiling.astype(int)
+        protocol_data.liquidation_protocol_fee = protocol_data.liquidation_protocol_fee / 10000
 
-    protocol_data = standardise_types(protocol_data)
+        protocol_data = standardise_types(protocol_data)
 
     context.add_output_metadata(
         {
