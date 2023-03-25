@@ -14,7 +14,9 @@ from aave_data.resources.helpers import (
                             get_token_transfers_from_covalent,
                             get_token_transfers_from_alchemy,
                             get_events_by_topic_hash_from_covalent,
-                            standardise_types
+                            standardise_types,
+                            get_raw_reserve_data,
+                            raw_reserve_to_dataframe,
                               )
  # pylint: enable=import-error
 
@@ -525,14 +527,129 @@ def test_standarise_types():
 
     assert_frame_equal(result, expected, check_exact=True)
 
-    
+def test_get_raw_reserve_data():
+    """
+    Tests the get raw reserve data function against a reference response
+
+    Tests v1, v2, v3 markets
+
+    """
+
+    v3_expected = {
+    "reserve_config": {
+        "decimals": 18,
+        "ltv": 0.8,
+        "liquidation_threshold": 0.825,
+        "liquidation_bonus": 1.05,
+        "reserve_factor": 0.15,
+        "usage_as_collateral_enabled": True,
+        "borrowing_enabled": True,
+        "stable_borrow_rate_enabled": False,
+        "is_active": True,
+        "is_frozen": False,
+    },
+    "reserve_data": {
+        "unbacked_atokens": 0.0,
+        "scaled_accrued_to_treasury": 1.9250904417920802,
+        "atoken_supply": 172763.04842357736,
+        "stable_debt": 0.0,
+        "variable_debt": 104500.09512616771,
+        "liquidity_rate": 0.019913150887283015,
+        "variable_borrow_rate": 0.038731198111748875,
+        "stable_borrow_rate": 0.09824336643341987,
+        "average_stable_rate": 0.0,
+        "liquidity_index": 1.0029367439843098,
+        "variable_borrow_index": 1.0058526832488903,
+        "last_update_timestamp": datetime(2023, 3, 25, 3, 35, 47),
+        "available_liquidity": 68262.95329740965,
+    },
+    "reserve_emode_category": 1,
+    "borrow_cap": 1400000,
+    "supply_cap": 1800000,
+    "is_paused": False,
+    "siloed_borrowing": False,
+    "liquidation_protocol_fee": 1000,
+    "unbacked_mint_cap": 0,
+    "debt_ceiling": 0,
+    "debt_ceiling_decimals": 2,
+    }
+
+    v2_expected = {
+    "reserve_config": {
+        "decimals": 18,
+        "ltv": 0.825,
+        "liquidation_threshold": 0.86,
+        "liquidation_bonus": 1.05,
+        "reserve_factor": 0.15,
+        "usage_as_collateral_enabled": True,
+        "borrowing_enabled": True,
+        "stable_borrow_rate_enabled": True,
+        "is_active": True,
+        "is_frozen": False,
+    },
+    "reserve_data": {
+        "available_liquidity": 315717.61882480345,
+        "stable_debt": 0.23277622824191513,
+        "variable_debt": 375932.9838717904,
+        "liquidity_rate": 0.01654780296335687,
+        "variable_borrow_rate": 0.03581768685055707,
+        "stable_borrow_rate": 0.0571765124742706,
+        "average_stable_rate": 0.05725995735046088,
+        "liquidity_index": 1.022404089914088,
+        "variable_borrow_index": 1.0421270320025577,
+        "last_update_timestamp": datetime(2023, 3, 25, 4, 24, 35),
+        "atoken_supply": 691650.8354728221,
+        "scaled_accrued_to_treasury": 0,
+        "unbacked_atokens": 0,
+    },
+    "is_paused": False,
+    }
+
+    v1_expected = {
+    "reserve_config": {
+        "decimals": 18,
+        "ltv": 0.75,
+        "liquidation_threshold": 0.8,
+        "liquidation_bonus": 1.05,
+        "reserve_factor": 0.09,
+        "usage_as_collateral_enabled": True,
+        "borrowing_enabled": True,
+        "stable_borrow_rate_enabled": False,
+        "is_active": True,
+    },
+    "reserve_data": {
+        "atoken_supply": 3797.823724736217,
+        "available_liquidity": 3665.948707828322,
+        "stable_debt": 26.081562023648097,
+        "variable_debt": 105.79345488424704,
+        "liquidity_rate": 0.00035776439641455103,
+        "variable_borrow_rate": 0.0042737031753279356,
+        "stable_borrow_rate": 0.03534212896915992,
+        "average_stable_rate": 0.03476004572423179,
+        "liquidity_index": 1.0069932511657278,
+        "variable_borrow_index": 1.0286044570334731,
+        "last_update_timestamp": datetime(2023, 3, 24, 11, 1, 23),
+        "scaled_accrued_to_treasury": 0,
+        "unbacked_atokens": 0,
+    },
+    "is_frozen": True,
+    }
+
+    v3_result = get_raw_reserve_data('ethereum_v3','ethereum','0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2', 18, 16902116)
+    v2_result = get_raw_reserve_data('ethereum_v2','ethereum','0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2', 18, 16902116)
+    v1_result = get_raw_reserve_data('ethereum_v1','ethereum','0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2', 18, 16902116)
+
+    assert v3_result == v3_expected
+    assert v2_result == v2_expected
+    assert v1_result == v1_expected
 
 if __name__ == "__main__":
     # test_get_market_tokens_at_block_messari()
-    test_get_market_tokens_at_block_aave()
+    # test_get_market_tokens_at_block_aave()
     # test_get_erc20_balance_of()
     # test_get_token_transfers_from_covalent()
     # test_get_events_by_topic_hash_from_covalent()
     # test_standarise_types()
     # test_get_scaled_balance_of()
     # test_get_token_transfers_from_alchemy()
+    test_get_raw_reserve_data()

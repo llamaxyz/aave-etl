@@ -13,6 +13,7 @@ from random import randint
 from multicall import Call, Multicall
 
 
+
 from aave_data.resources.financials_config import * #pylint: disable=wildcard-import, unused-wildcard-import
 
 INITIAL_RETRY = 0.01 #seconds
@@ -691,119 +692,253 @@ def standardise_types(df: pd.DataFrame) -> pd.DataFrame:
         
     return df
 
-# def get_v3_reserve_data(
-#     market: str,
-#     chain: str,
-#     reserve: str,
-#     block_height: Optional[int] = 0
-# ) -> pd.DataFrame:
-#     """
-#     Calls v3 protocol data provider contracts at the specified block height
-#     and returns a dataframe of reserve configuration and state data.
-#     Uses multicall to minimise RPC hits.
+def get_raw_reserve_data(
+    market: str,
+    chain: str,
+    reserve: str,
+    decimals: int,
+    block_height: int,
+) -> dict:
+    """
+    Calls protocol data provider contracts at the specified block height
+    and returns a dataframe of reserve configuration and state data.
+    Uses multicall to minimise RPC hits.
+    Uses appropriate call set for the aave version.
 
 
-#     Args:
-#         market:
-#         chain:
-#         reserve:
-#         block_height:
+    Args:
+        market:
+        chain:
+        reserve:
+        decimals:
+        block_height:
 
 
-#     Returns:
-#         pd.DataFrame: identical dataframe with dtypes set
+    Returns:
+        pd.DataFrame: identical dataframe with dtypes set
 
+    Raises:
+        ValueError: if the market version is not set in config
 
-#     """
+    """
 
-#     #initialise Web3 and token contract
-#     # ic(CONFIG_CHAINS[chain]['web3_rpc_url'])
-#     w3 = Web3(Web3.HTTPProvider(CONFIG_CHAINS[chain]['web3_rpc_url']))
-#     # token_contract = w3.eth.contract(address=Web3.to_checksum_address(token), abi=ERC20_ABI)
-#     data_provider = CONFIG_MARKETS[market]['protocol_data_provider']
-#     # ic(data_provider)
+    #initialise Web3 and variables
+    w3 = Web3(Web3.HTTPProvider(CONFIG_CHAINS[chain]['web3_rpc_url']))
+    
+    lending_pool = CONFIG_MARKETS[market]['pool']
+    core = '0x3dfd23A6c5E8BbcFc9581d2E864a68feb6a076d3' # aave_v1 only
 
-#     reserve = Web3.to_checksum_address(reserve)
-#     # setup multicall
+    if CONFIG_MARKETS[market]['version'] == 1:
+        data_provider = lending_pool
+    else:
+        data_provider = CONFIG_MARKETS[market]['protocol_data_provider']
 
-#     def passthrough(x):
-#         return x
-#     def res_caps(x):
-#         ic(type(x))
-#         ic(x)
-#         return x[0], x[1]
+    if (CONFIG_MARKETS[market]['version'] == 1) and (reserve == '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2'):
+        reserve = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
 
-#     reserve_config_data_schema = [
-#         ['decimals', None],
-#         ['ltv', None],
-#         ['liquidation_threshold', None],
-#         ['liquidation_bonus', None],
-#         ['reserve_factor', None],
-#         ['usage_as_collateral_enabled', None],
-#         ['borrowing_enabled', None],
-#         ['stable_borrow_rate_enabled', None],
-#         ['is_active', None],
-#         ['is_frozen', None],
-#     ]
-#     # todo 
-#     # reserve_caps_schema = [['borrow_cap', None], ['supply_cap', None]]
-#     reserve_caps_schema = [['borrow_cap', None], ['supply_cap', None]]
-
-#     multi = Multicall(
-#         [
-#             # Call(data_provider, ['getPaused(address)(bool)', reserve], [['getPaused', None]]),
-#             # Call(data_provider, ['getInterestRateStrategyAddress(address)(address)', reserve], [('irStrategyAddress', None)]),
-#             # Call(data_provider, ['getDebtCeiling(address)(uint256)', reserve], [('getDebtCeiling', None)]),
-#             Call(data_provider, ['getReserveConfigurationData(address)((uint256,uint256,uint256,uint256,uint256,bool,bool,bool,bool,bool))', reserve], [['res_config', None]]),
-#             Call(data_provider, ['getReserveCaps(address)(uint256,uint256)', reserve], reserve_caps_schema),
-#         ],
-#         _w3 = w3,
-#         # block_id = block_height
-#     )
-
-#     out = multi()
-
-#     ic(out)
-
-#     # if block_height > 0:
-#     #     i = 0
-#     #     delay = INITIAL_RETRY
-#     #     while True:
-#     #         try:
-#     #             balance_raw = token_contract.functions.balanceOf(Web3.to_checksum_address(address)).call(block_identifier=int(block_height))
-#     #             break
-#     #         except Exception as e:
-#     #             i += 1
-#     #             if i > MAX_RETRIES:
-#     #                 raise ValueError(f"RPC error count {i}, last error {str(e)}.  Bailing out.")
-#     #             rand_delay = randint(0, 250) / 1000
-#     #             sleep(delay + rand_delay)
-#     #             delay *= 2
-#     #             print(f"Request Error {str(e)}, retry count {i}")
-#     # else:
-#     #     i = 0
-#     #     delay = INITIAL_RETRY
-#     #     while True:
-#     #         try:
-#     #             balance_raw = token_contract.functions.balanceOf(Web3.to_checksum_address(address)).call()
-#     #             break
-#     #         except Exception as e:
-#     #             i += 1
-#     #             if i > MAX_RETRIES:
-#     #                 raise ValueError(f"RPC error count {i}, last error {str(e)}.  Bailing out.")
-#     #             rand_delay = randint(0, 250) / 1000
-#     #             sleep(delay + rand_delay)
-#     #             delay *= 2
-#     #             print(f"Request Error {str(e)}, retry count {i}")
+    # return value handler functions
+    def reserve_config_handler(value):
+        return {
+            'decimals': value[0],
+            'ltv': value[1] / 1e4,
+            'liquidation_threshold': value[2] / 1e4,
+            'liquidation_bonus': value[3] / 1e4,
+            'reserve_factor': value[4] / 1e4,
+            'usage_as_collateral_enabled': value[5],
+            'borrowing_enabled': value[6],
+            'stable_borrow_rate_enabled': value[7],
+            'is_active': value[8],
+            'is_frozen': value[9],
+        }
+    
+    def v1_reserve_config_handler(value):
+        return {
+            'decimals': decimals,
+            'ltv': value[0] / 100,
+            'liquidation_threshold': value[1] / 100,
+            'liquidation_bonus': value[2] / 100,
+            'reserve_factor': 0.09,
+            'usage_as_collateral_enabled': value[4],
+            'borrowing_enabled': value[5],
+            'stable_borrow_rate_enabled': value[6],
+            'is_active': value[7],
+        }
+    
+    def v3_reserve_data_handler(value):
+        return {
+            'unbacked_atokens': value[0] / 10 ** decimals,
+            'scaled_accrued_to_treasury': value[1] / 10 ** decimals,
+            'atoken_supply': value[2] / 10 ** decimals,
+            'stable_debt': value[3] / 10 ** decimals,
+            'variable_debt': value[4] / 10 ** decimals,
+            'liquidity_rate': value[5] / 10 ** 27,
+            'variable_borrow_rate': value[6] / 10 ** 27,
+            'stable_borrow_rate': value[7] / 10 ** 27,
+            'average_stable_rate': value[8] / 10 ** 27,
+            'liquidity_index': value[9] / 10 ** 27,
+            'variable_borrow_index': value[10] / 10 ** 27,
+            'last_update_timestamp': datetime.utcfromtimestamp(value[11]),
+            'available_liquidity': (value[2] - value[3] - value[4]) / 10 ** decimals,
+        }
+    
+    def v2_reserve_data_handler(value):
+        return {
+            'available_liquidity': value[0] / 10 ** decimals,
+            'stable_debt': value[1] / 10 ** decimals,
+            'variable_debt': value[2] / 10 ** decimals,
+            'liquidity_rate': value[3] / 10 ** 27,
+            'variable_borrow_rate': value[4] / 10 ** 27,
+            'stable_borrow_rate': value[5] / 10 ** 27,
+            'average_stable_rate': value[6] / 10 ** 27,
+            'liquidity_index': value[7] / 10 ** 27,
+            'variable_borrow_index': value[8] / 10 ** 27,
+            'last_update_timestamp': datetime.utcfromtimestamp(value[9]),
+            'atoken_supply': (value[0] + value[1] + value[2]) / 10 ** decimals,
+            'scaled_accrued_to_treasury': 0, #match v3 schema
+            'unbacked_atokens': 0,
+        }
+    
+    def v1_reserve_data_handler(value):
+        return {
+            'atoken_supply': value[0] / 10 ** decimals,
+            'available_liquidity': value[1] / 10 ** decimals,
+            'stable_debt': value[2] / 10 ** decimals,
+            'variable_debt': value[3] / 10 ** decimals,
+            'liquidity_rate': value[4] / 10 ** 27,
+            'variable_borrow_rate': value[5] / 10 ** 27,
+            'stable_borrow_rate': value[6] / 10 ** 27,
+            'average_stable_rate': value[7] / 10 ** 27,
+            'liquidity_index': value[9] / 10 ** 27,
+            'variable_borrow_index': value[10] / 10 ** 27,
+            'last_update_timestamp': datetime.utcfromtimestamp(value[12]),
+            'scaled_accrued_to_treasury': 0, #match v3 schema
+            'unbacked_atokens': 0,
+        }
         
+    reserve_caps_schema = [['borrow_cap', None], ['supply_cap', None]]
 
-#     # balance = balance_raw / pow(10, token_decimals)
+    # calls common across v2 and v3 markets
+    common_calls = [
+        Call(data_provider, ['getReserveConfigurationData(address)((uint256,uint256,uint256,uint256,uint256,bool,bool,bool,bool,bool))', reserve], [['reserve_config', reserve_config_handler]]),
+    ]
+    
+    # calls specific to v3
+    v3_calls = [
+        Call(data_provider, ['getReserveData(address)((uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint40))', reserve], [['reserve_data', v3_reserve_data_handler]]),
+        Call(data_provider, ['getReserveEModeCategory(address)(uint256)', reserve], [['reserve_emode_category', None]]),
+        Call(data_provider, ['getReserveCaps(address)(uint256,uint256)', reserve], reserve_caps_schema),
+        Call(data_provider, ['getPaused(address)(bool)', reserve], [['is_paused', None]]),
+        Call(data_provider, ['getSiloedBorrowing(address)(bool)', reserve], [['siloed_borrowing', None]]),
+        Call(data_provider, ['getLiquidationProtocolFee(address)(uint256)', reserve], [['liquidation_protocol_fee', None]]),
+        Call(data_provider, ['getUnbackedMintCap(address)(uint256)', reserve], [['unbacked_mint_cap', None]]),
+        Call(data_provider, ['getDebtCeiling(address)(uint256)', reserve], [['debt_ceiling', None]]),
+        Call(data_provider, ['getDebtCeilingDecimals()(uint256)'], [['debt_ceiling_decimals', None]]),
+        
+    ]
+    
+    # calls specific to v2
+    v2_calls = [
+        Call(data_provider, ['getReserveData(address)((uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint40))', reserve], [['reserve_data', v2_reserve_data_handler]]),
+        Call(lending_pool, ['paused()(bool)'], [['is_paused', None]]),
+    ]
 
-#     # return balance 
 
-#     return pd.DataFrame()
+    v1_calls = [
+        Call(lending_pool, ['getReserveConfigurationData(address)((uint256,uint256,uint256,address,bool,bool,bool,bool))', reserve], [['reserve_config', v1_reserve_config_handler]]),
+        Call(lending_pool, ['getReserveData(address)((uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,address,uint40))', reserve], [['reserve_data', v1_reserve_data_handler]]),
+        Call(core, ['getReserveIsFreezed(address)(bool)', reserve], [['is_frozen', None]]),
+    ]
+
+    # create multicall object
+    if CONFIG_MARKETS[market]['version'] == 3:
+        multi = Multicall(
+            [   
+                *common_calls,
+                *v3_calls
+            ],
+            _w3 = w3,
+            block_id = block_height
+        )
+    elif CONFIG_MARKETS[market]['version'] == 2:
+        multi = Multicall(
+            [   
+                *common_calls,
+                *v2_calls
+            ],
+            _w3 = w3,
+            block_id = block_height
+        )
+    elif CONFIG_MARKETS[market]['version'] == 1:
+        multi = Multicall(
+            [   
+                *v1_calls
+            ],
+            _w3 = w3,
+            block_id = block_height
+        )
+    else:
+        raise ValueError(f"Unknown aave market version {CONFIG_MARKETS[market]['version']}")
+
+    # execute multicall
+    # use retry logic to handle transient RPC errors
+    i = 0
+    delay = INITIAL_RETRY
+    while True:
+        try:
+            multicall_output = multi()
+            break
+        except Exception as e:
+            i += 1
+            if i > MAX_RETRIES:
+                raise ValueError(f"RPC error count {i}, last error {str(e)}.  Bailing out.")
+            rand_delay = randint(0, 250) / 1000
+            sleep(delay + rand_delay)
+            delay *= 2
+            print(f"Request Error {str(e)}, retry count {i}")
+
+    # out_df = pd.DataFrame(out)
+
+    # ic(multicall_output)
+    # print(multicall_output)
+
+    return multicall_output
+
+def raw_reserve_to_dataframe(
+        reserve: str,
+        block_height: int,
+        raw_reserve: dict,
+) -> pd.DataFrame():
+    """
+    Convert raw reserve data to dataframe.
+    Takes the output of get_raw_reserve_data and converts it to a dataframe.
 
 
+    Args:
+        raw_reserve: dict from get_raw_reserve_data
+        block_height: block height of the data
+        reserve: reserve address
+
+    Returns:
+        pd.DataFrame: single row dataframe with reserve data
+
+    """
+    
+    reserve_config = pd.DataFrame(raw_reserve['reserve_config'], index=[0])
+    reserve_data = pd.DataFrame(raw_reserve['reserve_data'], index=[0])
+    del raw_reserve['reserve_config']
+    del raw_reserve['reserve_data']
+    other_params = pd.DataFrame(raw_reserve, index=[0])
+
+    return_val = pd.DataFrame([
+        {
+            'reserve': reserve,
+            'block_height': block_height,
+        }
+    ])
+
+    return_val = pd.concat([return_val, reserve_config, reserve_data, other_params], axis=1)
+
+    return return_val
 
 if __name__ == "__main__":
     # wbtc = get_token_transfers_from_covalent(16050438, 16057596, 1, '0x464C71f6c2F760DdA6093dCB91C24c39e5d6e18c', '0xbcca60bb61934080951369a648fb03df4f96263c')
@@ -819,5 +954,25 @@ if __name__ == "__main__":
     # balance = get_erc20_balance_of('0x8a020d92d6b119978582be4d3edfdc9f7b28bf31', '0x191c10aa4af7c30e871e70c95db0e4eb77237530', 6, 'harmony', block_height=34443481)
     # ic(balance)
     # mtt = get_events_by_topic_hash_from_covalent(15154950, 15154960, 43114, '0x794a61358D6845594F94dc1DB02A252b5b4814aD', '0xbfa21aa5d5f9a1f0120a95e7c0749f389863cbdbfff531aa7339077a5bc919de')
-    get_v3_reserve_data('ethereum_v3','ethereum','0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2', 16057596)
+    # out = get_raw_reserve_data('ethereum_v3','ethereum','0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2', 18, 16902116)
+    # out = get_raw_reserve_data('ethereum_v2','ethereum','0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2', 18, 16902116)
+    out = get_raw_reserve_data('ethereum_v1','ethereum','0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2', 18, 16902116)
+    # from datetime import datetime
 
+    # out = {'reserve_config': {'decimals': 18, 'ltv': 8000, 'liquidation_threshold': 8250, 'liquidation_bonus': 10500, 'reserve_factor': 1500, 'usage_as_collateral_enabled': True, 'borrowing_enabled': True, 'stable_borrow_rate_enabled': False, 'is_active': True, 'is_frozen': False}, 'reserve_data': {'unbacked_atokens': 0.0, 'scaled_accrued_to_treasury': 1.774051652369331, 'atoken_supply': 172761.88639544294, 'stable_debt': 0.0, 'variable_debt': 104109.67095672512, 'liquidity_rate': 0.019784087388165828, 'variable_borrow_rate': 0.0386241186359518, 'stable_borrow_rate': 0.09813065119573873, 'average_stable_rate': 0.0, 'liquidity_index': 1.0029317607983557, 'variable_borrow_index': 1.0058429263973083, 'last_update_timestamp': datetime(2023, 3, 25, 1, 23, 47)}, 'reserve_emode_category': 1, 'borrow_cap': 1400000, 'supply_cap': 1800000, 'is_paused': False, 'siloed_borrowing': False, 'liquidation_protocol_fee': 1000, 'unbacked_mint_cap': 0, 'debt_ceiling': 0, 'debt_ceiling_decimals': 2}
+
+    # out = {'reserve_config': {'decimals': 18, 'ltv': 0.75, 'liquidation_threshold': 0.8, 'liquidation_bonus': 1.05, 'reserve_factor': 0.09, 'usage_as_collateral_enabled': True, 'borrowing_enabled': True, 'stable_borrow_rate_enabled': False, 'is_active': True}, 'reserve_data': {'atoken_supply': 3797.823724736217, 'available_liquidity': 3665.948707828322, 'stable_debt': 26.081562023648097, 'variable_debt': 105.79345488424704, 'liquidity_rate': 0.00035776439641455103, 'variable_borrow_rate': 0.0042737031753279356, 'stable_borrow_rate': 0.03534212896915992, 'average_stable_rate': 0.03476004572423179, 'liquidity_index': 1.0069932511657278, 'variable_borrow_index': 1.0286044570334731, 'last_update_timestamp': datetime(2023, 3, 24, 11, 1, 23), 'scaled_accrued_to_treasury': 0, 'unbacked_atokens': 0}, 'is_frozen': True}
+    df = raw_reserve_to_dataframe('0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2', 16902116, out)
+    ic(df)
+    df.info()
+    df.to_dict()
+
+    # reserve_config = pd.DataFrame(out['reserve_config'], index=[0])
+    # reserve_data = pd.DataFrame(out['reserve_data'], index=[0])
+    # del out['reserve_config']
+    # del out['reserve_data']
+    # other_params = pd.DataFrame(out, index=[0])
+
+    # ic(reserve_config)
+    # ic(reserve_data)
+    # ic(other_params)
