@@ -20,4 +20,6 @@ sources:
       - name: balance_group_lookup
       - name: aave_internal_addresses
       - name: token_prices_by_day
+      - name: market_state_by_day
+      - name: market_config_by_day
       
