@@ -76,6 +76,6 @@ select
   , measure
   , sum(value) as value
 from by_asset 
-where measure in ('revenue', 'revenue_usd')
+where measure in ('revenue_usd')
 group by block_day, market, reserve, atoken_symbol, measure
 order by market, atoken_symbol, measure, block_day

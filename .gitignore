@@ -142,3 +142,6 @@ logs/
 .telemetry/
 
 dagster.yaml
+
+# proof of concept for multicall code
+aave_data/resources/multicall_poc.py
