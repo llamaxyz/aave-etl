@@ -131,15 +131,15 @@ def protocol_data_by_day(
 # todo change inputs to function to be block_numbers_by_day
 # todo grab vars market, chain, block_height in the first part of the function
 # todo add metadata and logging
-@asset(
-    partitions_def=market_day_multipartition,
-    compute_kind="python",
-    code_version="1",
-    io_manager_key = 'protocol_data_lake_io_manager',
-    ins={
-        "block_numbers_by_day": AssetIn(key_prefix="financials_data_lake"),
-    }
-)            
+# @asset(
+#     partitions_def=market_day_multipartition,
+#     compute_kind="python",
+#     code_version="1",
+#     io_manager_key = 'protocol_data_lake_io_manager',
+#     ins={
+#         "block_numbers_by_day": AssetIn(key_prefix="financials_data_lake"),
+#     }
+# )            
 def incentives_config(
     context,
     block_numbers_by_day: pd.DataFrame,
