@@ -127,4 +127,389 @@ def protocol_data_by_day(
     )
     
     return protocol_data
-            
+
+# todo change inputs to function to be block_numbers_by_day
+# todo grab vars market, chain, block_height in the first part of the function
+# todo add metadata and logging
+@asset(
+    partitions_def=market_day_multipartition,
+    compute_kind="python",
+    code_version="1",
+    io_manager_key = 'protocol_data_lake_io_manager',
+    ins={
+        "block_numbers_by_day": AssetIn(key_prefix="financials_data_lake"),
+    }
+)            
+def incentives_config(
+    context,
+    block_numbers_by_day: pd.DataFrame,
+    market: str,
+    chain: str,
+    block_height: int,
+) -> pd.DataFrame:
+    """
+    Calls UiIncentiveDataProviderV3 contracts at the specified block height
+    and returns a dataframe of incentive configuration and state data.
+
+    V3 and V2 share a common ABI
+
+    V3 returns prices, V2 doesn't
+
+
+    Args:
+        context:
+        block_numbers_by_day:
+
+    Returns:
+        dataframe of incentives data
+
+    """
+
+    #initialise Web3 and variables
+    w3 = Web3(Web3.HTTPProvider(CONFIG_CHAINS[chain]['web3_rpc_url']))
+    
+    incentives_ui_provider = CONFIG_MARKETS[market]['incentives_ui_data_provider']
+    pool_address_provider = CONFIG_MARKETS[market]['pool_address_provider']
+    ic(incentives_ui_provider)
+    ic(pool_address_provider)
+
+    # Minimal ABI covering getReservesIncentivesData() only
+    V3_ABI = [
+        {
+        "constant": "true",
+        "inputs": [
+            {
+                "internalType": "contract IPoolAddressesProvider",
+                "name": "provider",
+                "type": "address"
+            }
+        ],
+        "name": "getReservesIncentivesData",
+        "outputs": [
+            {
+                "components": [
+                    {
+                        "internalType": "address",
+                        "name": "underlyingAsset",
+                        "type": "address"
+                    },
+                    {
+                        "components": [
+                            {
+                                "internalType": "address",
+                                "name": "tokenAddress",
+                                "type": "address"
+                            },
+                            {
+                                "internalType": "address",
+                                "name": "incentiveControllerAddress",
+                                "type": "address"
+                            },
+                            {
+                                "components": [
+                                    {
+                                        "internalType": "string",
+                                        "name": "rewardTokenSymbol",
+                                        "type": "string"
+                                    },
+                                    {
+                                        "internalType": "address",
+                                        "name": "rewardTokenAddress",
+                                        "type": "address"
+                                    },
+                                    {
+                                        "internalType": "address",
+                                        "name": "rewardOracleAddress",
+                                        "type": "address"
+                                    },
+                                    {
+                                        "internalType": "uint256",
+                                        "name": "emissionPerSecond",
+                                        "type": "uint256"
+                                    },
+                                    {
+                                        "internalType": "uint256",
+                                        "name": "incentivesLastUpdateTimestamp",
+                                        "type": "uint256"
+                                    },
+                                    {
+                                        "internalType": "uint256",
+                                        "name": "tokenIncentivesIndex",
+                                        "type": "uint256"
+                                    },
+                                    {
+                                        "internalType": "uint256",
+                                        "name": "emissionEndTimestamp",
+                                        "type": "uint256"
+                                    },
+                                    {
+                                        "internalType": "int256",
+                                        "name": "rewardPriceFeed",
+                                        "type": "int256"
+                                    },
+                                    {
+                                        "internalType": "uint8",
+                                        "name": "rewardTokenDecimals",
+                                        "type": "uint8"
+                                    },
+                                    {
+                                        "internalType": "uint8",
+                                        "name": "precision",
+                                        "type": "uint8"
+                                    },
+                                    {
+                                        "internalType": "uint8",
+                                        "name": "priceFeedDecimals",
+                                        "type": "uint8"
+                                    }
+                                ],
+                                "internalType": "struct IUiIncentiveDataProviderV3.RewardInfo[]",
+                                "name": "rewardsTokenInformation",
+                                "type": "tuple[]"
+                            }
+                        ],
+                        "internalType": "struct IUiIncentiveDataProviderV3.IncentiveData",
+                        "name": "aIncentiveData",
+                        "type": "tuple"
+                    },
+                    {
+                        "components": [
+                            {
+                                "internalType": "address",
+                                "name": "tokenAddress",
+                                "type": "address"
+                            },
+                            {
+                                "internalType": "address",
+                                "name": "incentiveControllerAddress",
+                                "type": "address"
+                            },
+                            {
+                                "components": [
+                                    {
+                                        "internalType": "string",
+                                        "name": "rewardTokenSymbol",
+                                        "type": "string"
+                                    },
+                                    {
+                                        "internalType": "address",
+                                        "name": "rewardTokenAddress",
+                                        "type": "address"
+                                    },
+                                    {
+                                        "internalType": "address",
+                                        "name": "rewardOracleAddress",
+                                        "type": "address"
+                                    },
+                                    {
+                                        "internalType": "uint256",
+                                        "name": "emissionPerSecond",
+                                        "type": "uint256"
+                                    },
+                                    {
+                                        "internalType": "uint256",
+                                        "name": "incentivesLastUpdateTimestamp",
+                                        "type": "uint256"
+                                    },
+                                    {
+                                        "internalType": "uint256",
+                                        "name": "tokenIncentivesIndex",
+                                        "type": "uint256"
+                                    },
+                                    {
+                                        "internalType": "uint256",
+                                        "name": "emissionEndTimestamp",
+                                        "type": "uint256"
+                                    },
+                                    {
+                                        "internalType": "int256",
+                                        "name": "rewardPriceFeed",
+                                        "type": "int256"
+                                    },
+                                    {
+                                        "internalType": "uint8",
+                                        "name": "rewardTokenDecimals",
+                                        "type": "uint8"
+                                    },
+                                    {
+                                        "internalType": "uint8",
+                                        "name": "precision",
+                                        "type": "uint8"
+                                    },
+                                    {
+                                        "internalType": "uint8",
+                                        "name": "priceFeedDecimals",
+                                        "type": "uint8"
+                                    }
+                                ],
+                                "internalType": "struct IUiIncentiveDataProviderV3.RewardInfo[]",
+                                "name": "rewardsTokenInformation",
+                                "type": "tuple[]"
+                            }
+                        ],
+                        "internalType": "struct IUiIncentiveDataProviderV3.IncentiveData",
+                        "name": "vIncentiveData",
+                        "type": "tuple"
+                    },
+                    {
+                        "components": [
+                            {
+                                "internalType": "address",
+                                "name": "tokenAddress",
+                                "type": "address"
+                            },
+                            {
+                                "internalType": "address",
+                                "name": "incentiveControllerAddress",
+                                "type": "address"
+                            },
+                            {
+                                "components": [
+                                    {
+                                        "internalType": "string",
+                                        "name": "rewardTokenSymbol",
+                                        "type": "string"
+                                    },
+                                    {
+                                        "internalType": "address",
+                                        "name": "rewardTokenAddress",
+                                        "type": "address"
+                                    },
+                                    {
+                                        "internalType": "address",
+                                        "name": "rewardOracleAddress",
+                                        "type": "address"
+                                    },
+                                    {
+                                        "internalType": "uint256",
+                                        "name": "emissionPerSecond",
+                                        "type": "uint256"
+                                    },
+                                    {
+                                        "internalType": "uint256",
+                                        "name": "incentivesLastUpdateTimestamp",
+                                        "type": "uint256"
+                                    },
+                                    {
+                                        "internalType": "uint256",
+                                        "name": "tokenIncentivesIndex",
+                                        "type": "uint256"
+                                    },
+                                    {
+                                        "internalType": "uint256",
+                                        "name": "emissionEndTimestamp",
+                                        "type": "uint256"
+                                    },
+                                    {
+                                        "internalType": "int256",
+                                        "name": "rewardPriceFeed",
+                                        "type": "int256"
+                                    },
+                                    {
+                                        "internalType": "uint8",
+                                        "name": "rewardTokenDecimals",
+                                        "type": "uint8"
+                                    },
+                                    {
+                                        "internalType": "uint8",
+                                        "name": "precision",
+                                        "type": "uint8"
+                                    },
+                                    {
+                                        "internalType": "uint8",
+                                        "name": "priceFeedDecimals",
+                                        "type": "uint8"
+                                    }
+                                ],
+                                "internalType": "struct IUiIncentiveDataProviderV3.RewardInfo[]",
+                                "name": "rewardsTokenInformation",
+                                "type": "tuple[]"
+                            }
+                        ],
+                        "internalType": "struct IUiIncentiveDataProviderV3.IncentiveData",
+                        "name": "sIncentiveData",
+                        "type": "tuple"
+                    }
+                ],
+                "internalType": "struct IUiIncentiveDataProviderV3.AggregatedReserveIncentiveData[]",
+                "name": "",
+                "type": "tuple[]"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    ]
+       
+    all_rewards = pd.DataFrame()
+
+    if incentives_ui_provider is not None:
+        incentives_ui_provider_contract = w3.eth.contract(address=Web3.to_checksum_address(incentives_ui_provider), abi=V3_ABI)
+        # contract_return = incentives_ui_provider_contract.functions.getReservesIncentivesData(
+        #     Web3.to_checksum_address(pool_address_provider)).call(block_identifier=int(block_height))
+
+        # exponential backoff retries on the function call to deal with transient RPC errors
+        if block_height > 0:
+            i = 0
+            delay = INITIAL_RETRY
+            while True:
+                try:
+                    contract_return = incentives_ui_provider_contract.functions.getReservesIncentivesData(
+                        Web3.to_checksum_address(pool_address_provider)).call(block_identifier=int(block_height))
+                    break
+                except Exception as e:
+                    i += 1
+                    if i > MAX_RETRIES:
+                        raise ValueError(f"RPC error count {i}, last error {str(e)}.  Bailing out.")
+                    rand_delay = randint(0, 250) / 1000
+                    sleep(delay + rand_delay)
+                    delay *= 2
+                    print(f"Request Error {str(e)}, retry count {i}")
+
+        # process the contract return data (list of tuples) into a dataframe
+        raw_rewards = pd.DataFrame(contract_return, columns=['underlying_asset', 'a_incentive_data', 'v_incentive_data', 's_incentive_data'])
+
+        token_cols = ['a_incentive_data', 'v_incentive_data', 's_incentive_data']
+        token_types = ['atoken','vtoken','stoken']
+
+        
+        for col, token_type in zip(token_cols, token_types):
+
+            atoken_rewards = pd.DataFrame(raw_rewards[col].tolist(), index=raw_rewards.index, columns=[
+                                          'token_address', 'incentive_controller_address', 'rewards_token_information'])
+            atoken_rewards = atoken_rewards.explode(column='rewards_token_information').dropna()
+
+            dfa_rewards = pd.DataFrame(atoken_rewards.rewards_token_information.tolist(), index=atoken_rewards.index, columns = [
+                                                'reward_token_symbol',
+                                                'reward_token_address',
+                                                'reward_oracle_address',
+                                                'emission_per_second',
+                                                'incentives_last_update_timestamp',
+                                                'token_incentives_index',
+                                                'emission_end_timestamp',
+                                                'reward_price_feed',
+                                                'reward_token_decimals',
+                                                'precision',
+                                                'price_feed_decimals'])
+
+            atoken_rewards = atoken_rewards[['token_address','incentive_controller_address']].join(dfa_rewards).drop_duplicates()
+            atoken_rewards['token_type'] = token_type
+
+            atoken_rewards = raw_rewards[['underlying_asset']].join(atoken_rewards).dropna()
+            all_rewards = pd.concat([all_rewards, atoken_rewards])
+
+        # force big cols to float to deal with bigints
+        for col in ['emission_per_second',
+                    'token_incentives_index',
+                    'reward_price_feed']:
+            all_rewards[col] = all_rewards[col].astype(float)
+        
+        # force other numerics to int
+        for col in ['incentives_last_update_timestamp',
+                    'emission_end_timestamp',
+                    'reward_token_decimals',
+                    'precision',
+                    'price_feed_decimals']:
+            all_rewards[col] = all_rewards[col].astype(int)
+
+    return all_rewards.reset_index(drop=True)

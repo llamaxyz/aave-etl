@@ -233,7 +233,7 @@ CONFIG_MARKETS = {
         "protocol_data_provider": "0xe69DE09Cd274242DDD7004794a4b00EbE9B65fEA",
         "oracle": "0xf20E5fe26811f7336a8A637C42b6e8913B291868",
         "incentives_controller": "0x77B59b07b87689a6D27adE063FB1D08C7Fe52F0b",
-        "incentives_ui_data_provider" : None,
+        "incentives_ui_data_provider" : '0xD01ab9a6577E1D84F142e44D49380e23A340387d',
         "pool_address_provider" : "0xB953a066377176092879a151C07798B3946EEa4b",
         "rewards_token": "0xc221b7E65FfC80DE234bbB6667aBDd46593D34F0",
         "rewards_token_symbol": "wCFG",
