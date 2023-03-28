@@ -6,7 +6,7 @@ import pandas as pd
 import requests
 import sys 
 from web3 import Web3
-from web3.exceptions import BadFunctionCallOutput
+from web3.exceptions import BadFunctionCallOutput 
 from dagster import (AssetIn,  # SourceAsset,; Output,
                      DailyPartitionsDefinition, ExperimentalWarning,
                      MetadataValue, #MultiPartitionKey,
@@ -22,6 +22,7 @@ from dagster import (AssetIn,  # SourceAsset,; Output,
 from icecream import ic
 # from subgrounds.subgrounds import Subgrounds
 from eth_abi.abi import decode
+from eth_abi.exceptions import InsufficientDataBytes
 from eth_utils.conversions import to_bytes
 from shroomdk import ShroomDK
 from time import sleep
@@ -128,24 +129,19 @@ def protocol_data_by_day(
     
     return protocol_data
 
-# todo change inputs to function to be block_numbers_by_day
-# todo grab vars market, chain, block_height in the first part of the function
-# todo add metadata and logging
-# @asset(
-#     partitions_def=market_day_multipartition,
-#     compute_kind="python",
-#     code_version="1",
-#     io_manager_key = 'protocol_data_lake_io_manager',
-#     ins={
-#         "block_numbers_by_day": AssetIn(key_prefix="financials_data_lake"),
-#     }
-# )            
-def incentives_config(
+
+@asset(
+    partitions_def=market_day_multipartition,
+    compute_kind="python",
+    code_version="1",
+    io_manager_key = 'protocol_data_lake_io_manager',
+    ins={
+        "block_numbers_by_day": AssetIn(key_prefix="financials_data_lake"),
+    }
+)            
+def raw_incentives_by_day(
     context,
     block_numbers_by_day: pd.DataFrame,
-    market: str,
-    chain: str,
-    block_height: int,
 ) -> pd.DataFrame:
     """
     Calls UiIncentiveDataProviderV3 contracts at the specified block height
@@ -164,14 +160,20 @@ def incentives_config(
         dataframe of incentives data
 
     """
+    date, market = context.partition_key.split("|")
+    partition_datetime = datetime.strptime(date, '%Y-%m-%d')
+    chain = CONFIG_MARKETS[market]["chain"]
+    block_height = int(block_numbers_by_day.block_height.values[0])
 
     #initialise Web3 and variables
     w3 = Web3(Web3.HTTPProvider(CONFIG_CHAINS[chain]['web3_rpc_url']))
     
     incentives_ui_provider = CONFIG_MARKETS[market]['incentives_ui_data_provider']
     pool_address_provider = CONFIG_MARKETS[market]['pool_address_provider']
-    ic(incentives_ui_provider)
-    ic(pool_address_provider)
+
+    context.log.info(f"incentives_ui_provider: {incentives_ui_provider}")
+    context.log.info(f"pool_address_provider: {pool_address_provider}")
+    context.log.info(f"block_height: {block_height}")
 
     # Minimal ABI covering getReservesIncentivesData() only
     V3_ABI = [
@@ -457,6 +459,11 @@ def incentives_config(
                     contract_return = incentives_ui_provider_contract.functions.getReservesIncentivesData(
                         Web3.to_checksum_address(pool_address_provider)).call(block_identifier=int(block_height))
                     break
+                # except InsufficientDataBytes as id:
+                except BadFunctionCallOutput as b:
+                    # This excepts when incentives haven't yet been deployed for the pool
+                    contract_return = None
+                    break
                 except Exception as e:
                     i += 1
                     if i > MAX_RETRIES:
@@ -466,50 +473,64 @@ def incentives_config(
                     delay *= 2
                     print(f"Request Error {str(e)}, retry count {i}")
 
-        # process the contract return data (list of tuples) into a dataframe
-        raw_rewards = pd.DataFrame(contract_return, columns=['underlying_asset', 'a_incentive_data', 'v_incentive_data', 's_incentive_data'])
+        if contract_return is not None:
+            # process the contract return data (list of tuples) into a dataframe
+            raw_rewards = pd.DataFrame(contract_return, columns=['underlying_asset', 'a_incentive_data', 'v_incentive_data', 's_incentive_data'])
 
-        token_cols = ['a_incentive_data', 'v_incentive_data', 's_incentive_data']
-        token_types = ['atoken','vtoken','stoken']
+            token_cols = ['a_incentive_data', 'v_incentive_data', 's_incentive_data']
+            token_types = ['atoken','vtoken','stoken']
 
-        
-        for col, token_type in zip(token_cols, token_types):
+            for col, token_type in zip(token_cols, token_types):
 
-            atoken_rewards = pd.DataFrame(raw_rewards[col].tolist(), index=raw_rewards.index, columns=[
-                                          'token_address', 'incentive_controller_address', 'rewards_token_information'])
-            atoken_rewards = atoken_rewards.explode(column='rewards_token_information').dropna()
+                atoken_rewards = pd.DataFrame(raw_rewards[col].tolist(), index=raw_rewards.index, columns=[
+                                            'token_address', 'incentive_controller_address', 'rewards_token_information'])
+                atoken_rewards = atoken_rewards.explode(column='rewards_token_information').dropna()
 
-            dfa_rewards = pd.DataFrame(atoken_rewards.rewards_token_information.tolist(), index=atoken_rewards.index, columns = [
-                                                'reward_token_symbol',
-                                                'reward_token_address',
-                                                'reward_oracle_address',
-                                                'emission_per_second',
-                                                'incentives_last_update_timestamp',
-                                                'token_incentives_index',
-                                                'emission_end_timestamp',
-                                                'reward_price_feed',
-                                                'reward_token_decimals',
-                                                'precision',
-                                                'price_feed_decimals'])
+                dfa_rewards = pd.DataFrame(atoken_rewards.rewards_token_information.tolist(), index=atoken_rewards.index, columns = [
+                                                    'reward_token_symbol',
+                                                    'reward_token_address',
+                                                    'reward_oracle_address',
+                                                    'emission_per_second',
+                                                    'incentives_last_update_timestamp',
+                                                    'token_incentives_index',
+                                                    'emission_end_timestamp',
+                                                    'reward_price_feed',
+                                                    'reward_token_decimals',
+                                                    'precision',
+                                                    'price_feed_decimals'])
 
-            atoken_rewards = atoken_rewards[['token_address','incentive_controller_address']].join(dfa_rewards).drop_duplicates()
-            atoken_rewards['token_type'] = token_type
+                atoken_rewards = atoken_rewards[['token_address','incentive_controller_address']].join(dfa_rewards).drop_duplicates()
+                atoken_rewards['token_type'] = token_type
 
-            atoken_rewards = raw_rewards[['underlying_asset']].join(atoken_rewards).dropna()
-            all_rewards = pd.concat([all_rewards, atoken_rewards])
+                atoken_rewards = raw_rewards[['underlying_asset']].join(atoken_rewards).dropna()
+                
+                all_rewards = pd.concat([all_rewards, atoken_rewards])
 
-        # force big cols to float to deal with bigints
-        for col in ['emission_per_second',
-                    'token_incentives_index',
-                    'reward_price_feed']:
-            all_rewards[col] = all_rewards[col].astype(float)
-        
-        # force other numerics to int
-        for col in ['incentives_last_update_timestamp',
-                    'emission_end_timestamp',
-                    'reward_token_decimals',
-                    'precision',
-                    'price_feed_decimals']:
-            all_rewards[col] = all_rewards[col].astype(int)
+            # force big cols to float to deal with bigints
+            for col in ['emission_per_second',
+                        'token_incentives_index',
+                        'reward_price_feed']:
+                all_rewards[col] = all_rewards[col].astype(float)
+            
+            # force other numerics to int
+            for col in ['incentives_last_update_timestamp',
+                        'emission_end_timestamp',
+                        'reward_token_decimals',
+                        'precision',
+                        'price_feed_decimals']:
+                all_rewards[col] = all_rewards[col].astype(int)
+
+            all_rewards.insert(0, 'block_day', partition_datetime)
+            all_rewards.insert(1, 'block_height', block_height)
+            all_rewards.insert(2, 'market', market)
+
+    all_rewards = standardise_types(all_rewards)
+
+    context.add_output_metadata(
+        {
+            "num_records": len(all_rewards),
+            "preview": MetadataValue.md(all_rewards.head().to_markdown()),
+        }
+    )
 
     return all_rewards.reset_index(drop=True)

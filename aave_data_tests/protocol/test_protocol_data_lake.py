@@ -12,6 +12,7 @@ from pandas.testing import assert_frame_equal
 # from aave.financials.
 from aave_data.assets.protocol.protocol_data_lake import (
                                                         protocol_data_by_day,
+                                                        raw_incentives_by_day
                                                     )
 
 from aave_data.resources.financials_config import *  # pylint: disable=wildcard-import, unused-wildcard-import
@@ -103,6 +104,65 @@ def test_protocol_data_by_day():
 
     assert_frame_equal(result, expected, check_exact=True)
 
+def test_raw_incentives_by_day():
+    """
+    Tests the raw_incentives_by_day asset against a reference response
+
+    """
+
+    pkey = MultiPartitionKey(
+        {
+            "date": '2023-03-15',
+            "market": 'polygon_v3'
+        }
+    )  # type: ignore
+
+    context = build_op_context(partition_key=pkey)
+
+    block_numbers_by_day_sample = pd.DataFrame(
+        [
+            {
+                'block_day': datetime(2023,3,15,0,0,0),
+                'block_time': datetime(2022,3,15,0,0,0),
+                'block_height': 40353814,
+                'end_block': 40391766,
+                'chain': 'polygon',
+                'market': 'polygon_v3',
+            }
+        ]
+    )
+    block_numbers_by_day_sample = standardise_types(block_numbers_by_day_sample)
+
+    expected = pd.DataFrame(
+        [
+            {
+                "block_day": datetime(2023,3,15,0,0,0),
+                "block_height": 40353814,
+                "market": "polygon_v3",
+                "underlying_asset": "0xfa68fb4628dff1028cfec22b4162fccd0d45efb6",
+                "token_address": "0x80ca0d8c38d2e2bcbab66aa1648bd1c7160500fe",
+                "incentive_controller_address": "0x929ec64c34a17401f460460d4b9390518e5b473e",
+                "reward_token_symbol": 'SD',
+                "reward_token_address": '0x1d734a02ef1e1f5886e66b0673b71af5b53ffa94',
+                "reward_oracle_address": '0x30e9671a8092429a358a4e31d41381aa0d10b0a0',
+                "emission_per_second": 3910108024691358.0,
+                "incentives_last_update_timestamp": 1678835458,
+                "token_incentives_index": 1421224559199312.0,
+                "emission_end_timestamp": 1691310675,
+                "reward_price_feed": 1135753.0,
+                "reward_token_decimals": 18,
+                "precision": 18,
+                "price_feed_decimals": 6,
+                "token_type": 'atoken',
+            }
+        ]
+    )
+    expected = standardise_types(expected)
+
+    result = raw_incentives_by_day(context, block_numbers_by_day_sample)
+
+    assert_frame_equal(result, expected, check_exact=True)
 
 if __name__ == "__main__":
-    test_protocol_data_by_day()
+    # test_protocol_data_by_day()
+    test_raw_incentives_by_day()
