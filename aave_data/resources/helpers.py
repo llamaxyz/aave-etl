@@ -119,7 +119,7 @@ def get_market_tokens_at_block_aave(
         pools = subgraph.Query.pools(  # type: ignore
                 block={'number': block_height},
                 where=[
-                    subgraph.Pool.id == markets_config[market]['lending_pool_address_provider']  # type: ignore
+                    subgraph.Pool.id == markets_config[market]['pool_address_provider']  # type: ignore
                 ]
             )
     else:
