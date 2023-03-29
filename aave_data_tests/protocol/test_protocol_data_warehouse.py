@@ -254,6 +254,8 @@ def test_incentives_by_day():
                 "symbol": "aPolSTMATIC",
                 "reward_token_symbol": 'LDO',
                 "reward_token_address": '0xc3c7d422809852031b44ab29eec9f1eff2a58756',
+                "emission_per_day": 267.85714285714295,
+                "emission_per_day_usd": 854.464285714286,
                 "supply_rewards_apr": 0.023474453506071684,
                 "variable_borrow_rewards_apr": 0.0,
                 "stable_borrow_rewards_apr": 0.0,
@@ -266,6 +268,8 @@ def test_incentives_by_day():
                 "symbol": "aPolMATICX",
                 "reward_token_symbol": 'SD',
                 "reward_token_address": '0x1d734a02ef1e1f5886e66b0673b71af5b53ffa94',
+                "emission_per_day": 337.8333333333333,
+                "emission_per_day_usd": 383.69522183333333,
                 "supply_rewards_apr": 0.01321605727791571,
                 "variable_borrow_rewards_apr": 0.0,
                 "stable_borrow_rewards_apr": 0.0,
@@ -276,6 +280,9 @@ def test_incentives_by_day():
     expected = standardise_types(expected)
 
     result = incentives_by_day(context, raw_incentives_by_day_sample, protocol_data_by_day_sample, aave_oracle_prices_by_day_sample)
+
+    ic(expected)
+    ic(result)
 
     assert_frame_equal(result, expected, check_exact=True)
 

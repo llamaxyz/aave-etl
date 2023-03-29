@@ -254,9 +254,12 @@ def incentives_by_day(context,
     
     incentives['supply_rewards_apr'], incentives['variable_borrow_rewards_apr'], incentives['stable_borrow_rewards_apr'] = zip(*incentives.apply(apr_calc, axis=1))
     
+    incentives.emission_per_day = incentives.emission_per_day.astype(float)
+    incentives.emission_per_day_usd = incentives.emission_per_day_usd.astype(float)
     incentives.supply_rewards_apr = incentives.supply_rewards_apr.astype(float)
     incentives.variable_borrow_rewards_apr = incentives.variable_borrow_rewards_apr.astype(float)
     incentives.stable_borrow_rewards_apr = incentives.stable_borrow_rewards_apr.astype(float)
+
 
     # aggregate by reserve & reward token
     incentives = incentives.groupby(
@@ -270,7 +273,9 @@ def incentives_by_day(context,
         'reward_token_address'
         ]
         , as_index=False).agg(
-                {
+                {   
+                    'emission_per_day': 'sum',
+                    'emission_per_day_usd': 'sum',
                     'supply_rewards_apr': 'sum',
                     'variable_borrow_rewards_apr': 'sum',
                     'stable_borrow_rewards_apr': 'sum',
