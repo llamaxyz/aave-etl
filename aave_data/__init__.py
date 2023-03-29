@@ -224,6 +224,7 @@ data_lake_unpartitioned_assets = [
     'financials_data_lake/streams_metadata',
     'financials_data_lake/streaming_payments_state',
     ]
+
 # data_lake_chunk_4 = [
 #     'financials_data_lake/tx_classification',
 #     'financials_data_lake/display_names',
@@ -242,14 +243,15 @@ data_lake_unpartitioned_assets = [
 #     partitions_def=market_day_multipartition
 # )
 
-financials_data_lake_partitioned_job = define_asset_job(
-    name='financials_data_lake_partitioned',
-    selection=AssetSelection.groups('financials_data_lake') - AssetSelection.keys(*data_lake_unpartitioned_assets),
+data_lake_partitioned_job = define_asset_job(
+    name='data_lake_partitioned',
+    selection=AssetSelection.groups('financials_data_lake', 'protocol_data_lake') - AssetSelection.keys(*data_lake_unpartitioned_assets),
     partitions_def=market_day_multipartition
 )
 
-financials_data_lake_unpartitioned_job = define_asset_job(
-    name='financials_data_lake_unpartitioned',
+
+data_lake_unpartitioned_job = define_asset_job(
+    name='data_lake_unpartitioned',
     selection=AssetSelection.keys(*data_lake_unpartitioned_assets),
     # partitions_def=market_day_multipartition
 )
@@ -334,11 +336,11 @@ def financials_root_schedule(context):
 
 @schedule(
     cron_schedule="0 2 * * *",
-    job=financials_data_lake_partitioned_job,
+    job=data_lake_partitioned_job,
     execution_timezone='UTC',
-    name="financials_data_lake_partitioned_schedule",
+    name="data_lake_partitioned_schedule",
 )
-def financials_data_lake_partitioned_schedule(context):
+def data_lake_partitioned_schedule(context):
     time_partitions = daily_partition.get_partition_keys(context.scheduled_execution_time)
 
     # Run for the latest time partition. Prior partitions will have been handled by prior ticks.
@@ -348,16 +350,16 @@ def financials_data_lake_partitioned_schedule(context):
         market_day_multipartition, {"date": curr_date}
     ):
         context.log.info(f"Generating run request for partition {multipartition_key}")
-        yield financials_data_lake_partitioned_job.run_request_for_partition(
+        yield data_lake_partitioned_job.run_request_for_partition(
             partition_key=multipartition_key,
             run_key=multipartition_key,
         )
 
-financials_data_lake_unpartitioned_schedule = ScheduleDefinition(
-    job = financials_data_lake_unpartitioned_job,
+data_lake_unpartitioned_schedule = ScheduleDefinition(
+    job = data_lake_unpartitioned_job,
     cron_schedule="0 2 * * *",
     execution_timezone='UTC',
-    name="financials_data_lake_unpartitioned_schedule"
+    name="data_lake_unpartitioned_schedule"
     )
 
 warehouse_datamart_schedule = ScheduleDefinition(
@@ -443,15 +445,15 @@ defs = Definitions(
         #   financials_chunk1_job,
         #   financials_chunk2_job,
         #   financials_chunk3_job,
-          financials_data_lake_unpartitioned_job,
-          financials_data_lake_partitioned_job,
+          data_lake_unpartitioned_job,
+          data_lake_partitioned_job,
           warehouse_datamart_job
           ],
     schedules = [
         financials_root_schedule,
         warehouse_datamart_schedule,
-        financials_data_lake_unpartitioned_schedule,
-        financials_data_lake_partitioned_schedule
+        data_lake_unpartitioned_schedule,
+        data_lake_partitioned_schedule
         ],
     sensors=[financials_data_lake_sensor, financials_warehouse_sensor, dbt_sensor, minimal_sensor],
     resources=resource_defs[dagster_deployment],
