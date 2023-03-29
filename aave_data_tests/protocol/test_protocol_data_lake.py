@@ -12,7 +12,7 @@ from pandas.testing import assert_frame_equal
 # from aave.financials.
 from aave_data.assets.protocol.protocol_data_lake import (
                                                         protocol_data_by_day,
-                                                        raw_incentives_by_day
+                                                        raw_incentives_by_day,
                                                     )
 
 from aave_data.resources.financials_config import *  # pylint: disable=wildcard-import, unused-wildcard-import
@@ -163,6 +163,9 @@ def test_raw_incentives_by_day():
 
     assert_frame_equal(result, expected, check_exact=True)
 
+
+
 if __name__ == "__main__":
     # test_protocol_data_by_day()
-    test_raw_incentives_by_day()
+    # test_raw_incentives_by_day()
+    test_incentives_by_day()
