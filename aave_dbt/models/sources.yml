@@ -22,4 +22,5 @@ sources:
       - name: token_prices_by_day
       - name: market_state_by_day
       - name: market_config_by_day
+      - name: incentives_by_day
       
