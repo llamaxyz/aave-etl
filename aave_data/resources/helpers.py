@@ -995,3 +995,8 @@ if __name__ == "__main__":
     # ic(reserve_config)
     # ic(reserve_data)
     # ic(other_params)
+
+    out = get_raw_reserve_data('polygon_v3','polygon','0xfa68fb4628dff1028cfec22b4162fccd0d45efb6', 18, 40353814)
+    ic(out)
+    outdf = raw_reserve_to_dataframe(out)
+    ic(outdf.to_dict())

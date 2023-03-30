@@ -117,6 +117,9 @@ def protocol_data_by_day(
         protocol_data.debt_ceiling = protocol_data.debt_ceiling / 10 ** protocol_data.debt_ceiling_decimals
         protocol_data.debt_ceiling = protocol_data.debt_ceiling.astype(int)
         protocol_data.liquidation_protocol_fee = protocol_data.liquidation_protocol_fee / 10000
+        protocol_data.liquidity_rate = protocol_data.liquidity_rate.astype(float)
+        protocol_data.variable_borrow_rate = protocol_data.variable_borrow_rate.astype(float)
+        protocol_data.stable_borrow_rate = protocol_data.stable_borrow_rate.astype(float)
 
         protocol_data = standardise_types(protocol_data)
 
