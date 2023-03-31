@@ -10,6 +10,7 @@ sources:
       - name: aave_oracle_prices_by_day
       - name: streams_metadata
       - name: streaming_payments_state
+      - name: non_atoken_transfers_by_day
   - name: warehouse
     tables:
       - name: atoken_measures_by_day
