@@ -1,4 +1,4 @@
-{{ config(materialized='table') }}
+ {{ config(materialized='table') }}
 
 with purchase_days as (
 select 
@@ -20,7 +20,7 @@ where 1=1
   and t.token = '0xba100000625a3754423978a60c9317c58a424e3d'
   and p.chain = 'ethereum'
   and t.tokens_in_external > 0
-  and t.block_day between '2022-11-14' and '2022-12-14'
+  and t.block_day between '2022-07-18' and '2022-07-20'
 )
 
 
