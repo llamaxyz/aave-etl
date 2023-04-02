@@ -602,7 +602,7 @@ def emode_config_by_day(
                 block_id = block_height
             )
             call_output = emode_call()
-            call_output['emode_data']['emode_category_id'] = int(emode)
+            call_output['emode_data']['reserve_emode_category'] = int(emode)
             ouput_row = pd.DataFrame(call_output['emode_data'], index=[0])
             emode_output = pd.concat([emode_output, ouput_row])
         
@@ -614,7 +614,7 @@ def emode_config_by_day(
                 'block_day',
                 'block_height',
                 'market',
-                'emode_category_id',
+                'reserve_emode_category',
                 'emode_category_name',
                 'emode_ltv',
                 'emode_liquidation_threshold',
