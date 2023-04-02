@@ -27,6 +27,7 @@ from eth_utils.conversions import to_bytes
 from shroomdk import ShroomDK
 from time import sleep
 from random import randint
+from multicall import Call, Multicall
 
 from aave_data.resources.financials_config import * #pylint: disable=wildcard-import, unused-wildcard-import
 
@@ -537,3 +538,97 @@ def raw_incentives_by_day(
     )
 
     return all_rewards.reset_index(drop=True)
+
+
+@asset(
+    partitions_def=market_day_multipartition,
+    compute_kind="python",
+    code_version="1",
+    io_manager_key = 'protocol_data_lake_io_manager',
+    ins={
+        "protocol_data_by_day": AssetIn(key_prefix="protocol_data_lake"),
+    }
+)            
+def emode_config_by_day(
+    context,
+    protocol_data_by_day: pd.DataFrame,
+) -> pd.DataFrame:
+    """
+    Calls Pool contracts at the specified block height
+    and returns a dataframe of emode data.
+
+    Specific to V3 only.  V1/V2 return empty
+
+    Args:
+        context:
+        block_numbers_by_day:
+
+    Returns:
+        dataframe of incentives data
+
+    """
+    date, market = context.partition_key.split("|")
+    partition_datetime = datetime.strptime(date, '%Y-%m-%d')
+    chain = CONFIG_MARKETS[market]["chain"]
+    block_height = int(protocol_data_by_day.block_height.values[0])
+    
+    emode_output = pd.DataFrame()
+
+    if CONFIG_MARKETS[market]['version'] == 3:
+        lending_pool = CONFIG_MARKETS[market]['pool']
+
+        context.log.info(f"pool: {lending_pool}")
+        context.log.info(f"block_height: {block_height}")
+        #initialise Web3 and variables
+        w3 = Web3(Web3.HTTPProvider(CONFIG_CHAINS[chain]['web3_rpc_url']))
+
+        def emode_handler(value):
+            return {
+                'emode_ltv': value[0] / 10000,
+                'emode_liquidation_threshold': value[1] / 10000,
+                'emode_liquidation_bonus': value[2] / 10000,
+                'emode_price_address': value[3],
+                'emode_category_name': value[4],
+            }
+
+        emodes = protocol_data_by_day.query('reserve_emode_category > 0').reserve_emode_category.unique()
+
+        for emode in emodes:
+            emode_call = Call(
+                lending_pool,
+                ['getEModeCategoryData(uint8)((uint16,uint16,uint16,address,string))', int(emode)],
+                [['emode_data', emode_handler]],
+                _w3 = w3,
+                block_id = block_height
+            )
+            call_output = emode_call()
+            call_output['emode_data']['emode_category_id'] = int(emode)
+            ouput_row = pd.DataFrame(call_output['emode_data'], index=[0])
+            emode_output = pd.concat([emode_output, ouput_row])
+        
+        emode_output['block_day'] = partition_datetime
+        emode_output['block_height'] = block_height
+        emode_output['market'] = market
+        emode_output = emode_output[
+            [
+                'block_day',
+                'block_height',
+                'market',
+                'emode_category_id',
+                'emode_category_name',
+                'emode_ltv',
+                'emode_liquidation_threshold',
+                'emode_liquidation_bonus',
+                'emode_price_address',
+            ]
+        ].reset_index(drop=True)
+        emode_output = standardise_types(emode_output)
+
+    context.add_output_metadata(
+        {
+            "num_records": len(emode_output),
+            "preview": MetadataValue.md(emode_output.head().to_markdown()),
+        }
+    )
+
+    return emode_output
