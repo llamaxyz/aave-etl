@@ -35,9 +35,10 @@ if not sys.warnoptions:
     io_manager_key = 'data_warehouse_io_manager',
     ins={
         "protocol_data_by_day": AssetIn(key_prefix="protocol_data_lake"),
+        "emode_config_by_day": AssetIn(key_prefix="protocol_data_lake"),
     }
 )
-def market_config_by_day(context, protocol_data_by_day) -> pd.DataFrame:
+def market_config_by_day(context, protocol_data_by_day, emode_config_by_day) -> pd.DataFrame:
     """
     Returns the config parameters set for each token in each market on each day
 
@@ -77,6 +78,10 @@ def market_config_by_day(context, protocol_data_by_day) -> pd.DataFrame:
             'debt_ceiling',
         ]
     ]
+
+    return_val = return_val.merge(emode_config_by_day, how='left', on = ['block_day', 'block_height', 'market', 'reserve_emode_category'])
+
+    return_val.drop(columns=['emode_price_address'], inplace=True)
 
     return_val.rename(columns={'symbol': 'atoken_symbol'}, inplace=True)
 

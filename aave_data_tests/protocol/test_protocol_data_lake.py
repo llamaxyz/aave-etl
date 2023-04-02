@@ -176,49 +176,7 @@ def test_emode_config_by_day():
 
     context = build_op_context(partition_key=pkey)
 
-    # protocol_data_by_day_sample = pd.DataFrame(
-    #         [
-    #             {
-    #                 "block_day": datetime(2022, 11, 26, 0, 0, 0),
-    #                 "block_height": 36068925,
-    #                 "market": "polygon_v3",
-    #                 "reserve": "0x2791bca1f2de4661ed88a30c99a7a9449aa84174",
-    #                 "symbol": "aPolUSDC",
-    #                 "decimals": 6,
-    #                 "ltv": 0.825,
-    #                 "liquidation_threshold": 0.85,
-    #                 "liquidation_bonus": 1.04,
-    #                 "reserve_factor": 0.1,
-    #                 "usage_as_collateral_enabled": True,
-    #                 "borrowing_enabled": True,
-    #                 "stable_borrow_rate_enabled": True,
-    #                 "is_active": True,
-    #                 "is_frozen": False,
-    #                 "unbacked_atokens": 0.0,
-    #                 "scaled_accrued_to_treasury": 43.39621,
-    #                 "atoken_supply": 32987105.149763,
-    #                 "stable_debt": 292202.63886,
-    #                 "variable_debt": 9883077.51599,
-    #                 "liquidity_rate": 0.004113700668945843,
-    #                 "variable_borrow_rate": 0.013709420849309104,
-    #                 "stable_borrow_rate": 0.05171367760616364,
-    #                 "average_stable_rate": 0.052311889505631086,
-    #                 "liquidity_index": 1.0098515920906572,
-    #                 "variable_borrow_index": 1.0162322913936128,
-    #                 "last_update_timestamp": datetime(2022, 11, 25, 23, 59, 18),
-    #                 "available_liquidity": 22811824.994913,
-    #                 "reserve_emode_category": 1,
-    #                 "borrow_cap": 30680000,
-    #                 "supply_cap": 2000000000,
-    #                 "is_paused": False,
-    #                 "siloed_borrowing": False,
-    #                 "liquidation_protocol_fee": 0.1,
-    #                 "unbacked_mint_cap": 0,
-    #                 "debt_ceiling": 0,
-    #                 "debt_ceiling_decimals": 2,
-    #             }
-    #         ]
-    #     )
+    
     protocol_data_by_day_sample = pd.DataFrame(
             [
                 {

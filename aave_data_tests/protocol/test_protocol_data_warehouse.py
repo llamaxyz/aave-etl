@@ -11,7 +11,8 @@ from pandas.testing import assert_frame_equal
 # ic(os.getcwd())
 # from aave.financials.
 from aave_data.assets.protocol.protocol_data_warehouse import (
-                                                        incentives_by_day
+                                                        incentives_by_day,
+                                                        market_config_by_day
                                                     )
 
 from aave_data.resources.financials_config import *  # pylint: disable=wildcard-import, unused-wildcard-import
@@ -25,7 +26,6 @@ def test_incentives_by_day():
     Tests the incentives_by_day asset against a reference response
 
     """
-    # todo move this to test_protocol_data_warehouse
     
     pkey = MultiPartitionKey(
         {
@@ -244,8 +244,7 @@ def test_incentives_by_day():
 
     aave_oracle_prices_by_day_sample = standardise_types(aave_oracle_prices_by_day_sample)
 
-    expected = pd.DataFrame(
-        [
+    expected = pd.DataFrame(        [
             {
                 "block_day": datetime(2023,3,27,0,0,0),
                 "block_height": 40805643,
@@ -285,9 +284,266 @@ def test_incentives_by_day():
         ]
     )
 
-    expected = standardise_types(expected)
+    expcted = standardise_types(expected)
 
     result = incentives_by_day(context, raw_incentives_by_day_sample, protocol_data_by_day_sample, aave_oracle_prices_by_day_sample)
+
+    ic(expected)
+    ic(result)
+
+    assert_frame_equal(result, expected, check_exact=True)
+
+def test_market_config_by_day():
+
+    context = build_op_context()
+
+    protocol_data_by_day_sample = pd.DataFrame(
+        [
+            {
+                "block_day": datetime(2023, 3, 27, 0, 0, 0),
+                "block_height": 40805643,
+                "market": "polygon_v3",
+                "reserve": "0x2791bca1f2de4661ed88a30c99a7a9449aa84174",
+                "symbol": "aPolUSDC",
+                "decimals": 6,
+                "ltv": 0.825,
+                "liquidation_threshold": 0.85,
+                "liquidation_bonus": 1.04,
+                "reserve_factor": 0.1,
+                "usage_as_collateral_enabled": True,
+                "borrowing_enabled": True,
+                "stable_borrow_rate_enabled": True,
+                "is_active": True,
+                "is_frozen": False,
+                "unbacked_atokens": 0.0,
+                "scaled_accrued_to_treasury": 43.39621,
+                "atoken_supply": 32987105.149763,
+                "stable_debt": 292202.63886,
+                "variable_debt": 9883077.51599,
+                "liquidity_rate": 0.004113700668945843,
+                "variable_borrow_rate": 0.013709420849309104,
+                "stable_borrow_rate": 0.05171367760616364,
+                "average_stable_rate": 0.052311889505631086,
+                "liquidity_index": 1.0098515920906572,
+                "variable_borrow_index": 1.0162322913936128,
+                "last_update_timestamp": datetime(2022, 11, 25, 23, 59, 18),
+                "available_liquidity": 22811824.994913,
+                "reserve_emode_category": 1,
+                "borrow_cap": 30680000,
+                "supply_cap": 2000000000,
+                "is_paused": False,
+                "siloed_borrowing": False,
+                "liquidation_protocol_fee": 0.1,
+                "unbacked_mint_cap": 0,
+                "debt_ceiling": 0,
+                "debt_ceiling_decimals": 2,
+            },
+            {
+                "block_day": datetime(2023, 3, 27, 0, 0, 0),
+                "block_height": 40805643,
+                "market": 'polygon_v3',
+                "reserve": '0xfa68fb4628dff1028cfec22b4162fccd0d45efb6',
+                "symbol": 'aPolMATICX',
+                "decimals": 18,
+                "ltv": 0.58,
+                "liquidation_threshold": 0.67,
+                "liquidation_bonus": 1.1,
+                "reserve_factor": 0.2,
+                "usage_as_collateral_enabled": True,
+                "borrowing_enabled": True,
+                "stable_borrow_rate_enabled": False,
+                "is_active": True,
+                "is_frozen": False,
+                "unbacked_atokens": 0.0,
+                "scaled_accrued_to_treasury": 0.91905075631900646,
+                "atoken_supply": 9067563.730126325,
+                "stable_debt": 0.0,
+                "variable_debt": 455591.72832620103,
+                "liquidity_rate": 0.00028000539449643313,
+                "variable_borrow_rate": 0.0069661359763045945,
+                "stable_borrow_rate": 0.060558266997038077,
+                "average_stable_rate": 0.0,
+                "liquidity_index": 1.0000171133605387,
+                "variable_borrow_index": 1.0002732976059296,
+                "last_update_timestamp": datetime(2023, 3, 27, 0, 0, 0),
+                "available_liquidity": 8611972.0018001236,
+                "reserve_emode_category": 2,
+                "borrow_cap": 5200000,
+                "supply_cap": 17200000,
+                "is_paused": False,
+                "siloed_borrowing": False,
+                "liquidation_protocol_fee": 0.1,
+                "unbacked_mint_cap": 0,
+                "debt_ceiling": 0,
+                "debt_ceiling_decimals": 2
+            },
+            {
+                "block_day": datetime(2023, 3, 27, 0, 0, 0),
+                "block_height": 40805643,
+                "market": 'polygon_v3',
+                "reserve": '0x172370d5cd63279efa6d502dab29171933a610af',
+                "symbol": 'aPolCRV',
+                "decimals": 18,
+                "ltv": 0.75,
+                "liquidation_threshold": 0.8,
+                "liquidation_bonus": 1.05,
+                "reserve_factor": 0.2,
+                "usage_as_collateral_enabled": True,
+                "borrowing_enabled": True,
+                "stable_borrow_rate_enabled": False,
+                "is_active": True,
+                "is_frozen": False,
+                "unbacked_atokens": 0.0,
+                "scaled_accrued_to_treasury": 0.000362979302076407,
+                "atoken_supply": 11292113.98316204,
+                "stable_debt": 0.0,
+                "variable_debt": 0.0,
+                "liquidity_rate": 0.0,
+                "variable_borrow_rate": 0.0,
+                "stable_borrow_rate": 0.09,
+                "average_stable_rate": 0.0,
+                "liquidity_index": 1.0000561590710746,
+                "variable_borrow_index": 1.0,
+                "last_update_timestamp": datetime(2023, 3, 27, 0, 0, 0),
+                "available_liquidity": 11292113.98316204,
+                "reserve_emode_category": 0,
+                "borrow_cap": 900190,
+                "supply_cap": 1130000,
+                "is_paused": False,
+                "siloed_borrowing": False,
+                "liquidation_protocol_fee": 0.2,
+                "unbacked_mint_cap": 0,
+                "debt_ceiling": 0,
+                "debt_ceiling_decimals": 2
+            },
+        ]
+    )
+
+    protocol_data_by_day_sample = standardise_types(protocol_data_by_day_sample)
+
+    emode_config_by_day_sample = pd.DataFrame(
+        [
+                {
+                    "block_day": datetime(2023, 3, 27, 0, 0, 0),
+                    "block_height": 40805643,
+                    "market": "polygon_v3",
+                    "reserve_emode_category": 1,
+                    "emode_category_name": "Stablecoins",
+                    "emode_ltv": 0.97,
+                    "emode_liquidation_threshold": 0.975,
+                    "emode_liquidation_bonus": 1.01,
+                    "emode_price_address": "0x0000000000000000000000000000000000000000",
+                },
+                {
+                    "block_day": datetime(2023, 3, 27, 0, 0, 0),
+                    "block_height": 40805643,
+                    "market": "polygon_v3",
+                    "reserve_emode_category": 2,
+                    "emode_category_name": "MATIC correlated",
+                    "emode_ltv": 0.925,
+                    "emode_liquidation_threshold": 0.95,
+                    "emode_liquidation_bonus": 1.01,
+                    "emode_price_address": "0x0000000000000000000000000000000000000000",
+                },
+            ]
+    )
+    emode_config_by_day_sample = standardise_types(emode_config_by_day_sample)
+
+    expected = pd.DataFrame(
+        [
+            {
+                "block_day": datetime(2023, 3, 27, 0, 0, 0),
+                "block_height": 40805643,
+                "market": "polygon_v3",
+                "reserve": "0x2791bca1f2de4661ed88a30c99a7a9449aa84174",
+                "atoken_symbol": "aPolUSDC",
+                "decimals": 6,
+                "ltv": 0.825,
+                "liquidation_threshold": 0.85,
+                "liquidation_bonus": 1.04,
+                "reserve_factor": 0.1,
+                "usage_as_collateral_enabled": True,
+                "borrowing_enabled": True,
+                "stable_borrow_rate_enabled": True,
+                "is_active": True,
+                "is_frozen": False,
+                "reserve_emode_category": int(1),
+                "borrow_cap": 30680000,
+                "supply_cap": 2000000000,
+                "is_paused": False,
+                "siloed_borrowing": False,
+                "liquidation_protocol_fee": 0.1,
+                "unbacked_mint_cap": 0,
+                "debt_ceiling": 0,
+                "emode_category_name": "Stablecoins",
+                "emode_ltv": 0.97,
+                "emode_liquidation_threshold": 0.975,
+                "emode_liquidation_bonus": 1.01,
+            },
+            {
+                "block_day": datetime(2023, 3, 27, 0, 0, 0),
+                "block_height": 40805643,
+                "market": 'polygon_v3',
+                "reserve": '0xfa68fb4628dff1028cfec22b4162fccd0d45efb6',
+                "atoken_symbol": 'aPolMATICX',
+                "decimals": 18,
+                "ltv": 0.58,
+                "liquidation_threshold": 0.67,
+                "liquidation_bonus": 1.1,
+                "reserve_factor": 0.2,
+                "usage_as_collateral_enabled": True,
+                "borrowing_enabled": True,
+                "stable_borrow_rate_enabled": False,
+                "is_active": True,
+                "is_frozen": False,
+                "reserve_emode_category": int(2),
+                "borrow_cap": 5200000,
+                "supply_cap": 17200000,
+                "is_paused": False,
+                "siloed_borrowing": False,
+                "liquidation_protocol_fee": 0.1,
+                "unbacked_mint_cap": 0,
+                "debt_ceiling": 0,
+                "emode_category_name": "MATIC correlated",
+                "emode_ltv": 0.925,
+                "emode_liquidation_threshold": 0.95,
+                "emode_liquidation_bonus": 1.01,
+            },
+            {
+                "block_day": datetime(2023, 3, 27, 0, 0, 0),
+                "block_height": 40805643,
+                "market": 'polygon_v3',
+                "reserve": '0x172370d5cd63279efa6d502dab29171933a610af',
+                "atoken_symbol": 'aPolCRV',
+                "decimals": 18,
+                "ltv": 0.75,
+                "liquidation_threshold": 0.8,
+                "liquidation_bonus": 1.05,
+                "reserve_factor": 0.2,
+                "usage_as_collateral_enabled": True,
+                "borrowing_enabled": True,
+                "stable_borrow_rate_enabled": False,
+                "is_active": True,
+                "is_frozen": False,
+                "reserve_emode_category": int(0),
+                "borrow_cap": 900190,
+                "supply_cap": 1130000,
+                "is_paused": False,
+                "siloed_borrowing": False,
+                "liquidation_protocol_fee": 0.2,
+                "unbacked_mint_cap": 0,
+                "debt_ceiling": 0,
+                "emode_category_name": None,
+                "emode_ltv": None,
+                "emode_liquidation_threshold": None,
+                "emode_liquidation_bonus": None,
+            },
+        ]
+    )
+
+    expected = standardise_types(expected)
+
+    result = market_config_by_day(context, protocol_data_by_day_sample, emode_config_by_day_sample)
 
     ic(expected)
     ic(result)
@@ -298,4 +554,5 @@ def test_incentives_by_day():
 if __name__ == "__main__":
     # test_protocol_data_by_day()
     # test_raw_incentives_by_day()
-    test_incentives_by_day()
+    # test_incentives_by_day()
+    test_market_config_by_day()
