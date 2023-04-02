@@ -570,11 +570,17 @@ def emode_config_by_day(
     date, market = context.partition_key.split("|")
     partition_datetime = datetime.strptime(date, '%Y-%m-%d')
     chain = CONFIG_MARKETS[market]["chain"]
-    block_height = int(protocol_data_by_day.block_height.values[0])
     
-    emode_output = pd.DataFrame()
+    try:
+        block_height = int(protocol_data_by_day.block_height.values[0])
+    except IndexError:
+        # protocol not deployed on this day
+        return pd.DataFrame()
 
     if CONFIG_MARKETS[market]['version'] == 3:
+        
+    
+        emode_output = pd.DataFrame()
         lending_pool = CONFIG_MARKETS[market]['pool']
 
         context.log.info(f"pool: {lending_pool}")
@@ -601,7 +607,23 @@ def emode_config_by_day(
                 _w3 = w3,
                 block_id = block_height
             )
-            call_output = emode_call()
+            
+            # exponential backoff retries on the function call to deal with transient RPC errors
+            i = 0
+            delay = INITIAL_RETRY
+            while True:
+                try:
+                    call_output = emode_call()
+                    break
+                except Exception as e:
+                    i += 1
+                    if i > MAX_RETRIES:
+                        raise ValueError(f"RPC error count {i}, last error {str(e)}.  Bailing out.")
+                    rand_delay = randint(0, 250) / 1000
+                    sleep(delay + rand_delay)
+                    delay *= 2
+                    print(f"Request Error {str(e)}, retry count {i}")
+
             call_output['emode_data']['reserve_emode_category'] = int(emode)
             ouput_row = pd.DataFrame(call_output['emode_data'], index=[0])
             emode_output = pd.concat([emode_output, ouput_row])
