@@ -308,7 +308,8 @@ class BigQueryIOManager(IOManager):
 
     def _time_window_where_clause(self, time_window: Tuple[datetime, datetime]) -> str:
         start_dt, end_dt = time_window
-        return f"""WHERE _dagster_partition_time BETWEEN '{start_dt.strftime(BIGQUERY_DATETIME_FORMAT)}' AND '{end_dt.strftime(BIGQUERY_DATETIME_FORMAT)}'"""
+        # return f"""WHERE _dagster_partition_time BETWEEN '{start_dt.strftime(BIGQUERY_DATETIME_FORMAT)}' AND '{end_dt.strftime(BIGQUERY_DATETIME_FORMAT)}'"""
+        return f"""WHERE _dagster_partition_time >= '{start_dt.strftime(BIGQUERY_DATETIME_FORMAT)}' AND _dagster_partition_time < '{end_dt.strftime(BIGQUERY_DATETIME_FORMAT)}'"""   
 
 if __name__ == '__main__':
     # initialise_pandas_gbq()
