@@ -582,12 +582,17 @@ def emode_config_by_day(
         block_height = int(protocol_data_by_day.block_height.values[0])
     except IndexError:
         # protocol not deployed on this day
+        context.add_output_metadata(
+            {
+                "num_records": 0,
+            }
+        )
         return pd.DataFrame()
+
+    emode_output = pd.DataFrame()
 
     if CONFIG_MARKETS[market]['version'] == 3:
         
-    
-        emode_output = pd.DataFrame()
         lending_pool = CONFIG_MARKETS[market]['pool']
 
         context.log.info(f"pool: {lending_pool}")
