@@ -75,54 +75,61 @@ def protocol_data_by_day(
     """
     date, market = context.partition_key.split("|")
     partition_datetime = datetime.strptime(date, '%Y-%m-%d')
+    context.log.info(f"market: {market}")
+    context.log.info(f"date: {date}")
     
     protocol_data = pd.DataFrame()
 
     if not market_tokens_by_day.empty:
-        block_height = int(market_tokens_by_day.block_height.values[0])
-        chain = CONFIG_MARKETS[market]["chain"]
-        context.log.info(f"market: {market}")
-        context.log.info(f"date: {date}")
-        context.log.info(f"block_height: {block_height}")
 
-        # get the protocol data for each token in the market
-        for row in market_tokens_by_day.itertuples():
-            reserve = row.reserve
-            symbol = row.atoken_symbol
-            decimals = row.decimals
-            context.log.info(f"getting protocol data for {symbol} {reserve}")
-            protocol_row = pd.DataFrame(
-                [
-                    {
-                        "block_day": partition_datetime,
-                        "block_height": block_height,       
-                        "market": market,
-                        "reserve": reserve,
-                        "symbol": symbol,
-                    }
-                ]
-            )
-            # get the raw data from on-chain
-            raw_reserve_data = get_raw_reserve_data(market, chain, reserve, decimals, block_height)
+        # multicall is not supported on Harmony until block 24185753.  Don't fetch data before this block.
+        if (market == 'harmony_v3' and int(market_tokens_by_day.block_height.values[0]) < 24185753):
+            protocol_data = pd.DataFrame()
+        else:
+        
+            block_height = int(market_tokens_by_day.block_height.values[0])
+            chain = CONFIG_MARKETS[market]["chain"]
+            
+            context.log.info(f"block_height: {block_height}")
 
-            # convert the raw data to a dataframe
-            reserve_data = raw_reserve_to_dataframe(raw_reserve_data)
+            # get the protocol data for each token in the market
+            for row in market_tokens_by_day.itertuples():
+                reserve = row.reserve
+                symbol = row.atoken_symbol
+                decimals = row.decimals
+                context.log.info(f"getting protocol data for {symbol} {reserve}")
+                protocol_row = pd.DataFrame(
+                    [
+                        {
+                            "block_day": partition_datetime,
+                            "block_height": block_height,       
+                            "market": market,
+                            "reserve": reserve,
+                            "symbol": symbol,
+                        }
+                    ]
+                )
+                # get the raw data from on-chain
+                raw_reserve_data = get_raw_reserve_data(market, chain, reserve, decimals, block_height)
 
-            # add the metadata
-            protocol_row = pd.concat([protocol_row, reserve_data], axis=1)
+                # convert the raw data to a dataframe
+                reserve_data = raw_reserve_to_dataframe(raw_reserve_data)
 
-            # add the row to the return value dataframe
-            protocol_data = pd.concat([protocol_data, protocol_row], axis=0)
-    
-        # fix these values up here - more difficult to do in helper function
-        protocol_data.debt_ceiling = protocol_data.debt_ceiling / 10 ** protocol_data.debt_ceiling_decimals
-        protocol_data.debt_ceiling = protocol_data.debt_ceiling.astype(int)
-        protocol_data.liquidation_protocol_fee = protocol_data.liquidation_protocol_fee / 10000
-        protocol_data.liquidity_rate = protocol_data.liquidity_rate.astype(float)
-        protocol_data.variable_borrow_rate = protocol_data.variable_borrow_rate.astype(float)
-        protocol_data.stable_borrow_rate = protocol_data.stable_borrow_rate.astype(float)
+                # add the metadata
+                protocol_row = pd.concat([protocol_row, reserve_data], axis=1)
 
-        protocol_data = standardise_types(protocol_data)
+                # add the row to the return value dataframe
+                protocol_data = pd.concat([protocol_data, protocol_row], axis=0)
+        
+            # fix these values up here - more difficult to do in helper function
+            protocol_data.debt_ceiling = protocol_data.debt_ceiling / 10 ** protocol_data.debt_ceiling_decimals
+            protocol_data.debt_ceiling = protocol_data.debt_ceiling.astype(int)
+            protocol_data.liquidation_protocol_fee = protocol_data.liquidation_protocol_fee / 10000
+            protocol_data.liquidity_rate = protocol_data.liquidity_rate.astype(float)
+            protocol_data.variable_borrow_rate = protocol_data.variable_borrow_rate.astype(float)
+            protocol_data.stable_borrow_rate = protocol_data.stable_borrow_rate.astype(float)
+
+            protocol_data = standardise_types(protocol_data)
 
     context.add_output_metadata(
         {
