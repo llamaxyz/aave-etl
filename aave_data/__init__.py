@@ -225,6 +225,10 @@ data_lake_unpartitioned_assets = [
     'financials_data_lake/streaming_payments_state',
     ]
 
+daily_unpartitioned_assets = [
+    'protocol_data_lake/matic_lsd_token_supply_by_day',
+    ]
+
 # data_lake_chunk_4 = [
 #     'financials_data_lake/tx_classification',
 #     'financials_data_lake/display_names',
@@ -245,7 +249,7 @@ data_lake_unpartitioned_assets = [
 
 data_lake_partitioned_job = define_asset_job(
     name='data_lake_partitioned',
-    selection=AssetSelection.groups('financials_data_lake', 'protocol_data_lake') - AssetSelection.keys(*data_lake_unpartitioned_assets),
+    selection=AssetSelection.groups('financials_data_lake', 'protocol_data_lake') - AssetSelection.keys(*data_lake_unpartitioned_assets) - AssetSelection.keys(*daily_unpartitioned_assets),
     partitions_def=market_day_multipartition
 )
 

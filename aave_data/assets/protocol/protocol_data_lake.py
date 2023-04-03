@@ -48,6 +48,12 @@ from aave_data.assets.financials.data_lake import (
     # aave_oracle_prices_by_day
 )
 
+from aave_data.assets.financials.data_warehouse import (
+    blocks_by_day
+)
+
+DAILY_PARTITION_START = DailyPartitionsDefinition(start_date='2023-01-01'),
+
 @asset(
     partitions_def=market_day_multipartition,
     compute_kind="python",
@@ -666,3 +672,123 @@ def emode_config_by_day(
     )
 
     return emode_output
+
+
+
+@asset(
+    partitions_def=DailyPartitionsDefinition(start_date='2023-01-01'),
+    compute_kind="python",
+    code_version="1",
+    io_manager_key = 'protocol_data_lake_io_manager',
+    ins={
+        "blocks_by_day": AssetIn(key_prefix="warehouse"),
+    }
+)
+def matic_lsd_token_supply_by_day(
+    context,
+    blocks_by_day: pd.DataFrame,
+) -> pd.DataFrame:
+    """
+    Table of the totalsupply of the tokens listed below
+
+    To add a new token to this table either:
+    - add it to the TOKENS dict below and backfill the entire table
+    - make a new table with the new token and backfill it (saves re-getting existing data)
+
+    Args:
+        context: dagster context object
+        blocks_by_day: warehouse tables of block numbers by day by chain
+
+    Returns:
+        A dataframe of the totalsupply of the tokens listed below
+
+    """
+    date = context.partition_key
+    partition_datetime = datetime.strptime(date, '%Y-%m-%d')
+    context.log.info(f"date: {date}")
+    
+    TOKENS = {
+        "polygon": {
+                "stMATIC": {
+                    "address": "0x3a58a54c066fdc0f2d55fc9c89f0415c92ebf3c4",
+                    "decimals": 18,
+                },
+                "MaticX": {
+                    "address": "0xfa68fb4628dff1028cfec22b4162fccd0d45efb6",
+                    "decimals": 18,
+                },
+        },
+        "ethereum": {
+                "stMATIC": {
+                        "address": "0x9ee91f9f426fa633d227f7a9b000e28b9dfd8599",
+                        "decimals": 18,
+                },
+                "MaticX": {
+                        "address": "0xf03a7eb46d01d9ecaa104558c732cf82f6b6b645",
+                        "decimals": 18,
+                },
+
+        }
+    }
+    supply_data = pd.DataFrame()
+
+    for chain in TOKENS:
+        context.log.info(f"chain: {chain}")
+        block_height = int(blocks_by_day.loc[blocks_by_day.chain == chain].block_height.values[0])
+        context.log.info(f"block_height: {block_height}")
+
+        # setup the Web3 connection
+        w3 = Web3(Web3.HTTPProvider(CONFIG_CHAINS[chain]['web3_rpc_url']))
+
+        # grab the token addresses in an iterable
+        addresses = [TOKENS[chain][token]['address'] for token in TOKENS[chain]]
+
+        # set up the multiple call objects (one for each address)
+        chain_calls = [Call(address, ['totalSupply()((uint256))'], [[address, None]]) for address in addresses]
+
+        # configure the mulitcall object
+        chain_multi = Multicall(chain_calls, _w3 = w3, block_id = block_height)
+
+        # exponential backoff retries on the function call to deal with transient RPC errors
+        i = 0
+        delay = INITIAL_RETRY
+        while True:
+            try:
+                chain_output = chain_multi()
+                break
+            except Exception as e:
+                i += 1
+                if i > MAX_RETRIES:
+                    raise ValueError(f"RPC error count {i}, last error {str(e)}.  Bailing out.")
+                rand_delay = randint(0, 250) / 1000
+                sleep(delay + rand_delay)
+                delay *= 2
+                print(f"Request Error {str(e)}, retry count {i}")
+        
+        chain_data = pd.DataFrame(chain_output).T.reset_index()
+        chain_data.columns = ['address', 'total_supply']
+        chain_data['chain'] = chain
+        chain_data['block_height'] = block_height
+        chain_data['block_day'] = partition_datetime
+        
+        # chain_data['symbol'] = chain_data.address.map({TOKENS[chain][token]['address']: token for token in TOKENS[chain]})
+        chain_data['symbol'] = pd.Series(TOKENS[chain].keys())
+        chain_data['decimals'] = pd.Series([TOKENS[chain][token]['decimals'] for token in TOKENS[chain]])
+        chain_data.total_supply = chain_data.total_supply.astype(float) / 10**chain_data.decimals
+        chain_data = chain_data[['block_day', 'block_height', 'chain', 'address', 'symbol', 'decimals', 'total_supply']]
+        
+        supply_data = pd.concat([supply_data, chain_data]).reset_index(drop=True)
+    
+    supply_data = standardise_types(supply_data)
+
+    context.add_output_metadata(
+        {
+            "num_records": len(supply_data),
+            "preview": MetadataValue.md(supply_data.head().to_markdown()),
+        }
+    )
+
+    return supply_data
+
+
+

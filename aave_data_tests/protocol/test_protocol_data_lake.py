@@ -13,7 +13,8 @@ from pandas.testing import assert_frame_equal
 from aave_data.assets.protocol.protocol_data_lake import (
                                                         protocol_data_by_day,
                                                         raw_incentives_by_day,
-                                                        emode_config_by_day
+                                                        emode_config_by_day,
+                                                        matic_lsd_token_supply_by_day
                                                     )
 
 from aave_data.resources.financials_config import *  # pylint: disable=wildcard-import, unused-wildcard-import
@@ -233,9 +234,86 @@ def test_emode_config_by_day():
 
     assert_frame_equal(result, expected, check_exact=True)
 
+def test_matic_lsd_token_supply_by_day():
+
+    pkey = '2023-03-15'
+
+    context = build_op_context(partition_key=pkey)
+
+    blocks_by_day_sample = pd.DataFrame(
+            [
+                {
+                    "block_day": datetime(2023, 3, 15, 0, 0, 0),
+                    "block_time": datetime(2023, 3, 15, 0, 0, 0),
+                    "block_height": 40353814,
+                    "end_block": 40391766,
+                    "chain": "polygon",
+                },
+                {
+                    "block_day": datetime(2023, 3, 15, 0, 0, 0),
+                    "block_time": datetime(2023, 3, 15, 0, 0, 0),
+                    "block_height": 16829610,
+                    "end_block": 16836710,
+                    "chain": "ethereum",
+                },
+            ]
+        )
+
+    blocks_by_day_sample = standardise_types(blocks_by_day_sample)
+
+    expected = pd.DataFrame(
+            [
+                {
+                    "block_day": datetime(2023, 3, 15, 0, 0, 0),
+                    "block_height": 40353814,
+                    "chain": "polygon",
+                    "address": "0x3a58a54c066fdc0f2d55fc9c89f0415c92ebf3c4",
+                    "symbol": "stMATIC",
+                    "decimals": 18,
+                    "total_supply": 45113198.567459114,
+                },
+                {
+                    "block_day": datetime(2023, 3, 15, 0, 0, 0),
+                    "block_height": 40353814,
+                    "chain": "polygon",
+                    "address": "0xfa68fb4628dff1028cfec22b4162fccd0d45efb6",
+                    "symbol": "MaticX",
+                    "decimals": 18,
+                    "total_supply": 21576294.82481394,
+                },
+                {
+                    "block_day": datetime(2023, 3, 15, 0, 0, 0),
+                    "block_height": 16829610,
+                    "chain": "ethereum",
+                    "address": "0x9ee91f9f426fa633d227f7a9b000e28b9dfd8599",
+                    "symbol": "stMATIC",
+                    "decimals": 18,
+                    "total_supply": 80971954.03109746,
+                },
+                {
+                    "block_day": datetime(2023, 3, 15, 0, 0, 0),
+                    "block_height": 16829610,
+                    "chain": "ethereum",
+                    "address": "0xf03a7eb46d01d9ecaa104558c732cf82f6b6b645",
+                    "symbol": "MaticX",
+                    "decimals": 18,
+                    "total_supply": 45987071.46845635,
+                },
+            ]
+        )
+    
+    expected = standardise_types(expected)
+    
+    result = matic_lsd_token_supply_by_day(context, blocks_by_day_sample)
+
+    assert_frame_equal(result, expected, check_exact=True)
+
+
+
 
 if __name__ == "__main__":
     # test_protocol_data_by_day()
     # test_raw_incentives_by_day()
     # test_incentives_by_day()
-    test_emode_config_by_day()
+    # test_emode_config_by_day()
+    test_matic_lsd_token_supply_by_day()
