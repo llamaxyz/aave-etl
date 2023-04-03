@@ -48,9 +48,9 @@ from aave_data.assets.financials.data_lake import (
     # aave_oracle_prices_by_day
 )
 
-from aave_data.assets.financials.data_warehouse import (
-    blocks_by_day
-)
+# from aave_data.assets.financials.data_warehouse import (
+#     blocks_by_day
+# )
 
 DAILY_PARTITION_START = DailyPartitionsDefinition(start_date='2023-01-01'),
 
