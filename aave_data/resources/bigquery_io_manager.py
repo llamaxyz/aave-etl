@@ -115,6 +115,8 @@ class BigQueryIOManager(IOManager):
             cleanup_query = self._get_cleanup_statement(table, dataset, partition_type, time_window, partition_key)
             # ic(cleanup_query)
 
+            i = 0
+            err_404 = False
             delay_time = INITIAL_RETRY
             while True:
                 try:
@@ -123,21 +125,24 @@ class BigQueryIOManager(IOManager):
                 except Exception as e:
                     if i > MAX_RETRIES:
                         raise e
-                    if (e == pandas_gbq.exceptions.GenericGBQException):
-                        if "Reason: 404" in str(e):
-                            # table missing, delete will fail with 404.  Break past this
-                            break
-                        elif "Reason: 400 Could not serialize access" in str(e):
-                            # concurrent access issue, move through to retry logic
-                            pass
-                        else:
-                            # raise any other GenericGBQException rather than retry
-                            raise pandas_gbq.exceptions.GenericGBQException(err)
-                        
-                    context.log.warning(f"Retry {i} cleanup read_gbq after {delay_time} seconds")
-                    sleep(delay_time)
-                    i += 1
-                    delay_time *= 2
+                    elif "Reason: 404" in str(e):
+                        # table missing, delete will fail with 404.  Don't retry
+                        err_404 = True
+                        break
+                    elif "Reason: 400 Could not serialize access" in str(e):
+                        # concurrent access issue, move through to retry logic
+                        pass
+                    else:
+                        # raise any other GenericGBQException rather than retry
+                        raise e
+
+                    if err_404:
+                        break
+                    else:    
+                        context.log.warning(f"Retry {i} cleanup read_gbq after {delay_time} seconds")
+                        sleep(delay_time)
+                        i += 1
+                        delay_time *= 2
 
             # ic(obj)
             # add a load timestamp to the table
