@@ -49,7 +49,7 @@ from aave_data.assets.financials.data_lake import (
 )
 
 
-DAILY_PARTITION_START = DailyPartitionsDefinition(start_date='2023-01-01'),
+DAILY_PARTITION_START_DATE = '2023-01-01',
 
 @asset(
     partitions_def=market_day_multipartition,

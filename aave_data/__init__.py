@@ -15,13 +15,15 @@ from dagster import (
     ExperimentalWarning,
     MultiPartitionsDefinition,
     DailyPartitionsDefinition,
-    ScheduleDefinition
+    ScheduleDefinition,
+    build_schedule_from_partitioned_job
 )
 from aave_data.assets.financials import data_lake, data_warehouse
 from aave_data.assets.protocol import protocol_data_lake, protocol_data_warehouse
 from aave_data.assets.financials.data_lake import market_day_multipartition
 from aave_data.resources.bigquery_io_manager import bigquery_io_manager
 from aave_data.resources.financials_config import FINANCIAL_PARTITION_START_DATE
+from aave_data.assets.protocol.protocol_data_lake import DAILY_PARTITION_START_DATE
 
 
 from dagster_gcp.gcs.io_manager import gcs_pickle_io_manager
@@ -201,21 +203,7 @@ dbt_assets = load_assets_from_dbt_project(
 ############################################
 # Jobs
 ############################################
-# data_lake_chunk_1 = [
-#     'financials_data_lake/market_tokens_by_day',
-#     'financials_data_lake/treasury_accrued_incentives_by_day',
-#     'financials_data_lake/non_atoken_balances_by_day',
-#     'financials_data_lake/non_atoken_transfers_by_day',
-#     'financials_data_lake/user_lm_rewards_claimed',
-#     ]
-# data_lake_chunk_2 = [
-#     'financials_data_lake/aave_oracle_prices_by_day',
-#     'financials_data_lake/collector_atoken_balances_by_day',
-#     'financials_data_lake/collector_atoken_transfers_by_day',
-#     'financials_data_lake/v3_accrued_fees_by_day',
-#     'financials_data_lake/v3_minted_to_treasury_by_day',
 
-#     ]
 data_lake_unpartitioned_assets = [
     'financials_data_lake/tx_classification',
     'financials_data_lake/display_names',
@@ -225,31 +213,14 @@ data_lake_unpartitioned_assets = [
     'financials_data_lake/streaming_payments_state',
     ]
 
-daily_unpartitioned_assets = [
+daily_partitioned_assets = [
     'protocol_data_lake/matic_lsd_token_supply_by_day',
     ]
 
-# data_lake_chunk_4 = [
-#     'financials_data_lake/tx_classification',
-#     'financials_data_lake/display_names',
-#     'financials_data_lake/internal_external_addresses'
-#     'financials_data_lake/balance_group_lists'
-# ]
-# unpartitioned_data_lake_assets = [
-#     'financials_data_lake/tx_classification',
-#     'financials_data_lake/display_names',
-#     'financials_data_lake/internal_external_addresses'
-# ]
-
-# financials_data_lake_update_job = define_asset_job(
-#     name='financials_data_lake_update_job',
-#     selection=AssetSelection.groups('financials_data_lake') - AssetSelection.keys(*unpartitioned_data_lake_assets),
-#     partitions_def=market_day_multipartition
-# )
 
 data_lake_partitioned_job = define_asset_job(
     name='data_lake_partitioned',
-    selection=AssetSelection.groups('financials_data_lake', 'protocol_data_lake') - AssetSelection.keys(*data_lake_unpartitioned_assets) - AssetSelection.keys(*daily_unpartitioned_assets),
+    selection=AssetSelection.groups('financials_data_lake', 'protocol_data_lake') - AssetSelection.keys(*data_lake_unpartitioned_assets) - AssetSelection.keys(*daily_partitioned_assets),
     partitions_def=market_day_multipartition
 )
 
@@ -265,6 +236,12 @@ warehouse_datamart_job = define_asset_job(
     selection=AssetSelection.groups('warehouse', 'datamart'),
 )
 
+daily_partitioned_job = define_asset_job(
+    name='daily_partitioned',
+    selection=AssetSelection.keys(*daily_partitioned_assets),
+    partitions_def=DailyPartitionsDefinition(start_date='2023-01-01')
+)
+
 # Updates block_numbers_by_day and thus triggers all downstream jobs via the reconciliation sensor
 financials_root_job = define_asset_job(
     name='financials_root_job',
@@ -272,29 +249,13 @@ financials_root_job = define_asset_job(
     partitions_def=market_day_multipartition
 )
 
-# financials_chunk1_job = define_asset_job(
-#     name='financials_chunk1_job',
-#     selection=AssetSelection.keys(*data_lake_chunk_1),
-#     partitions_def=market_day_multipartition
-# )
 
-# financials_chunk2_job = define_asset_job(
-#     name='financials_chunk2_job',
-#     selection=AssetSelection.keys(*data_lake_chunk_2),
-#     partitions_def=market_day_multipartition
-# )
-
-# financials_chunk3_job = define_asset_job(
-#     name='financials_chunk3_job',
-#     selection=AssetSelection.keys(*data_lake_unpartitioned_assets),
-#     partitions_def=market_day_multipartition
-# )
 
 ############################################
 # Schedules
 ############################################
 
-daily_partition = DailyPartitionsDefinition(start_date=FINANCIAL_PARTITION_START_DATE)
+financials_daily_partition = DailyPartitionsDefinition(start_date=FINANCIAL_PARTITION_START_DATE)
 
 def get_multipartition_keys_with_dimension_value(
     partition_def: MultiPartitionsDefinition, 
@@ -324,7 +285,7 @@ def get_multipartition_keys_with_dimension_value(
     name="financials_root_schedule",
 )
 def financials_root_schedule(context):
-    time_partitions = daily_partition.get_partition_keys(context.scheduled_execution_time)
+    time_partitions = financials_daily_partition.get_partition_keys(context.scheduled_execution_time)
 
     # Run for the latest time partition. Prior partitions will have been handled by prior ticks.
     curr_date = time_partitions[-1]
@@ -345,7 +306,7 @@ def financials_root_schedule(context):
     name="data_lake_partitioned_schedule",
 )
 def data_lake_partitioned_schedule(context):
-    time_partitions = daily_partition.get_partition_keys(context.scheduled_execution_time)
+    time_partitions = financials_daily_partition.get_partition_keys(context.scheduled_execution_time)
 
     # Run for the latest time partition. Prior partitions will have been handled by prior ticks.
     curr_date = time_partitions[-1]
@@ -373,40 +334,18 @@ warehouse_datamart_schedule = ScheduleDefinition(
     name="warehouse_datamart_schedule"
     )
 
+daily_partitioned_schedule = build_schedule_from_partitioned_job(
+    job=daily_partitioned_job,
+    minute_of_hour=45,
+    hour_of_day=2,
+    name="daily_partitioned_schedule",
+)
+
+
 ####################################################
 # Sensor Code - not working pending sensor performance improvements
 ############################################
-#
-# # break assets up into chunks to avoid sensor timeout
-# data_lake_chunk_1 = [
-#     'financials_data_lake/market_tokens_by_day',
-#     # 'financials_data_lake/treasury_accrued_incentives_by_day',
-#     # 'financials_data_lake/non_atoken_balances_by_day',
-#     # 'financials_data_lake/non_atoken_transfers_by_day',
-#     # 'financials_data_lake/user_lm_rewards_claimed',
-#     ]
-# data_lake_chunk_2 = [
-#     'financials_data_lake/aave_oracle_prices_by_day',
-#     'financials_data_lake/collector_atoken_balances_by_day',
-#     'financials_data_lake/collector_atoken_transfers_by_day',
-#     'financials_data_lake/v3_accrued_fees_by_day',
-#     'financials_data_lake/v3_minted_to_treasury_by_day',
-#     'financials_data_lake/tx_classification',
-#     'financials_data_lake/display_names',
-#     'financials_data_lake/internal_external_addresses'
-#     ]
-# data_lake_chunk_3 = [
-#     'financials_data_lake/aave_oracle_prices_by_day',
-#     'financials_data_lake/collector_atoken_balances_by_day',
-#     'financials_data_lake/collector_atoken_transfers_by_day',
-#     'financials_data_lake/v3_accrued_fees_by_day',
-#     'financials_data_lake/v3_minted_to_treasury_by_day',
-#     ]
-# data_lake_chunk_4 = [
-#     'financials_data_lake/tx_classification',
-#     'financials_data_lake/display_names',
-#     'financials_data_lake/internal_external_addresses'
-# ]
+
 
 financials_data_lake_sensor = build_asset_reconciliation_sensor(
     name="financials_data_lake_sensor",
@@ -446,18 +385,17 @@ defs = Definitions(
     assets=[*financials_data_lake_assets, *protocol_data_lake_assets, *warehouse_assets, *dbt_assets],
     jobs=[
           financials_root_job,
-        #   financials_chunk1_job,
-        #   financials_chunk2_job,
-        #   financials_chunk3_job,
           data_lake_unpartitioned_job,
           data_lake_partitioned_job,
-          warehouse_datamart_job
+          warehouse_datamart_job,
+          daily_partitioned_job,
           ],
     schedules = [
         financials_root_schedule,
         warehouse_datamart_schedule,
         data_lake_unpartitioned_schedule,
-        data_lake_partitioned_schedule
+        data_lake_partitioned_schedule,
+        daily_partitioned_schedule
         ],
     sensors=[financials_data_lake_sensor, financials_warehouse_sensor, dbt_sensor, minimal_sensor],
     resources=resource_defs[dagster_deployment],
