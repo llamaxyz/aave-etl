@@ -120,14 +120,20 @@ class BigQueryIOManager(IOManager):
                 try:
                     pd.read_gbq(cleanup_query, dialect='standard', use_bqstorage_api=True)
                     break
-                except pandas_gbq.exceptions.GenericGBQException as err:
-                    if not "Reason: 404" in str(err):
-                        raise pandas_gbq.exceptions.GenericGBQException(err)
-                    else:
-                        break
                 except Exception as e:
                     if i > MAX_RETRIES:
                         raise e
+                    if (e == pandas_gbq.exceptions.GenericGBQException):
+                        if "Reason: 404" in str(e):
+                            # table missing, delete will fail with 404.  Break past this
+                            break
+                        elif "Reason: 400 Could not serialize access" in str(e):
+                            # concurrent access issue, move through to retry logic
+                            pass
+                        else:
+                            # raise any other GenericGBQException rather than retry
+                            raise pandas_gbq.exceptions.GenericGBQException(err)
+                        
                     context.log.warning(f"Retry {i} cleanup read_gbq after {delay_time} seconds")
                     sleep(delay_time)
                     i += 1
