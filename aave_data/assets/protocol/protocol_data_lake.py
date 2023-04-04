@@ -701,7 +701,7 @@ def matic_lsd_token_supply_by_day(
 
     """
     date = context.partition_key
-    partition_datetime = datetime.strptime(date, '%Y-%m-%d')
+    partition_datetime = datetime.strptime(date, '%Y-%m-%d').replace(tzinfo=timezone.utc)
     context.log.info(f"date: {date}")
     
     TOKENS = {
@@ -731,8 +731,10 @@ def matic_lsd_token_supply_by_day(
 
     for chain in TOKENS:
         context.log.info(f"chain: {chain}")
-        block_height = int(blocks_by_day.loc[blocks_by_day.chain == chain].block_height.values[0])
+        block_height = int(blocks_by_day.loc[(blocks_by_day.chain == chain) & (blocks_by_day.block_day == partition_datetime)].block_height.values[0])
         context.log.info(f"block_height: {block_height}")
+
+        ic(blocks_by_day)
 
         # setup the Web3 connection
         w3 = Web3(Web3.HTTPProvider(CONFIG_CHAINS[chain]['web3_rpc_url']))
