@@ -734,8 +734,6 @@ def matic_lsd_token_supply_by_day(
         block_height = int(blocks_by_day.loc[(blocks_by_day.chain == chain) & (blocks_by_day.block_day == partition_datetime)].block_height.values[0])
         context.log.info(f"block_height: {block_height}")
 
-        ic(blocks_by_day)
-
         # setup the Web3 connection
         w3 = Web3(Web3.HTTPProvider(CONFIG_CHAINS[chain]['web3_rpc_url']))
 
