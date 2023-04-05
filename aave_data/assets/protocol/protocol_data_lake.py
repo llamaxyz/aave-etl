@@ -673,7 +673,7 @@ def emode_config_by_day(
 
 
 @asset(
-    partitions_def=DailyPartitionsDefinition(start_date='2023-01-01'),
+    partitions_def=DailyPartitionsDefinition(start_date='2022-02-25'),
     compute_kind="python",
     code_version="1",
     io_manager_key = 'protocol_data_lake_io_manager',
@@ -776,6 +776,7 @@ def matic_lsd_token_supply_by_day(
         
         supply_data = pd.concat([supply_data, chain_data]).reset_index(drop=True)
     
+    supply_data.total_supply = supply_data.total_supply.fillna(0)
     supply_data = standardise_types(supply_data)
 
     context.add_output_metadata(

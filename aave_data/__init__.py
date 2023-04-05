@@ -239,7 +239,7 @@ warehouse_datamart_job = define_asset_job(
 daily_partitioned_job = define_asset_job(
     name='daily_partitioned',
     selection=AssetSelection.keys(*daily_partitioned_assets),
-    partitions_def=DailyPartitionsDefinition(start_date='2023-01-01')
+    partitions_def=DailyPartitionsDefinition(start_date='2022-02-25')
 )
 
 # Updates block_numbers_by_day and thus triggers all downstream jobs via the reconciliation sensor
