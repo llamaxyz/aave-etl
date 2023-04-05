@@ -1848,6 +1848,84 @@ def streams_metadata(context) -> pd.DataFrame:
     )
 
     return streams
+
+@asset(
+    partitions_def=market_day_multipartition,
+    compute_kind="python", 
+    #group_name='data_lake',
+    code_version="1",
+    io_manager_key = 'data_lake_io_manager',
+    ins={
+        "block_numbers_by_day": AssetIn(key_prefix="financials_data_lake"),
+    }
+)
+def eth_balances_by_day(context, block_numbers_by_day) -> pd.DataFrame:  # type: ignore pylint: disable=W0621
+    """
+    Table of balances of the native gas token for each market collector contract
+
+    uses the list of contracts & tokens in CONFIG_TOKENS
+
+    Uses the eth.get_balance() function via RPC calls
+
+    Args:
+        context: dagster context object
+        block_numbers_by_day: block numbers at the start and end of the day for the chain
+
+    Returns:
+        A dataframe with the balances of each token on each contract
+
+    """
+    
+    start_block = block_numbers_by_day.block_height.values[0]
+    date, market = context.partition_key.split("|")
+    chain = CONFIG_MARKETS[market]['chain']
+    partition_datetime = datetime.strptime(date, '%Y-%m-%d')
+
+    context.log.info(f"market: {market}")
+    context.log.info(f"date: {date}")
+
+    collector = CONFIG_MARKETS[market]['collector']
+    block_height = block_numbers_by_day.block_height.values[0]
+
+    w3 = Web3(Web3.HTTPProvider(CONFIG_CHAINS[chain]['web3_rpc_url']))
+
+    i = 0
+    delay = INITIAL_RETRY
+    while True:
+        try:
+            balance = w3.eth.get_balance(Web3.to_checksum_address(collector), block_identifier=int(block_height)) / 1e18
+            break
+        except Exception as e:
+            i += 1
+            if i > MAX_RETRIES:
+                raise ValueError(f"RPC error count {i}, last error {str(e)}.  Bailing out.")
+            rand_delay = randint(0, 250) / 1000
+            sleep(delay + rand_delay)
+            delay *= 2
+            print(f"Request Error {str(e)}, retry count {i}")
+
+    balance_list = {
+                    'block_height': start_block, 
+                    'block_day': partition_datetime.replace(tzinfo=timezone.utc),
+                    'chain': chain,
+                    'market': market,
+                    'collector': collector,
+                    'wrapped_gas_token': CONFIG_CHAINS[chain]['wrapped_ether'],
+                    'gas_token': CONFIG_CHAINS[chain]['gas_token'],
+                    'balance': balance
+                }
+    balance_output = pd.DataFrame(balance_list, index=[0])
+
+    balance_output = standardise_types(balance_output)
+
+    context.add_output_metadata(
+        {
+            "num_records": len(balance_output),
+            "preview": MetadataValue.md(balance_output.head().to_markdown()),
+        }
+    )
+
+    return balance_output
 # Test assets for the io manager
 
 

@@ -108,6 +108,7 @@ CONFIG_CHAINS = {
         "ape_ok": True,
         "ape_network_choice": "ethereum:mainnet:alchemy",
         "wrapped_ether": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+        "gas_token": "ETH",
         "web3_rpc_url": f"https://eth-mainnet.g.alchemy.com/v2/{WEB3_ALCHEMY_API_KEY}"
     },
     "polygon": {
@@ -116,6 +117,7 @@ CONFIG_CHAINS = {
         "ape_ok": True,
         "ape_network_choice": "polygon:mainnet:alchemy",
         "wrapped_ether": "0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619",
+        "gas_token": "MATIC",
         "web3_rpc_url": f"https://polygon-mainnet.g.alchemy.com/v2/{POLYGON_ALCHEMY_KEY}"
     },
     "avalanche": {
@@ -124,6 +126,7 @@ CONFIG_CHAINS = {
         "ape_ok": True, 
         "ape_network_choice": "avalanche:mainnet:https://rpc.ankr.com/avalanche",
         "wrapped_ether": "0x49D5c2BdFfac6CE2BFdB6640F4F80f226bc10bAB",
+        "gas_token": "AVAX",
         "web3_rpc_url": "https://rpc.ankr.com/avalanche"
     },
     "optimism": {
@@ -132,6 +135,7 @@ CONFIG_CHAINS = {
         "ape_ok": True,
         "ape_network_choice": "optimism:mainnet:alchemy",
         "wrapped_ether": "0x4200000000000000000000000000000000000006",
+        "gas_token": "ETH",
         "web3_rpc_url": f"https://opt-mainnet.g.alchemy.com/v2/{OPTIMISM_ALCHEMY_KEY}"
     },
     "arbitrum": {
@@ -140,6 +144,7 @@ CONFIG_CHAINS = {
         "ape_ok": True,
         "ape_network_choice": "arbitrum:mainnet:alchemy",
         "wrapped_ether": "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
+        "gas_token": "ETH",
         "web3_rpc_url": f"https://arb-mainnet.g.alchemy.com/v2/{ARBITRUM_ALCHEMY_KEY}"
     },
     "fantom": {
@@ -148,6 +153,7 @@ CONFIG_CHAINS = {
         "ape_ok": True, 
         "ape_network_choice": "fantom:opera:https://rpc.ankr.com/fantom",
         "wrapped_ether": "0x74b23882a30290451A17c44f4F05243b6b58C76d",
+        "gas_token": "FTM",
         "web3_rpc_url": "https://rpc.ankr.com/fantom"
     },
     "harmony": {
@@ -156,6 +162,7 @@ CONFIG_CHAINS = {
         "ape_ok": True, 
         "ape_network_choice": "harmony:mainnet:https://a.api.s0.t.hmny.io",
         "wrapped_ether": "0x6983D1E6DEf3690C4d616b13597A09e6193EA013",
+        "gas_token": "ONE",
         "web3_rpc_url": "https://a.api.s0.t.hmny.io"
     }
 }

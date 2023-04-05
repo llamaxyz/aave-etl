@@ -25,6 +25,7 @@ from aave_data.assets.financials.data_lake import (aave_oracle_prices_by_day,
                                                     tx_classification,
                                                     display_names,
                                                     streaming_payments_state,
+                                                    eth_balances_by_day
                                                     )
 # from financials.assets import data_lake
 # from financials.
@@ -1225,6 +1226,54 @@ def test_streaming_payments_state():
     ic(result)
     assert_frame_equal(result.head(1), expected, check_exact=True)
 
+def test_eth_balances_by_day():
+    """
+    Tests the gas token balance asset
+    """
+    pkey_eth = MultiPartitionKey(
+        {
+            "date": '2022-11-26',
+            "market": 'ethereum_v2'
+        }
+    )  # type: ignore
+
+    context_eth = build_op_context(partition_key=pkey_eth)
+
+    block_numbers_by_day_sample_output = pd.DataFrame(
+        [
+            {
+                'block_day': datetime(2022,11,26,0,0,0),
+                'block_time': datetime(2022,11,26,0,0,0),
+                'block_height': 16050438,
+                'end_block': 16057596,
+                'chain': 'ethereum',
+                'market': 'ethereum_v2',
+            }
+        ]
+    )
+
+    block_numbers_by_day_sample_output = standardise_types(block_numbers_by_day_sample_output)
+
+    expected = pd.DataFrame(
+        [
+            {
+                'block_height': 16050438, 
+                'block_day': datetime(2022,11,26,0,0,0),
+                'chain': 'ethereum',
+                'market': 'ethereum_v2',
+                'collector': '0x464c71f6c2f760dda6093dcb91c24c39e5d6e18c',
+                'wrapped_gas_token': '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2',
+                'gas_token': 'ETH',
+                'balance': 104.542448
+            }
+        ]
+    )
+    expected = standardise_types(expected)
+    result = eth_balances_by_day(context_eth, block_numbers_by_day_sample_output)
+    ic(expected)
+    ic(result)
+    assert_frame_equal(result, expected, check_exact=True)
+
 
 
 if __name__ == "__main__":
@@ -1235,7 +1284,7 @@ if __name__ == "__main__":
     # test_eth_oracle_prices_by_day()
     # test_get_market_tokens_at_block_messari()
     # test_block_numbers_by_day()
-    test_market_tokens_by_day()
+    # test_market_tokens_by_day()
     # test_aave_oracle_prices_table()
     # test_market_tokens_table()
     # test_non_atoken_transfers_by_day()
@@ -1251,7 +1300,7 @@ if __name__ == "__main__":
     # test_tx_classification()
     # test_display_names()
     # test_streaming_payments_state()
-    
+    test_eth_balances_by_day()
     # pass
 
 
