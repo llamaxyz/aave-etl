@@ -673,7 +673,7 @@ def emode_config_by_day(
 
 
 @asset(
-    partitions_def=DailyPartitionsDefinition(start_date='2022-02-25'),
+    partitions_def=DailyPartitionsDefinition(start_date='2022-02-26'),
     compute_kind="python",
     code_version="1",
     io_manager_key = 'protocol_data_lake_io_manager',
