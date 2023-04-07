@@ -198,7 +198,6 @@ def atoken_measures_by_day(
 
         # fix up eth_v1 ETH token symbol - should be WETH
         return_val['symbol'] = np.where((return_val['market']=='ethereum_v1') & (return_val['symbol'] == 'ETH'), 'WETH', return_val['symbol'])
-        return_val['underlying_reserve_symbol'] = np.where((return_val['market']=='ethereum_v1') & (return_val['underlying_reserve_symbol'] == 'ETH'), 'WETH', return_val['underlying_reserve_symbol'])
         
         return_val = return_val.fillna(float(0))
         # return_val['chain'] = chain
