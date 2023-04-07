@@ -1,7 +1,21 @@
-{{ config(materialized='table') }}
+-- {{ config(materialized='table') }}
 
--- bring together the atokens * non-atokens into one table
-with token_measures as (
+-- lookup table for the native chain gas tokens
+with gas_token_markets as (
+select distinct
+  market
+  , chain
+  , collector
+-- from financials_data_lake.eth_balances_by_day 
+from  {{ source('financials_data_lake','eth_balances_by_day')}}
+where 1=1
+  and (chain = 'ethereum' and market = 'ethereum_v2')
+  or (chain = 'ethereum' and market = 'ethereum_v1')
+  or chain != 'ethereum'
+)
+
+-- bring together the atokens & non-atokens & gas tokens into one table
+, token_measures as (
 select 
   collector
   , chain
@@ -39,6 +53,29 @@ select
   , 0 as minted_amount
 -- from warehouse.non_atoken_measures_by_day
 from  {{ source('warehouse','non_atoken_measures_by_day')}}
+union all
+select distinct
+  e.collector
+  , e.chain
+  , m.market
+  , e.wrapped_gas_token as token
+  , e.gas_token as symbol
+  , e.block_day
+  , e.balance
+  , 0 as scaled_balance
+  , 0 as accrued_fees
+  , 0 as tokens_in_external
+  , 0 as tokens_in_internal
+  , 0 as tokens_out_external
+  , 0 as tokens_out_internal
+  , 0 as minted_to_treasury_amount
+  , 0 as minted_amount
+-- from financials_data_lake.eth_balances_by_day e
+from  {{ source('financials_data_lake','eth_balances_by_day')}} e
+  left join gas_token_markets m on (
+    e.chain = m.chain and 
+    e.collector = m.collector
+  )
 )
 
 -- add underlying reserve to join pricing
@@ -203,7 +240,7 @@ select
   , liq_adjust
   , tokens_in_external - liq_adjust - minted_amount + minted_to_treasury_amount as tokens_in_external_adjust -- liqs only occur externally
   , tokens_in_external - liq_adjust - minted_amount as protocol_fees_received
-  -- todo the following code is slightly different from hex & needs careful validation
+  -- todo the following code is slightly different from hex & needs careful validation - checked OK
   , case when collector = '0x25f2226b597e8f9514b3f68f00f494cf4f286491' and market = 'ethereum_v2'
       then tokens_out_external - (sm_stkAAVE_claims + sm_stkABPT_claims) else 0 end as ecosystem_reserve_spend
   , case when not (collector in ('0xd784927ff2f95ba542bfc824c8a8a98f3495f6b5', '0x25f2226b597e8f9514b3f68f00f494cf4f286491') and chain = 'ethereum')
@@ -227,7 +264,7 @@ select
   , sm_stkAAVE_claims * start_usd_price as sm_stkAAVE_claims_usd
   , sm_stkABPT_claims * start_usd_price as sm_stkABPT_claims_usd
   , lm_aave_v2_claims * start_usd_price as lm_aave_v2_claims_usd
-  -- todo the following code is slightly different from hex & needs careful validation
+  -- todo the following code is slightly different from hex & needs careful validation - checked OK
   , case when collector = '0x25f2226b597e8f9514b3f68f00f494cf4f286491' and market = 'ethereum_v2'
       then (tokens_out_external - (sm_stkAAVE_claims + sm_stkABPT_claims)) * start_usd_price else 0 end as ecosystem_reserve_spend_usd
   , case when not (collector in ('0xd784927ff2f95ba542bfc824c8a8a98f3495f6b5', '0x25f2226b597e8f9514b3f68f00f494cf4f286491') and chain = 'ethereum')
@@ -301,11 +338,11 @@ select
   , c.label as collector_label
   , b.balance_group
   , b.stable_class
-from long_format l
-  -- left join financials_data_lake.tx_classification t on (l.measure = t.measure)
-  -- left join financials_data_lake.display_names d on (l.collector = d.collector and l.chain = d.chain and l.market = d.market)
-  -- left join warehouse.aave_internal_addresses c on (l.collector = c.contract_address and l.chain = c.chain)
-  -- left join warehouse.balance_group_lookup b on (l.market = b.market and l.token = b.atoken)
+-- from long_format l
+--   left join financials_data_lake.tx_classification t on (l.measure = t.measure)
+--   left join financials_data_lake.display_names d on (l.collector = d.collector and l.chain = d.chain and l.market = d.market)
+--   left join warehouse.aave_internal_addresses c on (l.collector = c.contract_address and l.chain = c.chain)
+--   left join warehouse.balance_group_lookup b on (l.market = b.market and l.token = b.atoken)
   left join {{ source('financials_data_lake','tx_classification') }} t on (l.measure = t.measure)
   left join {{ source('financials_data_lake','display_names') }} d on (l.collector = d.collector and l.chain = d.chain and l.market = d.market)
   left join {{ source('warehouse','aave_internal_addresses') }} c on (l.collector = c.contract_address and l.chain = c.chain)
