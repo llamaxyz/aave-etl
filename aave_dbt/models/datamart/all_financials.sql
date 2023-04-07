@@ -338,7 +338,7 @@ select
   , c.label as collector_label
   , b.balance_group
   , b.stable_class
--- from long_format l
+from long_format l
 --   left join financials_data_lake.tx_classification t on (l.measure = t.measure)
 --   left join financials_data_lake.display_names d on (l.collector = d.collector and l.chain = d.chain and l.market = d.market)
 --   left join warehouse.aave_internal_addresses c on (l.collector = c.contract_address and l.chain = c.chain)
