@@ -570,18 +570,18 @@ def aave_internal_addresses(
     ins={
         "market_tokens_by_day": AssetIn(key_prefix="financials_data_lake"),
         "balance_group_lists": AssetIn(key_prefix="financials_data_lake"),
+        "eth_balances_by_day": AssetIn(key_prefix="financials_data_lake"),
     }
 )
 def balance_group_lookup(
             context,
             market_tokens_by_day,
-            balance_group_lists
+            balance_group_lists,
+            eth_balances_by_day
             ) -> pd.DataFrame:
     """
+    Converts the balance_group_lists into a lookup table
     
-    
-
-
     Args:
         context: dagster context object
         market_tokens_by_day: the output of market_tokens_by_day
@@ -621,6 +621,12 @@ def balance_group_lookup(
                 non_atokens = pd.concat([non_atokens, token_row])
     non_atokens = non_atokens.drop_duplicates()
     return_val = pd.concat([return_val, non_atokens])
+    # add the gas tokens
+    gas_tokens = eth_balances_by_day[['market','wrapped_gas_token','gas_token']].copy().drop_duplicates()
+    gas_tokens.rename(columns={'wrapped_gas_token':'atoken', 'gas_token':'atoken_symbol'}, inplace=True)
+    gas_tokens['reserve'] = gas_tokens['atoken']
+    gas_tokens['symbol'] = gas_tokens['atoken_symbol']
+    return_val = pd.concat([return_val, gas_tokens])
     # merge the chain names
     return_val = return_val.merge(mc, on='market', how='left')
     
@@ -628,7 +634,6 @@ def balance_group_lookup(
     return_val['balance_group'] = pd.NA
     for col in balance_group_lists.columns:
         token_list = balance_group_lists[col].dropna().tolist()
-        # todo fix the next line, it's overwriting everything except the last column
         return_val['balance_group'] = np.where(return_val['atoken_symbol'].isin(token_list), col, return_val['balance_group'])
     
     return_val['balance_group'] = np.where(return_val['balance_group'].isna(), 'Other Token', return_val['balance_group'])
