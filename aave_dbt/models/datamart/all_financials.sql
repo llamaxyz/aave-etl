@@ -114,10 +114,10 @@ select
   , t.underlying_reserve_symbol
   , t.block_day
   , t.balance as start_balance
-  , lead(t.balance) over (partition by t.collector, t.chain, t.market, t.token order by t.block_day) as end_balance
+  , lead(t.balance) over (partition by t.collector, t.chain, t.market, t.token, t.symbol order by t.block_day) as end_balance
   , t.scaled_balance
   , t.accrued_fees as start_accrued_fees
-  , lead(t.accrued_fees) over (partition by t.collector, t.chain, t.market, t.token order by t.block_day) as end_accrued_fees
+  , lead(t.accrued_fees) over (partition by t.collector, t.chain, t.market, t.token, t.symbol order by t.block_day) as end_accrued_fees
   , t.tokens_in_external
   , t.tokens_in_internal
   , t.tokens_out_external
@@ -125,7 +125,7 @@ select
   , t.minted_to_treasury_amount
   , t.minted_amount
   , p.usd_price as start_usd_price
-  , lead(p.usd_price) over (partition by t.collector, t.chain, t.market, t.token order by t.block_day) as end_usd_price
+  , lead(p.usd_price) over (partition by t.collector, t.chain, t.market, t.token, t.symbol order by t.block_day) as end_usd_price
   , coalesce(r.sm_stkAAVE_claims, 0) as sm_stkAAVE_claims
   , coalesce(r.sm_stkABPT_claims, 0) as sm_stkABPT_claims
   , coalesce(r.lm_aave_v2_claims, 0) as lm_aave_v2_claims
