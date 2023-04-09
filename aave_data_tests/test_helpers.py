@@ -17,7 +17,8 @@ from aave_data.resources.helpers import (
                             standardise_types,
                             get_raw_reserve_data,
                             raw_reserve_to_dataframe,
-                            get_quote_from_1inch
+                            get_quote_from_1inch,
+                            get_aave_oracle_price
                               )
  # pylint: enable=import-error
 
@@ -677,6 +678,19 @@ def test_get_quote_from_1inch():
     assert result == 1.0
 
 
+def test_get_aave_oracle_price():
+    """
+    Tests the get_aave_oracle_price() helper function
+    
+    Calls the ethereum oracle with the WETH address at a known block
+
+    """
+
+    result = get_aave_oracle_price('ethereum_v3', '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', 16902116)
+
+    assert type(result) == float
+    assert result == 1758.82507
+
 if __name__ == "__main__":
     # test_get_market_tokens_at_block_messari()
     # test_get_market_tokens_at_block_aave()
@@ -687,4 +701,5 @@ if __name__ == "__main__":
     # test_get_scaled_balance_of()
     # test_get_token_transfers_from_alchemy()
     # test_get_raw_reserve_data()
-    test_get_quote_from_1inch()
+    # test_get_quote_from_1inch()
+    test_get_aave_oracle_price()

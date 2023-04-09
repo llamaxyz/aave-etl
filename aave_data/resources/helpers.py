@@ -1038,13 +1038,13 @@ def get_aave_oracle_price(
     if block_height is None:
         multi = Multicall(oracle_calls, _w3=w3)
     else:
-        multi = Multicall(oracle_calls, block_identifier=block_height, _w3=w3)
+        multi = Multicall(oracle_calls, block_id=block_height, _w3=w3,)
 
     # get the data
     multicall_output = multi()
-    ic(multicall_output)
+    # ic(multicall_output)
 
-    # return price
+    return multicall_output['oracle_price'] / multicall_output['base_currency_unit']
         
 if __name__ == "__main__":
 
@@ -1052,7 +1052,8 @@ if __name__ == "__main__":
     # out = get_quote_from_1inch(137, '0x3A58a54C066FdC0f2D55FC9C89F0415C92eBf3C4', 18, '0x3A58a54C066FdC0f2D55FC9C89F0415C92eBf3C4', 18, 10000000)
     # out = get_quote_from_1inch(1, '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', 18, '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', 18, 1)
     # ic(out)
-    out = get_aave_oracle_price('ethereum_v3', '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2')
+    out = get_aave_oracle_price('ethereum_v3', '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', 16902116)
+    ic(out)
 
 
     # out = get_v3_incentives_data('aave_rwa', 'ethereum', 16902116)
