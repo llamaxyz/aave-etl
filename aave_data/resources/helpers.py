@@ -948,11 +948,113 @@ def raw_reserve_to_dataframe(
     return return_val
 
 
+def get_quote_from_1inch(
+    chain_id: str,
+    from_token: str,
+    from_token_decimals: int,
+    to_token: str,
+    to_token_decimals: int,
+    from_token_amount) -> float:
+    """
+    Get swap rate from 1inch API.
+    Uses the decimals vars to convert the from and to amounts to the correct number of decimals.
 
+    Args:
+        chain_id: chain_id of the network
+        from_token: from token address
+        from_token_decimals: number of decimals of from token
+        to_token: to token address
+        to_token_decimals: number of decimals of to token
+        from_token_amount: amount of from token
+
+    Returns:
+        float: amount of to_token received from the swap
+
+    
+    """
+    # convert from_token_amount to the correct number of decimals
+    from_amount_converted = int(from_token_amount * 10 ** from_token_decimals)
+
+    # construct the URL
+    oneinch_url = f"https://api.1inch.exchange/v3.0/{chain_id}/quote?fromTokenAddress={from_token}&toTokenAddress={to_token}&amount={from_amount_converted}"
+
+    # use exponential backoff logic to handle transient API errors
+    i = 0
+    delay = INITIAL_RETRY
+    while True:
+        response = requests.get(oneinch_url, timeout=300)
+        if response.status_code == requests.codes.ok:
+            break
+        elif response.status_code == requests.codes.bad:
+            # request error, don't retry
+            print(f"Request Error {response.status_code} {response.reason} {response.json()['description']}")
+            response.raise_for_status()
+        i += 1
+        if i > MAX_RETRIES:
+            raise ValueError(f"1Inch Quote API error count {i}, last error {response.status_code} {response.reason}.  Bailing out.")
+        rand_delay = randint(0, 250) / 1000
+        sleep(delay + rand_delay)
+        delay *= 2
+        print(f"Request Error {response.status_code} {response.reason}, retry count {i}")
+
+    # parse the response
+    response_json = response.json()
+    # ic(response_json)
+
+    quote_amount = int(response_json['toTokenAmount']) / 10 ** to_token_decimals
+
+    return quote_amount
+    
+
+def get_aave_oracle_price(
+    market: str,
+    reserve: str,
+    block_height: Optional[int] = None,
+) -> float:
+    """
+    Get the price of a reserve from the Aave oracle.
+
+    Args:
+        chain: chain of the reserve
+        reserve: reserve address
+        block_height: block height of the data (optional, defaults to latest)
+
+    Returns:
+        float: price of the reserve in the default oracle return units (CONFIG_MARKETS[market]['oracle_base_currency'])
+
+    """
+    # get params from config
+    oracle_address = CONFIG_MARKETS[market]['oracle']
+    chain = CONFIG_MARKETS[market]['chain']
+
+    # configure the Web3 object
+    w3 = Web3(Web3.HTTPProvider(CONFIG_CHAINS[chain]['web3_rpc_url']))
+
+    oracle_calls = [
+        Call(oracle_address, ['getAssetPrice(address)(uint256)', reserve], [['oracle_price', None]]),
+        Call(oracle_address, ['BASE_CURRENCY_UNIT()(uint256)'], [['base_currency_unit', None]]),
+    ]
+
+    if block_height is None:
+        multi = Multicall(oracle_calls, _w3=w3)
+    else:
+        multi = Multicall(oracle_calls, block_identifier=block_height, _w3=w3)
+
+    # get the data
+    multicall_output = multi()
+    ic(multicall_output)
+
+    # return price
         
 if __name__ == "__main__":
 
     pass
+    # out = get_quote_from_1inch(137, '0x3A58a54C066FdC0f2D55FC9C89F0415C92eBf3C4', 18, '0x3A58a54C066FdC0f2D55FC9C89F0415C92eBf3C4', 18, 10000000)
+    # out = get_quote_from_1inch(1, '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', 18, '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', 18, 1)
+    # ic(out)
+    out = get_aave_oracle_price('ethereum_v3', '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2')
+
+
     # out = get_v3_incentives_data('aave_rwa', 'ethereum', 16902116)
     # smol = out.drop(columns=['incentive_controller_address','reward_oracle_address','reward_token_address'])
     # out.emission_end_timestamp = pd.to_datetime(out.emission_end_timestamp)
@@ -996,7 +1098,7 @@ if __name__ == "__main__":
     # ic(reserve_data)
     # ic(other_params)
 
-    out = get_raw_reserve_data('polygon_v3','polygon','0xfa68fb4628dff1028cfec22b4162fccd0d45efb6', 18, 40353814)
-    ic(out)
-    outdf = raw_reserve_to_dataframe(out)
-    ic(outdf.to_dict())
+    # out = get_raw_reserve_data('polygon_v3','polygon','0xfa68fb4628dff1028cfec22b4162fccd0d45efb6', 18, 40353814)
+    # ic(out)
+    # outdf = raw_reserve_to_dataframe(out)
+    # ic(outdf.to_dict())
