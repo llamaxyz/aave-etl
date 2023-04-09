@@ -11,7 +11,8 @@ from {{ source('financials_data_lake', 'display_names') }}
 where display_name not in ('Ecosystem Reserve', 'Incentives Controller V2')
 )
 
-s.block_day
+SELECT
+  s.block_day
   , s.reserve
   , p.symbol as reserve_symbol
   , s.atoken_symbol
