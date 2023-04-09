@@ -17,6 +17,7 @@ from aave_data.resources.helpers import (
                             standardise_types,
                             get_raw_reserve_data,
                             raw_reserve_to_dataframe,
+                            get_quote_from_1inch
                               )
  # pylint: enable=import-error
 
@@ -660,6 +661,22 @@ def test_get_raw_reserve_data():
     assert v2_result == v2_expected
     assert v1_result == v1_expected
 
+def test_get_quote_from_1inch():
+    """
+    Tests the get_quote_from_1inch() helper function
+    
+    Verifies the API call using a swap quote of 1 ETH to WETH
+
+    Assuming the answer to this is always 1
+
+    """
+
+    result = get_quote_from_1inch(1, '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', 18, '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', 18, 1)
+
+    assert type(result) == float
+    assert result == 1.0
+
+
 if __name__ == "__main__":
     # test_get_market_tokens_at_block_messari()
     # test_get_market_tokens_at_block_aave()
@@ -669,4 +686,5 @@ if __name__ == "__main__":
     # test_standarise_types()
     # test_get_scaled_balance_of()
     # test_get_token_transfers_from_alchemy()
-    test_get_raw_reserve_data()
+    # test_get_raw_reserve_data()
+    test_get_quote_from_1inch()
