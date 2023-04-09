@@ -31,7 +31,7 @@ SELECT
   , s.available_liquidity * p.usd_price as tvl_usd
 
 -- FROM `aave-prod.datamart.market_state_by_day` s
-from {{ ref('market_state_by_day') }}
+from {{ ref('market_state_by_day') }} s
   left join names n on (
     s.market = n.market
   )
