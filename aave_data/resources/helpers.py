@@ -2,6 +2,7 @@ from typing import Optional  # , date, time, timedelta, timezone
 
 import pandas as pd
 import requests
+import httpx
 from dagster import op
 from icecream import ic
 from subgrounds.subgrounds import Subgrounds
@@ -11,7 +12,6 @@ from time import sleep
 from subgrounds.pagination.pagination import PaginationError
 from random import randint
 from multicall import Call, Multicall
-
 
 
 from aave_data.resources.financials_config import * #pylint: disable=wildcard-import, unused-wildcard-import
@@ -959,6 +959,8 @@ def get_quote_from_1inch(
     Get swap rate from 1inch API.
     Uses the decimals vars to convert the from and to amounts to the correct number of decimals.
 
+    Uses requests library to make the API call (synchronous)
+
     Args:
         chain_id: chain_id of the network
         from_token: from token address
@@ -1005,6 +1007,66 @@ def get_quote_from_1inch(
 
     return quote_amount
     
+async def get_quote_from_1inch_async(
+    chain_id: str,
+    from_token: str,
+    from_token_decimals: int,
+    to_token: str,
+    to_token_decimals: int,
+    from_token_amount) -> float:
+    """
+    Get swap rate from 1inch API.
+    Uses the decimals vars to convert the from and to amounts to the correct number of decimals.
+
+    Uses httpx library to make the API call (asynchronous)
+
+    Args:
+        chain_id: chain_id of the network
+        from_token: from token address
+        from_token_decimals: number of decimals of from token
+        to_token: to token address
+        to_token_decimals: number of decimals of to token
+        from_token_amount: amount of from token
+
+    Returns:
+        float: amount of to_token received from the swap
+
+    """
+    # convert from_token_amount to the correct number of decimals
+    from_amount_converted = int(from_token_amount * 10 ** from_token_decimals)
+
+    # construct the URL
+    oneinch_url = f"https://api.1inch.exchange/v5.0/{chain_id}/quote?fromTokenAddress={from_token}&toTokenAddress={to_token}&amount={from_amount_converted}"
+
+    async with httpx.AsyncClient() as client:
+        
+        # use exponential backoff logic to handle transient API errors
+        i = 0
+        delay = INITIAL_RETRY
+        while True:
+            response = await client.get(oneinch_url, timeout=300)
+            if response.status_code == requests.codes.ok:
+                break
+            elif response.status_code == requests.codes.bad:
+                # request error, don't retry
+                print(f"Request Error {response.status_code} {response.reason} {response.json()['description']}")
+                response.raise_for_status()
+            i += 1
+            if i > MAX_RETRIES:
+                raise ValueError(f"1Inch Quote API error count {i}, last error {response.status_code} {response.reason}.  Bailing out.")
+            rand_delay = randint(0, 250) / 1000
+            sleep(delay + rand_delay)
+            delay *= 2
+            print(f"Request Error {response.status_code} {response.reason}, retry count {i}")
+
+    # parse the response
+    response_json = response.json()
+    # ic(response_json)
+
+    quote_amount = int(response_json['toTokenAmount']) / 10 ** to_token_decimals
+
+    return quote_amount
+
 
 def get_aave_oracle_price(
     market: str,

@@ -2,6 +2,8 @@ from datetime import datetime, timezone
 
 import pandas as pd
 import numpy as np
+import asyncio
+import httpx
 from icecream import ic
 from pandas.testing import assert_frame_equal
 # pylint: disable=import-error
@@ -18,9 +20,11 @@ from aave_data.resources.helpers import (
                             get_raw_reserve_data,
                             raw_reserve_to_dataframe,
                             get_quote_from_1inch,
-                            get_aave_oracle_price
+                            get_aave_oracle_price,
+                            get_quote_from_1inch_async,
                               )
  # pylint: enable=import-error
+
 
 def test_get_market_tokens_at_block_messari():
     """
@@ -665,6 +669,7 @@ def test_get_raw_reserve_data():
 def test_get_quote_from_1inch():
     """
     Tests the get_quote_from_1inch() helper function
+    Test both sync and async versions of the function
     
     Verifies the API call using a swap quote of 1 ETH to WETH
 
@@ -674,6 +679,15 @@ def test_get_quote_from_1inch():
 
     result = get_quote_from_1inch(1, '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', 18, '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', 18, 1)
 
+    assert type(result) == float
+    assert result == 1.0
+
+    async def async_get():
+            async_result= await get_quote_from_1inch_async(1, '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', 18, '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', 18, 1)
+            return async_result
+
+    result = asyncio.run(async_get())
+    
     assert type(result) == float
     assert result == 1.0
 
@@ -701,5 +715,5 @@ if __name__ == "__main__":
     # test_get_scaled_balance_of()
     # test_get_token_transfers_from_alchemy()
     # test_get_raw_reserve_data()
-    # test_get_quote_from_1inch()
-    test_get_aave_oracle_price()
+    test_get_quote_from_1inch()
+    # test_get_aave_oracle_price()
