@@ -518,6 +518,106 @@ CONFIG_TOKENS = {
     }
 }
 
+CONFIG_1INCH = {
+    "polygon_matic": {
+        "market": "polygon_v3",
+        "chain": "polygon",
+        "loop_market": "MATIC",
+        "to_asset": {
+            "WMATIC": {
+                    "address": "0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270",
+                    "decimals": 18,
+                }
+            },
+        "from_assets": {
+            "MaticX": {
+                    "address": "0xfa68fb4628dff1028cfec22b4162fccd0d45efb6",
+                    "decimals": 18,
+            },
+            "stMATIC": {
+                    "address": "0x3a58a54c066fdc0f2d55fc9c89f0415c92ebf3c4",
+                    "decimals": 18,
+            }
+        },
+    },
+    "ethereum_eth": {
+        "market": "ethereum_v3",
+        "chain": "ethereum",
+        "loop_market": "ETH",
+        "to_asset": {
+            "WETH": {
+                    "address": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                    "decimals": 18,
+                }
+            },
+        "from_assets": {
+            "wstETH": {
+                    "address": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+                    "decimals": 18,
+            },
+            "rETH": {
+                    "address": "0xae78736cd615f374d3085123a210448e74fc6393",
+                    "decimals": 18,
+            },
+            "cbETH": {
+                    "address": "0xbe9895146f7af43049ca1c1ae358b0541ea49704",
+                    "decimals": 18,
+            }
+        },
+    },
+    "arbitrum_eth": {
+        "market": "arbitrum_v3",
+        "chain": "arbitrum",
+        "loop_market": "ETH",
+        "to_asset": {
+            "WETH": {
+                    "address": "0x82af49447d8a07e3bd95bd0d56f35241523fbab1",
+                    "decimals": 18,
+                }
+            },
+        "from_assets": {
+            "wstETH": {
+                    "address": "0x5979d7b546e38e414f7e9822514be443a4800529",
+                    "decimals": 18,
+            },
+        },
+    },
+    "optimism_eth": {
+        "market": "optimism_v3",
+        "chain": "optimism",
+        "loop_market": "ETH",
+        "to_asset": {
+            "WETH": {
+                    "address": "0x4200000000000000000000000000000000000006",
+                    "decimals": 18,
+                }
+            },
+        "from_assets": {
+            "wstETH": {
+                    "address": "0x1f32b1c2345538c0c6f582fcb022739c4a194ebb",
+                    "decimals": 18,
+            },
+        },
+    },
+    "avalanche_avax": {
+        "market": "avax_v3",
+        "chain": "avalanche",
+        "loop_market": "WAVAX",
+        "to_asset": {
+            "WAVAX": {
+                    "address": "0xb31f66aa3c1e785363f0875a1b74e27b85fd66c7",
+                    "decimals": 18,
+                }
+            },
+        "from_assets": {
+            "sAVAX": {
+                    "address": "0x2b2c81e08f1af8835a78bb2a90ae924ace0ea4be",
+                    "decimals": 18,
+            },
+        },
+    },
+}
+
 if __name__ == "__main__":
     
     # print(list(CONFIG_TOKENS.keys()))
