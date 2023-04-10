@@ -3,6 +3,7 @@ from typing import Optional  # , date, time, timedelta, timezone
 import pandas as pd
 import requests
 import httpx
+import asyncio
 from dagster import op
 from icecream import ic
 from subgrounds.subgrounds import Subgrounds
@@ -1013,7 +1014,8 @@ async def get_quote_from_1inch_async(
     from_token_decimals: int,
     to_token: str,
     to_token_decimals: int,
-    from_token_amount) -> float:
+    from_token_amount: float,
+    semaphore: asyncio.Semaphore) -> float:
     """
     Get swap rate from 1inch API.
     Uses the decimals vars to convert the from and to amounts to the correct number of decimals.
@@ -1027,6 +1029,7 @@ async def get_quote_from_1inch_async(
         to_token: to token address
         to_token_decimals: number of decimals of to token
         from_token_amount: amount of from token
+        semaphore: asyncio.Semaphore to limit the number of concurrent requests
 
     Returns:
         float: amount of to_token received from the swap
@@ -1038,26 +1041,27 @@ async def get_quote_from_1inch_async(
     # construct the URL
     oneinch_url = f"https://api.1inch.exchange/v5.0/{chain_id}/quote?fromTokenAddress={from_token}&toTokenAddress={to_token}&amount={from_amount_converted}"
 
-    async with httpx.AsyncClient() as client:
-        
-        # use exponential backoff logic to handle transient API errors
-        i = 0
-        delay = INITIAL_RETRY
-        while True:
-            response = await client.get(oneinch_url, timeout=300)
-            if response.status_code == requests.codes.ok:
-                break
-            elif response.status_code == requests.codes.bad:
-                # request error, don't retry
-                print(f"Request Error {response.status_code} {response.reason} {response.json()['description']}")
-                response.raise_for_status()
-            i += 1
-            if i > MAX_RETRIES:
-                raise ValueError(f"1Inch Quote API error count {i}, last error {response.status_code} {response.reason}.  Bailing out.")
-            rand_delay = randint(0, 250) / 1000
-            sleep(delay + rand_delay)
-            delay *= 2
-            print(f"Request Error {response.status_code} {response.reason}, retry count {i}")
+    async with semaphore:
+        async with httpx.AsyncClient() as client:
+            
+            # use exponential backoff logic to handle transient API errors
+            i = 0
+            delay = INITIAL_RETRY
+            while True:
+                response = await client.get(oneinch_url, timeout=300)
+                if response.status_code == requests.codes.ok:
+                    break
+                elif response.status_code == requests.codes.bad:
+                    # request error, don't retry
+                    print(f"Request Error {response.status_code} {response.reason_phrase} {response.json()['description']}")
+                    response.raise_for_status()
+                i += 1
+                if i > MAX_RETRIES:
+                    raise ValueError(f"1Inch Quote API error count {i}, last error {response.status_code} {response.reason_phrase}.  Bailing out.")
+                rand_delay = randint(0, 250) / 1000
+                sleep(delay + rand_delay)
+                delay *= 2
+                print(f"Request Error {response.status_code} {response.reason_phrase}, retry count {i}")
 
     # parse the response
     response_json = response.json()
