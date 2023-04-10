@@ -976,7 +976,7 @@ def get_quote_from_1inch(
     from_amount_converted = int(from_token_amount * 10 ** from_token_decimals)
 
     # construct the URL
-    oneinch_url = f"https://api.1inch.exchange/v3.0/{chain_id}/quote?fromTokenAddress={from_token}&toTokenAddress={to_token}&amount={from_amount_converted}"
+    oneinch_url = f"https://api.1inch.exchange/v5.0/{chain_id}/quote?fromTokenAddress={from_token}&toTokenAddress={to_token}&amount={from_amount_converted}"
 
     # use exponential backoff logic to handle transient API errors
     i = 0
@@ -1045,6 +1045,10 @@ def get_aave_oracle_price(
     # ic(multicall_output)
 
     return multicall_output['oracle_price'] / multicall_output['base_currency_unit']
+
+# def one_inch_price_thing(
+
+# )
         
 if __name__ == "__main__":
 
