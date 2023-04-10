@@ -38,6 +38,7 @@ setup(
         "google-auth",
         "icecream", #dev debug tool
         "requests",
+        "httpx", # async http requests
         "subgrounds",  # API for accessing subgraphs easily
         "shroomdk",  # API for accessing shroom Flipside Crypto data tables via SQL
         # "web3==6.0.0", # installed in dagster_cloud_post_install.sh due to version clash with multicall
