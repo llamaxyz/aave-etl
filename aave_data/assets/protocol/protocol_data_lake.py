@@ -793,10 +793,12 @@ def matic_lsd_token_supply_by_day(
     return supply_data
 
 
-
-def liquidity_depth(
-        # context
-        ) -> pd.DataFrame():
+@asset(
+    compute_kind="python",
+    code_version="1",
+    io_manager_key = 'protocol_data_lake_append_io_manager',
+)
+def liquidity_depth_raw(context):
     """
     Uses the 1inch API to get the liquidity depth of the configured
     tokens with respect to the to_asset
@@ -814,127 +816,113 @@ def liquidity_depth(
     Returns:
         A dataframe of the liquidity depth of the tokens at the time the function is called
     """
-
-    # # get the current timestamp
-    # timestamp = datetime.now(timezone.utc)
-
-    # # construct the ouput dataframe
-    # rows = []
-    # for market_key, market_data in CONFIG_1INCH.items():
-    #     for from_asset_key, from_asset_data in market_data["from_assets"].items():
-    #         row = {
-    #             "market_key": market_key,
-    #             "market": market_data["market"],
-    #             "chain": market_data["chain"],
-    #             "loop_market": market_data["loop_market"],
-    #             "to_asset": list(market_data["to_asset"].keys())[0],
-    #             "to_asset_address": market_data["to_asset"][list(market_data["to_asset"].keys())[0]]["address"],
-    #             "to_asset_decimals": market_data["to_asset"][list(market_data["to_asset"].keys())[0]]["decimals"],
-    #             "from_asset": from_asset_key,
-    #             "from_asset_address": from_asset_data["address"],
-    #             "from_asset_decimals": from_asset_data["decimals"]
-    #         }
-    #         rows.append(row)
-    # output = pd.DataFrame(rows)
-
-    # # get the from asset chain & assets & grab the oracle price
-    # from_assets = output[["from_asset", "from_asset_address", "from_asset_decimals", "chain", "market"]].drop_duplicates().reset_index(drop=True)
-    # from_assets['from_asset_price'] = from_assets.apply(lambda x: get_aave_oracle_price(x.market, x.from_asset_address), axis=1)
-
-    # # get the to asset chain & assets & grab the oracle price
-    # to_assets = output[["to_asset", "to_asset_address", "to_asset_decimals", "chain", "market"]].drop_duplicates().reset_index(drop=True)
-    # to_assets['to_asset_price'] = to_assets.apply(lambda x: get_aave_oracle_price(x.market, x.to_asset_address), axis=1)
-
-    # # join back into the output
-    # output = output.merge(from_assets, on=["from_asset", "from_asset_address", "from_asset_decimals", "chain", "market"], how="left")
-    # output = output.merge(to_assets, on=["to_asset", "to_asset_address", "to_asset_decimals", "chain", "market"], how="left")
-
-    # # get the chain_ids for use inth 1inch API
-    # chain_ids = {chain: CONFIG_CHAINS[chain]["chain_id"] for chain in output.chain.unique()}
-    # output["chain_id"] = output.chain.map(chain_ids)
-
-    # # build the list of from amounts to sweep
-    # sweep_range = [10**i for i in range(3, 10)]
-    # output['from_amount_usd'] = output.apply(lambda x: sweep_range, axis=1)
-    # output = output.explode("from_amount_usd").reset_index(drop=True)
-
-    # # convert to native asset amounts
-    # output["from_amount_native"] = output.from_amount_usd / output.from_asset_price
-
-    # ################################################################
-    # # 1inch API calls using synchronous requests
-    # ################################################################
-    # # import time
-    # # start = time.time()
-    # # # run the first sweep sync
-    # # output["to_amount_native"] = output.apply(
-    # #     lambda x: get_quote_from_1inch(
-    # #             x.chain_id,
-    # #             x.from_asset_address,
-    # #             x.from_asset_decimals,
-    # #             x.to_asset_address,
-    # #             x.to_asset_decimals,
-    # #             x.from_amount_native
-    # #     ), axis=1)
-    # # end = time.time()
-    # # elapsed = end - start
-    # # ic(elapsed)
-    # ################################################################
+    CONCURRENT_REQUESTS = 20
     
-    # ################################################################
-    # # 1inch API calls using async requests
-    # ################################################################
-    # # run the first sweep async
-    # async def sweep():
-    #     tasks = output.apply(
-    #         lambda x: get_quote_from_1inch_async(
-    #                 x.chain_id,
-    #                 x.from_asset_address,
-    #                 x.from_asset_decimals,
-    #                 x.to_asset_address,
-    #                 x.to_asset_decimals,
-    #                 x.from_amount_native
-    #         ), axis=1)
-    #     results = await asyncio.gather(*tasks)
-    #     return results
-    
-    # # import time
-    # # start = time.time()
-    # output["to_amount_native"] = asyncio.run(sweep())
-    # # end = time.time()
-    # # elapsed = end - start
-    # # ic(elapsed)
-    # ################################################################
-    
-    # output['to_amount_usd'] = output.to_amount_native * output.to_asset_price
-    # output['price_impact'] = 1 - (output.to_amount_usd / output.from_amount_usd)
+    # construct the ouput dataframe
+    rows = []
+    for market_key, market_data in CONFIG_1INCH.items():
+        for from_asset_key, from_asset_data in market_data["from_assets"].items():
+            row = {
+                "market_key": market_key,
+                "market": market_data["market"],
+                "chain": market_data["chain"],
+                "loop_market": market_data["loop_market"],
+                "to_asset": list(market_data["to_asset"].keys())[0],
+                "to_asset_address": market_data["to_asset"][list(market_data["to_asset"].keys())[0]]["address"],
+                "to_asset_decimals": market_data["to_asset"][list(market_data["to_asset"].keys())[0]]["decimals"],
+                "from_asset": from_asset_key,
+                "from_asset_address": from_asset_data["address"],
+                "from_asset_decimals": from_asset_data["decimals"]
+            }
+            rows.append(row)
+    output = pd.DataFrame(rows)
 
-    # # ic(from_amounts_usd)
+    # get the from asset chain & assets & grab the oracle price
+    from_assets = output[["from_asset", "from_asset_address", "from_asset_decimals", "chain", "market"]].drop_duplicates().reset_index(drop=True)
+    from_assets['from_asset_price'] = from_assets.apply(lambda x: get_aave_oracle_price(x.market, x.from_asset_address), axis=1)
+
+    # get the to asset chain & assets & grab the oracle price
+    to_assets = output[["to_asset", "to_asset_address", "to_asset_decimals", "chain", "market"]].drop_duplicates().reset_index(drop=True)
+    to_assets['to_asset_price'] = to_assets.apply(lambda x: get_aave_oracle_price(x.market, x.to_asset_address), axis=1)
+
+    # join back into the output
+    output = output.merge(from_assets, on=["from_asset", "from_asset_address", "from_asset_decimals", "chain", "market"], how="left")
+    output = output.merge(to_assets, on=["to_asset", "to_asset_address", "to_asset_decimals", "chain", "market"], how="left")
+
+    # get the chain_ids for use inth 1inch API
+    chain_ids = {chain: CONFIG_CHAINS[chain]["chain_id"] for chain in output.chain.unique()}
+    output["chain_id"] = output.chain.map(chain_ids)
+
+    # build the list of from amounts to sweep
+    sweep_range = [10**i for i in range(3, 10)]
+    output['from_amount_usd'] = output.apply(lambda x: sweep_range, axis=1)
+    output = output.explode("from_amount_usd").reset_index(drop=True)
+    output["from_amount_usd"] = output.from_amount_usd.astype(float)
+
+    # convert to native asset amounts
+    output["from_amount_native"] = output.from_amount_usd / output.from_asset_price
+
+    ################################################################
+    # 1inch API calls using synchronous requests
+    ################################################################
+    # import time
+    # start = time.time()
+    # # run the first sweep sync
+    # output["to_amount_native"] = output.apply(
+    #     lambda x: get_quote_from_1inch(
+    #             x.chain_id,
+    #             x.from_asset_address,
+    #             x.from_asset_decimals,
+    #             x.to_asset_address,
+    #             x.to_asset_decimals,
+    #             x.from_amount_native
+    #     ), axis=1)
+    # end = time.time()
+    # elapsed = end - start
+    # ic(elapsed)
+    ################################################################
+    
+    ################################################################
+    # 1inch API calls using async requests
+    ################################################################
+    # run the first sweep async
+    async def sweep():
+        semaphore = asyncio.Semaphore(CONCURRENT_REQUESTS)
+        tasks = output.apply(
+            lambda x: get_quote_from_1inch_async(
+                    x.chain_id,
+                    x.from_asset_address,
+                    x.from_asset_decimals,
+                    x.to_asset_address,
+                    x.to_asset_decimals,
+                    x.from_amount_native,
+                    semaphore
+            ), axis=1)
+        results = await asyncio.gather(*tasks)
+        return results
+    
+    # import time
+    # start = time.time()
+    output["to_amount_native"] = asyncio.run(sweep())
+    # end = time.time()
+    # elapsed = end - start
+    # ic(elapsed)
+    ################################################################
+    
+    output['to_amount_usd'] = output.to_amount_native * output.to_asset_price
+    output['price_impact'] = 1 - (output.to_amount_usd / output.from_amount_usd)
+
+    # ic(from_amounts_usd)
     # ic(output)
-    # # output.to_pickle("output.pkl")
-    output = pd.read_pickle("output.pkl")
+    # output.to_pickle("output.pkl")
+    # output = pd.read_pickle("output.pkl")
     detail_sweep = output.copy()
     
 
     detail_sweep['dist_from_1'] = 0.01 - detail_sweep.price_impact
     detail_sweep['dist_from_5'] = detail_sweep.price_impact - 0.05
 
-    # mins = (detail_sweep
-    #             .groupby(["market_key", "from_asset", "to_asset"])
-    #             .agg({"dist_from_1": "min",
-    #                   "dist_from_5": "min",})
-    #             .rename(columns={
-    #                     "dist_from_1": "dist_from_1_min",
-    #                     "dist_from_5": "dist_from_5_min"})
-    #             .reset_index()
-    # )
-    
-    # ic(mins)
-
-    # # join this back onto the output frame
-    # detail_sweep = detail_sweep.merge(mins, how="left")
-
-    # filter for lowest non-negative distance values for the 1% and 5% price impact
+    # filter for lowest non-negative distance values for the 1% price impact
     detail_sweep_low = detail_sweep.loc[(detail_sweep.dist_from_1 >= 0)]
     detail_sweep_low_mins = (detail_sweep_low
                                 .groupby(["market_key", "from_asset", "to_asset"])
@@ -942,11 +930,13 @@ def liquidity_depth(
                                 .rename(columns={"dist_from_1": "dist_from_1_min",})
                                 .reset_index()
         )
+    # join the mins back in and filter for the lowest distance values
     detail_sweep_low = detail_sweep_low.merge(detail_sweep_low_mins, how="left")
     detail_sweep_low = detail_sweep_low.loc[(detail_sweep_low.dist_from_1 == detail_sweep_low.dist_from_1_min)]
     detail_sweep_low.drop(columns=['to_amount_native','to_amount_usd','price_impact','from_amount_native','dist_from_1', 'dist_from_5', 'dist_from_1_min'], inplace=True)
     detail_sweep_low = detail_sweep_low.rename(columns={"from_amount_usd": "from_amount_usd_low",})
-
+    
+    # filter for lowest non-negative distance values for the 5% price impact
     detail_sweep_high = detail_sweep.loc[(detail_sweep.dist_from_5 >= 0)]
     detail_sweep_high_mins = (detail_sweep_high
                                 .groupby(["market_key", "from_asset", "to_asset"])
@@ -954,6 +944,7 @@ def liquidity_depth(
                                 .rename(columns={"dist_from_5": "dist_from_5_min",})
                                 .reset_index()
         )
+    # join the mins back in and filter for the lowest distance values
     detail_sweep_high = detail_sweep_high.merge(detail_sweep_high_mins, how="left")
     detail_sweep_high = detail_sweep_high.loc[(detail_sweep_high.dist_from_5 == detail_sweep_high.dist_from_5_min)]
     detail_sweep_high.drop(columns=['to_amount_native','to_amount_usd','from_amount_native','price_impact','dist_from_1', 'dist_from_5','dist_from_5_min'], inplace=True)
@@ -963,10 +954,11 @@ def liquidity_depth(
     detail_sweep = detail_sweep_low.merge(detail_sweep_high, how="left")
     
     # generate the sweep range (non-inclusive)
-    SWEEP_STEPS = 100
-    CONCURRENT_REQUESTS = 10
-    detail_sweep['sweep_range'] = detail_sweep.apply(lambda x: np.linspace(x.from_amount_usd_low, x.from_amount_usd_high, SWEEP_STEPS-1, endpoint=False), axis=1)
+    SWEEP_STEPS = 20
+    
+    detail_sweep['sweep_range'] = detail_sweep.apply(lambda x: np.linspace(x.from_amount_usd_low, x.from_amount_usd_high, SWEEP_STEPS, endpoint=False), axis=1)
     detail_sweep = detail_sweep.explode('sweep_range').reset_index(drop=True)
+    # don't sweep the values we already have
     detail_sweep = detail_sweep.loc[detail_sweep.sweep_range != detail_sweep.from_amount_usd_low]
 
     detail_sweep.rename(columns={"sweep_range": "from_amount_usd"}, inplace=True)
@@ -978,7 +970,7 @@ def liquidity_depth(
     ################################################################
     # 1inch API calls using async requests
     ################################################################
-    # run the first sweep async
+    # run the sweep async
     async def sweep():
         semaphore = asyncio.Semaphore(CONCURRENT_REQUESTS)
         tasks = detail_sweep.apply(
@@ -994,44 +986,49 @@ def liquidity_depth(
         results = await asyncio.gather(*tasks)
         return results
     
-    import time
-    start = time.time()
+    # import time
+    # start = time.time()
     detail_sweep["to_amount_native"] = asyncio.run(sweep())
-    end = time.time()
-    elapsed = end - start
-    ic(elapsed)
+    # end = time.time()
+    # elapsed = end - start
+    # ic(elapsed)
     ################################################################
     
+    # calc the results
     detail_sweep['to_amount_usd'] = detail_sweep.to_amount_native * detail_sweep.to_asset_price
     detail_sweep['price_impact'] = 1 - (detail_sweep.to_amount_usd / detail_sweep.from_amount_usd)
 
-    ic(detail_sweep)
+    # ic(detail_sweep)
 
-    # join the two dfs together
+    # join back with the 1st sweep
     output = pd.concat([output, detail_sweep], axis=0)
 
-    
+    # tidy up
+    output = output.sort_values(by=['market_key', 'from_asset', 'to_asset', 'from_amount_usd']).reset_index(drop=True)
+    output['fetch_time'] = datetime.now(timezone.utc)
 
-    output.to_csv("detail_sweep.csv", index=False)
-    # find the range of from amounts where the price impact is between 1 and 5%
+    # output.to_csv("detail_sweep.csv", index=False)
+    output.to_pickle("output.pkl")
+    # output = pd.read_pickle("output.pkl")
+    context.add_output_metadata(
+        {
+            "num_records": len(output),
+        }
+    )
 
-    # assign a target_range_low and target_range_high (in USD) to each from/to asset pair
-    # need to group by for this -> new dataframe
-    
+    # ic(output)    
+    output = standardise_types(output)
 
-    # create a new list of amounts to sweep based on target_range_low and target_range_high
-    # run the sweep and calcs again
-    # join the two dfs together
+    return output
 
-    # 
 
 
 if __name__ == "__main__":
 
-    # import time
-    # start = time.time()
-    out = liquidity_depth()
-    # end = time.time()
-    # elapsed = end - start
-    # ic(elapsed)
+    import time
+    start = time.time()
+    out = liquidity_depth_raw()
+    end = time.time()
+    elapsed = end - start
+    ic(elapsed)
     
