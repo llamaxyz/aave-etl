@@ -1008,7 +1008,7 @@ def liquidity_depth_raw(context):
     output['fetch_time'] = datetime.now(timezone.utc)
 
     # output.to_csv("detail_sweep.csv", index=False)
-    output.to_pickle("output.pkl")
+    # output.to_pickle("output.pkl")
     # output = pd.read_pickle("output.pkl")
     context.add_output_metadata(
         {
