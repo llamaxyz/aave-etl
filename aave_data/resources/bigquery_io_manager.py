@@ -49,7 +49,8 @@ MAX_RETRIES = 10
     "dataset": str,
     "service_account_creds": str,
     "service_account_file": str,
-    "use_service_account_file": bool,})
+    "use_service_account_file": bool,
+    "append_only": bool,})
 def bigquery_io_manager(init_context):
     return BigQueryIOManager(
         config = {
@@ -58,6 +59,7 @@ def bigquery_io_manager(init_context):
             "service_account_creds": init_context.resource_config["service_account_creds"],
             "service_account_file": init_context.resource_config["service_account_file"],
             "use_service_account_file": init_context.resource_config["use_service_account_file"],
+            "append_only": init_context.resource_config["append_only"],
         }
     )
 
@@ -111,38 +113,40 @@ class BigQueryIOManager(IOManager):
             time_window = None
 
         if not obj.empty:
-            # enforced idempotency using delete-write pattern.  Used for partitioned assets, non-partitioned assets use overwrite.
-            cleanup_query = self._get_cleanup_statement(table, dataset, partition_type, time_window, partition_key)
-            # ic(cleanup_query)
+            # check for append_only config - if set, don't delete existing data prior to write
+            if not self._config['append_only']:
+                # enforced idempotency using delete-write pattern.  Used for partitioned assets, non-partitioned assets use overwrite.
+                cleanup_query = self._get_cleanup_statement(table, dataset, partition_type, time_window, partition_key)
+                # ic(cleanup_query)
 
-            i = 0
-            err_404 = False
-            delay_time = INITIAL_RETRY
-            while True:
-                try:
-                    pd.read_gbq(cleanup_query, dialect='standard', use_bqstorage_api=True)
-                    break
-                except Exception as e:
-                    if i > MAX_RETRIES:
-                        raise e
-                    elif "Reason: 404" in str(e):
-                        # table missing, delete will fail with 404.  Don't retry
-                        err_404 = True
+                i = 0
+                err_404 = False
+                delay_time = INITIAL_RETRY
+                while True:
+                    try:
+                        pd.read_gbq(cleanup_query, dialect='standard', use_bqstorage_api=True)
                         break
-                    elif "Reason: 400 Could not serialize access" in str(e):
-                        # concurrent access issue, move through to retry logic
-                        pass
-                    else:
-                        # raise any other GenericGBQException rather than retry
-                        raise e
+                    except Exception as e:
+                        if i > MAX_RETRIES:
+                            raise e
+                        elif "Reason: 404" in str(e):
+                            # table missing, delete will fail with 404.  Don't retry
+                            err_404 = True
+                            break
+                        elif "Reason: 400 Could not serialize access" in str(e):
+                            # concurrent access issue, move through to retry logic
+                            pass
+                        else:
+                            # raise any other GenericGBQException rather than retry
+                            raise e
 
-                    if err_404:
-                        break
-                    else:    
-                        context.log.warning(f"Retry {i} cleanup read_gbq after {delay_time} seconds")
-                        sleep(delay_time)
-                        i += 1
-                        delay_time *= 2
+                        if err_404:
+                            break
+                        else:    
+                            context.log.warning(f"Retry {i} cleanup read_gbq after {delay_time} seconds")
+                            sleep(delay_time)
+                            i += 1
+                            delay_time *= 2
 
             # ic(obj)
             # add a load timestamp to the table

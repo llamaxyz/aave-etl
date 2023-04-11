@@ -86,6 +86,7 @@ resource_defs = {
                 "service_account_creds": creds_env_var,
                 "service_account_file" : creds_file,
                 "use_service_account_file": True,
+                "append_only": False,
             },
         ),
         "protocol_data_lake_io_manager": bigquery_io_manager.configured(
@@ -95,6 +96,17 @@ resource_defs = {
                 "service_account_creds": creds_env_var,
                 "service_account_file" : creds_file,
                 "use_service_account_file": True,
+                "append_only": False,
+            },
+        ),
+        "protocol_data_lake_append_io_manager": bigquery_io_manager.configured(
+            {
+                "project": "aave-dev",
+                "dataset": "protocol_data_lake",
+                "service_account_creds": creds_env_var,
+                "service_account_file" : creds_file,
+                "use_service_account_file": True,
+                "append_only": True,
             },
         ),
         "data_warehouse_io_manager": bigquery_io_manager.configured(
@@ -104,6 +116,7 @@ resource_defs = {
                 "service_account_creds": creds_env_var,
                 "service_account_file" : creds_file,
                 "use_service_account_file": True,
+                "append_only": False,
             },
         ),
         "datamart_io_manager": bigquery_io_manager.configured(
@@ -113,6 +126,7 @@ resource_defs = {
                 "service_account_creds": creds_env_var,
                 "service_account_file" : creds_file,
                 "use_service_account_file": True,
+                "append_only": False,
             },
         ),
         "dbt": dbt_cli_resource.configured(
@@ -131,6 +145,7 @@ resource_defs = {
                 "service_account_creds": creds_env_var,
                 "service_account_file" : creds_file,
                 "use_service_account_file": False,
+                "append_only": False,
             },
         ),
         "protocol_data_lake_io_manager": bigquery_io_manager.configured(
@@ -140,6 +155,17 @@ resource_defs = {
                 "service_account_creds": creds_env_var,
                 "service_account_file" : creds_file,
                 "use_service_account_file": False,
+                "append_only": False,
+            },
+        ),
+        "protocol_data_lake_append_io_manager": bigquery_io_manager.configured(
+            {
+                "project": "aave-prod",
+                "dataset": "protocol_data_lake",
+                "service_account_creds": creds_env_var,
+                "service_account_file" : creds_file,
+                "use_service_account_file": True,
+                "append_only": True,
             },
         ),
         "data_warehouse_io_manager": bigquery_io_manager.configured(
@@ -149,6 +175,7 @@ resource_defs = {
                 "service_account_creds": creds_env_var,
                 "service_account_file" : creds_file,
                 "use_service_account_file": False,
+                "append_only": False,
             },
         ),
         "datamart_io_manager": bigquery_io_manager.configured(
@@ -158,6 +185,7 @@ resource_defs = {
                 "service_account_creds": creds_env_var,
                 "service_account_file" : creds_file,
                 "use_service_account_file": False,
+                "append_only": False,
             },
         ),
         "dbt": dbt_cli_resource.configured(
