@@ -245,10 +245,19 @@ daily_partitioned_assets = [
     'protocol_data_lake/matic_lsd_token_supply_by_day',
     ]
 
+liquidity_depth_assets = [
+    'protocol_data_lake/liquidity_depth_raw',
+    'warehouse/liquidity_depth',
+]
 
 data_lake_partitioned_job = define_asset_job(
     name='data_lake_partitioned',
-    selection=AssetSelection.groups('financials_data_lake', 'protocol_data_lake') - AssetSelection.keys(*data_lake_unpartitioned_assets) - AssetSelection.keys(*daily_partitioned_assets),
+    selection= (
+            AssetSelection.groups('financials_data_lake', 'protocol_data_lake')
+            - AssetSelection.keys(*data_lake_unpartitioned_assets)
+            - AssetSelection.keys(*daily_partitioned_assets)
+            - AssetSelection.keys(*liquidity_depth_assets)
+    ),
     partitions_def=market_day_multipartition
 )
 
@@ -261,7 +270,7 @@ data_lake_unpartitioned_job = define_asset_job(
 
 warehouse_datamart_job = define_asset_job(
     name='warehouse_datamart',
-    selection=AssetSelection.groups('warehouse', 'datamart'),
+    selection=AssetSelection.groups('warehouse', 'datamart') - AssetSelection.keys(*liquidity_depth_assets),
 )
 
 daily_partitioned_job = define_asset_job(
@@ -277,6 +286,11 @@ financials_root_job = define_asset_job(
     partitions_def=market_day_multipartition
 )
 
+# these assets use a different schedule and aren't partitioned
+liquidity_depth_job = define_asset_job(
+    name='liquidity_depth_job',
+    selection=AssetSelection.keys(*liquidity_depth_assets),
+)
 
 
 ############################################
@@ -369,7 +383,12 @@ daily_partitioned_schedule = build_schedule_from_partitioned_job(
     name="daily_partitioned_schedule",
 )
 
-
+liquidity_depth_schedule = ScheduleDefinition(
+    job = liquidity_depth_job,
+    cron_schedule="0 */2 * * *",
+    execution_timezone='UTC',
+    name="liquidity_depth_schedule"
+)
 ####################################################
 # Sensor Code - not working pending sensor performance improvements
 ############################################
@@ -423,7 +442,8 @@ defs = Definitions(
         warehouse_datamart_schedule,
         data_lake_unpartitioned_schedule,
         data_lake_partitioned_schedule,
-        daily_partitioned_schedule
+        daily_partitioned_schedule,
+        liquidity_depth_schedule
         ],
     sensors=[financials_data_lake_sensor, financials_warehouse_sensor, dbt_sensor, minimal_sensor],
     resources=resource_defs[dagster_deployment],
