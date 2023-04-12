@@ -1017,6 +1017,13 @@ def liquidity_depth_raw(context):
     )
 
     # ic(output)    
+    # fix types
+    for col in ['from_amount_usd','from_amount_native','to_amount_native','to_amount_usd','price_impact','from_asset_price','to_asset_price']:
+        output[col] = output[col].astype('Float64')
+    # fix types
+    for col in ['to_asset_decimals','from_asset_decimals','chain_id']:
+        output[col] = output[col].astype('Int64')
+
     output = standardise_types(output)
 
     return output
