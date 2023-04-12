@@ -320,3 +320,119 @@ def incentives_by_day(context,
 
     return incentives
 
+@asset(
+    compute_kind="python",
+    code_version="1",
+    io_manager_key = 'data_warehouse_io_manager',
+    ins={
+        "liquidity_depth_raw": AssetIn(key_prefix="protocol_data_lake"),
+    }
+)
+def liquidity_depth(context, liquidity_depth_raw):
+    """
+    Interpolate liquidity depth data
+
+    Takes the raw liquidity depth data and uses it to interpolate at specified targets
+    (e.g. 0.01%, 0.0125%, 0.015%, etc.)
+
+    Args:
+        context (ExecutionContext): Dagster execution context
+        liquidity_depth_raw (DataFrame): Raw liquidity depth data
+        liquidity_depth (DataFrame): Interpolated and raw liquidity depth data from previous run
+
+    Returns:
+        DataFrame: Interpolated liquidity depth data combined with the raw data
+    """
+    # todo implement a sensor which updates this asset when the upstream changes
+    # todo for now we just read & process everything
+
+    # # get the unique load timestamps
+    # load_timestamps = liquidity_depth.fetch_time.unique()
+
+    # # filter the raw data to only include the timestamps that are not in the interpolated data
+    # liquidity_depth_raw = liquidity_depth_raw[~liquidity_depth_raw.fetch_time.isin(load_timestamps)]
+
+    # liquidity_depth_raw = pd.read_pickle("output.pkl")
+
+    # if liquidity_depth_raw.empty:
+    #     return_val = pd.DataFrame()
+    # else:
+    # set the range of target price impacts we are interested in
+    start = 0.01
+    end = 0.05
+    increment = 0.0025
+    target_price_impact = [i / 10000 for i in range(int(start * 10000), int(end * 10000) + 1, int(increment * 10000))]
+
+    # group the raw data by market, assets & timestamp and add the from_amount_usd and price_impact as lists for use in the interp
+    g = liquidity_depth_raw.groupby(['market_key','to_asset', 'from_asset','fetch_time']).agg(
+        {
+            'from_amount_usd' : lambda x: x.astype(float).to_list(),
+            'price_impact' : lambda x: x.astype(float).to_list(),
+
+        }
+    ).reset_index()
+
+    # add the target price impact to the grouped data as a list
+    g['target_price_impact'] = g.apply(lambda x: target_price_impact, axis=1)
+    # interpolate the from_amount_usd to the target price impact using np.interp
+    g['new_from_amount'] = g.apply(lambda x: np.interp(x.target_price_impact, x.price_impact, x.from_amount_usd), axis=1)
+
+    # explode the lists back out to a row per price impact
+    g = g[['market_key','to_asset', 'from_asset','fetch_time','target_price_impact','new_from_amount']]
+    g.rename(columns = {'target_price_impact':'price_impact','new_from_amount':'from_amount_usd'}, inplace=True)
+    g = g.explode(['price_impact','from_amount_usd'])
+
+    # calc the to_amount_usd
+    g['to_amount_usd'] = (1-g.price_impact) * g.from_amount_usd
+
+    # tag the data as interpolated or raw
+    liquidity_depth_raw['is_interpolated'] = False
+    g['is_interpolated'] = True
+
+    # add the interpolated data to the raw data
+    return_val = pd.concat([liquidity_depth_raw,g], axis=0)
+    return_val = return_val.sort_values(['market_key','to_asset', 'from_asset','fetch_time','from_amount_usd']).reset_index(drop=True)
+
+    
+    # fix types
+    for col in ['from_amount_usd','from_amount_native','to_amount_native','to_amount_usd','price_impact']:
+        return_val[col] = return_val[col].astype('Float64')
+    # fix types
+    for col in ['to_asset_decimals','from_asset_decimals','chain_id']:
+        return_val[col] = return_val[col].astype('Int64')
+
+    # fill the missing fields
+    for col in ['market','chain','loop_market','to_asset_address','to_asset_decimals','from_asset_address','from_asset_decimals','chain_id','from_asset_price','to_asset_price']:
+        return_val[col] = return_val[col].fillna(method='ffill')
+
+    # recalc missing fields
+    return_val.from_amount_native = return_val.from_amount_usd / return_val.from_asset_price
+    return_val.to_amount_native = return_val.to_amount_usd / return_val.to_asset_price
+
+    return_val = standardise_types(return_val)
+    # return_val.info()
+
+    return return_val
+
+
+if __name__ == "__main__":
+
+    # import time
+    # start = time.time()
+    # out = interp_liquidity_depth()
+
+    # ic(out.groupby(['is_interpolated']).count())
+    start = 0.01
+    end = 0.05
+    increment = 0.0025
+    target_price_impact = [i / 10000 for i in range(int(start * 10000), int(end * 10000) + 1, int(increment * 10000))]
+
+    g = pd.read_pickle("g.pkl")
+    g = g.loc[g.market_key == 'polygon_matic']
+    ic(g)
+    
+    g['new_from_amount'] = g.apply(lambda x: np.interp(target_price_impact, x.price_impact, x.from_amount_usd), axis=1)
+
+    # end = time.time()
+    # elapsed = end - start
+    # ic(elapsed)
