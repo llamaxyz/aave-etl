@@ -164,7 +164,7 @@ resource_defs = {
                 "dataset": "protocol_data_lake",
                 "service_account_creds": creds_env_var,
                 "service_account_file" : creds_file,
-                "use_service_account_file": True,
+                "use_service_account_file": False,
                 "append_only": True,
             },
         ),
