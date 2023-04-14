@@ -289,7 +289,7 @@ financials_root_job = define_asset_job(
 # these assets use a different schedule and aren't partitioned
 liquidity_depth_job = define_asset_job(
     name='liquidity_depth_job',
-    selection=AssetSelection.keys(*liquidity_depth_assets),
+    selection=AssetSelection.keys(*liquidity_depth_assets, 'liquidity_depth_lsd'),
 )
 
 
