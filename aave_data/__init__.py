@@ -285,8 +285,8 @@ daily_partitioned_job = define_asset_job(
     partitions_def=DailyPartitionsDefinition(start_date='2022-02-26')
 )
 
-chain_day_partioned_job = define_asset_job(
-    name='chain_day_partioned',
+chain_day_partitioned_job = define_asset_job(
+    name='chain_day_partitioned',
     selection=AssetSelection.keys(*chain_day_partitioned_assets),
     partitions_def=chain_day_multipartition
 )
@@ -401,6 +401,13 @@ liquidity_depth_schedule = ScheduleDefinition(
     execution_timezone='UTC',
     name="liquidity_depth_schedule"
 )
+
+chain_day_partitioned_schedule = build_schedule_from_partitioned_job(
+    job=chain_day_partitioned_job,
+    hour_of_day=2,
+    minute_of_hour=15,
+    name="chain_day_partitioned_schedule",
+)
 ####################################################
 # Sensor Code - not working pending sensor performance improvements
 ############################################
@@ -448,6 +455,7 @@ defs = Definitions(
           data_lake_partitioned_job,
           warehouse_datamart_job,
           daily_partitioned_job,
+          chain_day_partitioned_job,
           ],
     schedules = [
         financials_root_schedule,
@@ -455,7 +463,8 @@ defs = Definitions(
         data_lake_unpartitioned_schedule,
         data_lake_partitioned_schedule,
         daily_partitioned_schedule,
-        liquidity_depth_schedule
+        liquidity_depth_schedule,
+        chain_day_partitioned_schedule
         ],
     sensors=[financials_data_lake_sensor, financials_warehouse_sensor, dbt_sensor, minimal_sensor],
     resources=resource_defs[dagster_deployment],
