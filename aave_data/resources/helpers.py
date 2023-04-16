@@ -1112,9 +1112,72 @@ def get_aave_oracle_price(
 
     return multicall_output['oracle_price'] / multicall_output['base_currency_unit']
 
-# def one_inch_price_thing(
 
-# )
+def get_balancer_bpt_data(
+        chain: str,
+        bpt_address: str,
+        decimals: int,
+        block_height: Optional[int] = None,
+) -> dict:
+    """
+    Gets the rate and actualSupply data for a Balancer BPT token
+
+    Uses multicall to get the data in a single RPC call.
+
+    Args:
+        chain: chain of the BPT token
+        bpt_address: address of the BPT token
+        decimals: number of decimals of the BPT token
+        block_height: block height of the data (optional, defaults to latest)
+    """
+
+    def _convert_to_float(x):
+        return x / 10 ** decimals
+
+    # setup the Web3 connection
+    w3 = Web3(Web3.HTTPProvider(CONFIG_CHAINS[chain]['web3_rpc_url']))
+
+    # check if the contract exists
+    # Get the contract bytecode at the specified block height
+    contract_bytecode = w3.eth.get_code(Web3.to_checksum_address(bpt_address), block_identifier=block_height)
+
+    # Check if the contract exists at the specified block height
+    if contract_bytecode != b'' and contract_bytecode != '0x':  
+
+        # set up the multiple call objects (one for each address)
+        calls = [
+            Call(bpt_address, ['getRate()(uint256)'], [['rate', _convert_to_float]]),
+            Call(bpt_address, ['getActualSupply()(uint256)'], [['actual_supply', _convert_to_float]]),
+        ]
+
+        # configure the mulitcall object
+        if block_height is None:
+            multi = Multicall(calls, _w3 = w3)
+        else:
+            multi = Multicall(calls, _w3 = w3, block_id = block_height)
+
+        # exponential backoff retries on the function call to deal with transient RPC errors
+        i = 0
+        delay = INITIAL_RETRY
+        while True:
+            try:
+                multi_output = multi()
+                break
+            except Exception as e:
+                i += 1
+                if i > MAX_RETRIES:
+                    raise ValueError(f"RPC error count {i}, last error {str(e)}.  Bailing out.")
+                rand_delay = randint(0, 250) / 1000
+                sleep(delay + rand_delay)
+                delay *= 2
+                print(f"Request Error {str(e)}, retry count {i}")
+
+    else:
+        multi_output =  {"actual_supply": None, "rate": None}
+    
+    return multi_output
+    
+        
         
 if __name__ == "__main__":
 
@@ -1122,9 +1185,10 @@ if __name__ == "__main__":
     # out = get_quote_from_1inch(137, '0x3A58a54C066FdC0f2D55FC9C89F0415C92eBf3C4', 18, '0x3A58a54C066FdC0f2D55FC9C89F0415C92eBf3C4', 18, 10000000)
     # out = get_quote_from_1inch(1, '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', 18, '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', 18, 1)
     # ic(out)
-    out = get_aave_oracle_price('ethereum_v3', '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', 16902116)
+    # out = get_aave_oracle_price('ethereum_v3', '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', 16902116)
+    # ic(out)
+    out = get_balancer_bpt_data('ethereum', '0x9001cbbd96f54a658ff4e6e65ab564ded76a5431', 18, 16992952)
     ic(out)
-
 
     # out = get_v3_incentives_data('aave_rwa', 'ethereum', 16902116)
     # smol = out.drop(columns=['incentive_controller_address','reward_oracle_address','reward_token_address'])

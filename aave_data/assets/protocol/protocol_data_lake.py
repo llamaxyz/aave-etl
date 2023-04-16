@@ -17,7 +17,10 @@ from dagster import (AssetIn,  # SourceAsset,; Output,
                      IdentityPartitionMapping,
                      FreshnessPolicy,
                      MultiPartitionKey,
-                     build_op_context
+                     build_op_context,
+                     MultiPartitionMapping,
+                     DimensionPartitionMapping,
+                     StaticPartitionMapping
 )
 from icecream import ic
 # from subgrounds.subgrounds import Subgrounds
@@ -39,6 +42,7 @@ from aave_data.resources.helpers import (
     get_quote_from_1inch,
     get_quote_from_1inch_async,
     get_aave_oracle_price,
+    get_balancer_bpt_data,
 )
 
 
@@ -54,6 +58,36 @@ from aave_data.assets.financials.data_lake import (
 
 
 DAILY_PARTITION_START_DATE = '2023-01-01',
+
+chain_day_multipartition = MultiPartitionsDefinition(
+    {
+        "date": DailyPartitionsDefinition(start_date='2023-04-06'),
+        "chain": StaticPartitionsDefinition(list(BALANCER_BPT_TOKENS.keys())),
+    }
+)
+
+market_chain_multipartiton_mapping = MultiPartitionMapping(
+    {   
+        "date": DimensionPartitionMapping(
+            dimension_name='date',
+            partition_mapping=IdentityPartitionMapping()
+        ),
+        "market": DimensionPartitionMapping(
+            dimension_name='chain',
+            partition_mapping=StaticPartitionMapping(
+                {
+                'ethereum_v3': 'ethereum',
+                'polygon_v3': 'polygon',
+                # 'harmony_v3': 'harmony',
+                # 'fantom_v3': 'fantom',
+                # 'avax_v3': 'avalanche',
+                'arbitrum_v3': 'arbitrum',
+                'optimism_v3': 'optimism',
+                }
+            )
+        )
+    }
+)
 
 @asset(
     partitions_def=market_day_multipartition,
@@ -1028,14 +1062,101 @@ def liquidity_depth_raw(context):
 
     return output
 
+@asset(
+    partitions_def=chain_day_multipartition,
+    compute_kind="python",
+    code_version="1",
+    io_manager_key = 'protocol_data_lake_io_manager',
+    ins={
+        "block_numbers_by_day": AssetIn(key_prefix="financials_data_lake", partition_mapping=market_chain_multipartiton_mapping)
+    }
+)
+def balancer_bpt_data_by_day(
+    context,
+    block_numbers_by_day: pd.DataFrame,
+) -> pd.DataFrame:
+    """
+    Table of the each token in a market with configuration and protocol data
+    Data is retrieved on-chain using the Aave Protocol Data Provider (or equivalent)
+
+    Args:
+        context: dagster context object
+        market_tokens_by_day: the output of market_tokens_by_day for a given market
+
+    Returns:
+        A dataframe market config & protocol data for each token in a market
+
+    """
+    context.log.info(f"{context.partition_key}")
+    # chain, date = context.partition_key.split("|")
+    chain = context.partition_key.keys_by_dimension['chain']
+    date = context.partition_key.keys_by_dimension['date']
+    partition_datetime = datetime.strptime(date, '%Y-%m-%d')
+    context.log.info(f"market: {chain}")
+    context.log.info(f"date: {date}")
+
+    # get the blocks for the day
+    block_height = int(block_numbers_by_day.block_height.values[0])
+
+    bal_bpt_data = pd.DataFrame()
+    for bpt in BALANCER_BPT_TOKENS[chain]:
+        bpt_data = get_balancer_bpt_data(chain, bpt['pool'], bpt['decimals'], block_height)
+        if bpt_data['rate'] is not None:
+            bpt_row = pd.DataFrame(bpt, index=[0])
+            bpt_data_df = pd.DataFrame(bpt_data, index=[0])
+            bpt_row = pd.concat([bpt_row, bpt_data_df], axis=1)
+            bal_bpt_data = pd.concat([bal_bpt_data, bpt_row], axis=0).reset_index(drop=True)
+    
+    if not bal_bpt_data.empty:
+        bal_bpt_data['block_day'] = partition_datetime
+        bal_bpt_data['block_height'] = block_height
+        bal_bpt_data['chain'] = chain
+        bal_bpt_data = standardise_types(bal_bpt_data)
+    
+    context.add_output_metadata(
+        {
+            "num_records": len(bal_bpt_data),
+            "preview": MetadataValue.md(bal_bpt_data.head().to_markdown()),
+        }
+    )
+
+    return bal_bpt_data
+
+
+def bal_dev():
+    
+    block_height = 17058323
+    chain = "ethereum"
+    date = '2023-04-07'
+    partition_datetime = datetime.strptime(date, '%Y-%m-%d')
+    
+    bal_bpt_data = pd.DataFrame()
+    for bpt in BALANCER_BPT_TOKENS[chain]:
+        bpt_data = get_balancer_bpt_data(chain, bpt['pool'], bpt['decimals'], block_height)
+        bpt_row = pd.DataFrame(bpt, index=[0])
+        bpt_data_df = pd.DataFrame(bpt_data, index=[0])
+        bpt_row = pd.concat([bpt_row, bpt_data_df], axis=1)
+        bal_bpt_data = pd.concat([bal_bpt_data, bpt_row], axis=0).reset_index(drop=True)
+    
+    bal_bpt_data['date'] = partition_datetime
+    bal_bpt_data['block_height'] = block_height
+    bal_bpt_data['chain'] = chain
+    bal_bpt_data = standardise_types(bal_bpt_data)
+    
+    
+
+    return bal_bpt_data
+
+
 
 
 if __name__ == "__main__":
 
-    import time
-    start = time.time()
-    out = liquidity_depth_raw()
-    end = time.time()
-    elapsed = end - start
-    ic(elapsed)
+    # import time
+    # start = time.time()
+    # out = liquidity_depth_raw()
+    # end = time.time()
+    # elapsed = end - start
+    # ic(elapsed)
     
+    ic(bal_dev())

@@ -414,24 +414,80 @@ def liquidity_depth(context, liquidity_depth_raw):
 
     return return_val
 
+@asset(
+    compute_kind="python",
+    code_version="1",
+    io_manager_key = 'data_warehouse_io_manager',
+    ins={
+        "balancer_bpt_data_by_day": AssetIn(key_prefix="protocol_data_lake"),
+        "token_prices_by_day": AssetIn(key_prefix="warehouse"),
+    }
+)
+def balancer_bpt_by_day(
+    context,
+    balancer_bpt_data_by_day,
+    token_prices_by_day
+):
+    """
+    Joins the balancer BPT data with the token prices to get 
+    the USD price of the BPT token and the pool TVL
+
+    Args:
+        context (ExecutionContext): Dagster execution context
+        balancer_bpt_data_by_day (DataFrame): Balancer BPT data
+        token_prices_by_day (DataFrame): Token prices
+
+    Returns:
+        DataFrame: Balancer BPT data with USD price of BPT and pool TVL
+    """
+
+    # grab the balancer bpt data
+    bpt = balancer_bpt_data_by_day
+
+    # grab the token prices
+    prices = token_prices_by_day.rename(columns={'symbol':'reserve_symbol'})
+
+    # merge the prices into the bpt data
+    bpt = bpt.merge(
+        prices[['chain','block_day','reserve','reserve_symbol','usd_price']],
+        how='left',
+        left_on=['chain','block_day','price_token','price_symbol'],
+        right_on=['chain','block_day','reserve','reserve_symbol']
+        )
+    bpt.rename(columns={'usd_price':'underlying_asset_price'}, inplace=True)
+    # set the missing USD denominated price to 1
+    bpt.underlying_asset_price = bpt.underlying_asset_price.fillna(1)
+
+    # calc the USD value of the BPT
+    bpt['bpt_usd_price'] = bpt.rate * bpt.underlying_asset_price
+
+    # calc the pool TVL
+    bpt['pool_tvl_usd'] = bpt.bpt_usd_price * bpt.actual_supply
+
+    bpt.drop(columns=['reserve','reserve_symbol'], inplace=True)
+
+    bpt = standardise_types(bpt)
+
+    return bpt
 
 if __name__ == "__main__":
 
+    pass
     # import time
     # start = time.time()
     # out = interp_liquidity_depth()
 
     # ic(out.groupby(['is_interpolated']).count())
-    start = 0.01
-    end = 0.05
-    increment = 0.0025
-    target_price_impact = [i / 10000 for i in range(int(start * 10000), int(end * 10000) + 1, int(increment * 10000))]
+    # start = 0.01
+    # end = 0.05
+    # increment = 0.0025
+    # target_price_impact = [i / 10000 for i in range(int(start * 10000), int(end * 10000) + 1, int(increment * 10000))]
 
-    g = pd.read_pickle("g.pkl")
-    g = g.loc[g.market_key == 'polygon_matic']
-    ic(g)
+    # g = pd.read_pickle("g.pkl")
+    # g = g.loc[g.market_key == 'polygon_matic']
+    # ic(g)
     
-    g['new_from_amount'] = g.apply(lambda x: np.interp(target_price_impact, x.price_impact, x.from_amount_usd), axis=1)
+    # g['new_from_amount'] = g.apply(lambda x: np.interp(target_price_impact, x.price_impact, x.from_amount_usd), axis=1)
 
     # end = time.time()
     # elapsed = end - start

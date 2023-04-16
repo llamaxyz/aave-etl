@@ -23,7 +23,8 @@ from aave_data.assets.protocol import protocol_data_lake, protocol_data_warehous
 from aave_data.assets.financials.data_lake import market_day_multipartition
 from aave_data.resources.bigquery_io_manager import bigquery_io_manager
 from aave_data.resources.financials_config import FINANCIAL_PARTITION_START_DATE
-from aave_data.assets.protocol.protocol_data_lake import DAILY_PARTITION_START_DATE
+from aave_data.assets.protocol.protocol_data_lake import DAILY_PARTITION_START_DATE, chain_day_multipartition
+
 
 
 from dagster_gcp.gcs.io_manager import gcs_pickle_io_manager
@@ -250,6 +251,10 @@ liquidity_depth_assets = [
     'warehouse/liquidity_depth',
 ]
 
+chain_day_partitioned_assets = [
+    'protocol_data_lake/balancer_bpt_data_by_day',
+]
+
 data_lake_partitioned_job = define_asset_job(
     name='data_lake_partitioned',
     selection= (
@@ -257,6 +262,7 @@ data_lake_partitioned_job = define_asset_job(
             - AssetSelection.keys(*data_lake_unpartitioned_assets)
             - AssetSelection.keys(*daily_partitioned_assets)
             - AssetSelection.keys(*liquidity_depth_assets)
+            - AssetSelection.keys(*chain_day_partitioned_assets)
     ),
     partitions_def=market_day_multipartition
 )
@@ -277,6 +283,12 @@ daily_partitioned_job = define_asset_job(
     name='daily_partitioned',
     selection=AssetSelection.keys(*daily_partitioned_assets),
     partitions_def=DailyPartitionsDefinition(start_date='2022-02-26')
+)
+
+chain_day_partioned_job = define_asset_job(
+    name='chain_day_partioned',
+    selection=AssetSelection.keys(*chain_day_partitioned_assets),
+    partitions_def=chain_day_multipartition
 )
 
 # Updates block_numbers_by_day and thus triggers all downstream jobs via the reconciliation sensor

@@ -22,6 +22,7 @@ from aave_data.resources.helpers import (
                             get_quote_from_1inch,
                             get_aave_oracle_price,
                             get_quote_from_1inch_async,
+                            get_balancer_bpt_data
                               )
  # pylint: enable=import-error
 
@@ -705,6 +706,25 @@ def test_get_aave_oracle_price():
     assert type(result) == float
     assert result == 1758.82507
 
+def test_get_balancer_bpt_data():
+    """
+    Tests the get_balancer_bpt_data() helper function
+    
+    Calls a balancer pool at a known block
+
+    """
+    # check known data
+    result = get_balancer_bpt_data('polygon', '0xb371aA09F5a110AB69b39A84B5469d29f9b22B76', 18, 41588560)
+
+    assert type(result) == dict
+    assert result == {'actual_supply': 39.41060936959508, 'rate': 1.0000269779494702}
+
+    # check contract not deployed at block height
+    result = get_balancer_bpt_data('ethereum', '0x9001cbbd96f54a658ff4e6e65ab564ded76a5431', 18, 16992952)
+
+    assert type(result) == dict
+    assert result == {"actual_supply": None, "rate": None}
+
 if __name__ == "__main__":
     # test_get_market_tokens_at_block_messari()
     # test_get_market_tokens_at_block_aave()
@@ -715,5 +735,6 @@ if __name__ == "__main__":
     # test_get_scaled_balance_of()
     # test_get_token_transfers_from_alchemy()
     # test_get_raw_reserve_data()
-    test_get_quote_from_1inch()
+    # test_get_quote_from_1inch()
     # test_get_aave_oracle_price()
+    test_get_balancer_bpt_data()

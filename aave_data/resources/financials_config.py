@@ -618,6 +618,120 @@ CONFIG_1INCH = {
     },
 }
 
+BALANCER_BPT_TOKENS ={
+   "arbitrum":
+      [
+         {
+            "pool":"0x5a7f39435fd9c381e4932fa2047c9a5136a5e3e7",
+            "symbol":"wstETH-bb-a-WETH-BPT",
+            "name":"Balancer wstETH-Boosted Aave WETH StablePool",
+            "decimals":18,
+            "denom":"ETH",
+            "price_token":"0x82af49447d8a07e3bd95bd0d56f35241523fbab1",
+            "price_symbol":"WETH"
+         },
+         {
+            "pool":"0xEE02583596AEE94ccCB7e8ccd3921d955f17982A",
+            "symbol":"bb-a-USD",
+            "name":"Balancer Aave v3 Boosted StablePool",
+            "decimals":18,
+            "denom":"USD",
+            "price_token": None,
+            "price_symbol":"USD"
+         },
+         {
+            "pool":"0xCba9Ff45cfB9cE238AfDE32b0148Eb82CbE63562",
+            "symbol":"rETH-bb-a-WETH-BPT",
+            "name":"Balancer rETH-Boosted Aave WETH StablePool",
+            "decimals":18,
+            "denom":"ETH",
+            "price_token":"0x82af49447d8a07e3bd95bd0d56f35241523fbab1",
+            "price_symbol":"WETH"
+         }
+      ],
+   "ethereum":
+      [
+         {
+            "pool":"0x9001cbbd96f54a658ff4e6e65ab564ded76a5431",
+            "symbol":"cbETH-bb-a-WETH-BPT",
+            "name":"Balancer cbETH-Boosted Aave WETH StablePool",
+            "decimals":18,
+            "denom":"ETH",
+            "price_token":"0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+            "price_symbol":"WETH"
+         },
+         {
+            "pool":"0xe0fcbf4d98f0ad982db260f86cf28b49845403c5",
+            "symbol":"wstETH-bb-a-WETH-BPT",
+            "name":"Balancer Boosted Aave WETH StablePool",
+            "decimals":18,
+            "denom":"ETH",
+            "price_token":"0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+            "price_symbol":"WETH"
+         },
+        {
+            "pool":"0xfeBb0bbf162E64fb9D0dfe186E517d84C395f016",
+            "symbol":"bb-a-USD",
+            "name":"Balancer Aave v3 Boosted StablePool",
+            "decimals":18,
+            "denom":"USD",
+            "price_token":None,
+            "price_symbol":"USD"
+         },
+      ],
+   "polygon":
+      [
+         {
+            "pool":"0x4a77ef015ddcd972fd9ba2c7d5d658689d090f1a",
+            "symbol":"wstETH-bb-a-WETH-BPT",
+            "name":"Balancer wstETH-Boosted Aave WETH StablePool",
+            "decimals":18,
+            "denom":"ETH",
+            "price_token":"0x7ceb23fd6bc0add59e62ac25578270cff1b9f619",
+            "price_symbol":"WETH"
+         },
+         {
+            "pool":"0xb371aA09F5a110AB69b39A84B5469d29f9b22B76",
+            "symbol":"bb-am-USD",
+            "name":"Balancer Aave v3 Boosted StablePool",
+            "decimals":18,
+            "denom":"USD",
+            "price_token": None,
+            "price_symbol":"USD"
+         },
+         {
+            "pool":"0xe78b25c06db117fdf8f98583cdaaa6c92b79e917",
+            "symbol":"MaticX-bb-a-WMATIC-BPT",
+            "name":"Balancer MaticX Boosted Aave WMATIC StablePool",
+            "decimals":18,
+            "denom":"MATIC",
+            "price_token":"0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270",
+            "price_symbol":"WMATIC"
+         },
+         {
+            "pool":"0x216690738aac4aa0c4770253ca26a28f0115c595",
+            "symbol":"stMATIC-bb-a-WMATIC-BPT",
+            "name":"Balancer stMATIC-Boosted Aave WMATIC StablePool",
+            "decimals":18,
+            "denom":"MATIC",
+            "price_token":"0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270",
+            "price_symbol":"WMATIC"
+         }
+      ],
+   "optimism":
+      [
+         {
+            "pool":"not yet",
+            "symbol":"not yet",
+            "name":"not yet",
+            "decimals":18,
+            "denom":"ETH",
+            "price_token":"0x4200000000000000000000000000000000000006",
+            "price_symbol":"WETH"
+         }
+      ],
+}
+
 if __name__ == "__main__":
     
     # print(list(CONFIG_TOKENS.keys()))
