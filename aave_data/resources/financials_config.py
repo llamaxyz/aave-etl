@@ -720,15 +720,15 @@ BALANCER_BPT_TOKENS ={
       ],
    "optimism":
       [
-         {
-            "pool":"not yet",
-            "symbol":"not yet",
-            "name":"not yet",
-            "decimals":18,
-            "denom":"ETH",
-            "price_token":"0x4200000000000000000000000000000000000006",
-            "price_symbol":"WETH"
-         }
+        #  {
+        #     "pool":"not yet",
+        #     "symbol":"not yet",
+        #     "name":"not yet",
+        #     "decimals":18,
+        #     "denom":"ETH",
+        #     "price_token":"0x4200000000000000000000000000000000000006",
+        #     "price_symbol":"WETH"
+        #  }
       ],
 }
 
