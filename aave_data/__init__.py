@@ -240,6 +240,7 @@ data_lake_unpartitioned_assets = [
     'financials_data_lake/balance_group_lists',
     'financials_data_lake/streams_metadata',
     'financials_data_lake/streaming_payments_state',
+    'protocol_data_lake/coingecko_data_by_day',
     ]
 
 daily_partitioned_assets = [
@@ -255,6 +256,7 @@ liquidity_depth_assets = [
 chain_day_partitioned_assets = [
     'protocol_data_lake/balancer_bpt_data_by_day',
 ]
+
 
 data_lake_partitioned_job = define_asset_job(
     name='data_lake_partitioned',

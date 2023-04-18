@@ -755,6 +755,17 @@ CONFIG_SM_TOKENS = {
     },
 }
 
+COINGECKO_TOKENS = {
+    "stkABPT": {
+        "cg_id": "staked-aave-balancer-pool-token",
+        "symbol": "stkABPT",
+        "address": "0xa1116930326d21fb917d5a27f1e9943a9595fb47",
+        "chain": "ethereum",
+        "decimals": 18,
+        "start_date": "2022-01-01",
+    },
+}
+
 if __name__ == "__main__":
     
     # print(list(CONFIG_TOKENS.keys()))

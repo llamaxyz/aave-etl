@@ -1,6 +1,6 @@
 import json
 # import sys
-from datetime import datetime, timedelta, timezone  # , date, time, timedelta, timezone
+from datetime import datetime, timedelta, timezone # , date, time, timedelta, timezone
 import numpy as np
 import pandas as pd
 import requests
@@ -1145,6 +1145,13 @@ def safety_module_rpc(
     Gets Safety Module token data from RPC sources for a day
     and stores in a dataframe
 
+    Args:
+        context: dagster context object
+        blocks_by_day: the output of blocks_by_day 
+    
+    Returns:
+        A dataframe of Safety Module token data for a day
+
     """
     date = context.partition_key
     partition_datetime = datetime.strptime(date, '%Y-%m-%d').replace(tzinfo=timezone.utc)
@@ -1238,7 +1245,76 @@ def safety_module_rpc(
     )
     return return_val
 
+@asset(
+    compute_kind="python",
+    code_version="1",
+    io_manager_key = 'protocol_data_lake_io_manager',
+)
+def coingecko_data_by_day(context):
+    """
+    Gets the price data from coingecko for the tokens in 
+    the COINGECKO_TOKENS config object
+    
+    Gets all data from the given start_date through to the current date
 
+    Args:
+        context: dagster context object
+
+    Returns:
+        A dataframe of price data for the tokens in COINGECKO_TOKENS
+
+    """
+
+    # get the current date
+    today = datetime.now(tz=timezone.utc).date()
+    today_dt = datetime.combine(today, datetime.min.time()).replace(tzinfo=timezone.utc)
+    end_date = int(today_dt.timestamp())
+
+
+    # get the price data for each token
+    return_val = pd.DataFrame()
+    for token in COINGECKO_TOKENS.keys():
+        start_date = int(datetime.strptime(COINGECKO_TOKENS[token]['start_date'], '%Y-%m-%d').replace(tzinfo=timezone.utc).timestamp())
+        cg_id = COINGECKO_TOKENS[token]['cg_id']
+
+        cg_url = f"https://api.coingecko.com/api/v3/coins/{cg_id}/market_chart/range?vs_currency=usd&from={start_date}&to={end_date}"
+
+        # exponential backoff retries on the function call to deal with transient RPC errors
+        i = 0
+        delay = INITIAL_RETRY
+        while True:
+            try:
+                cg_return = requests.get(cg_url, timeout=300)
+                break
+            except Exception as e:
+                i += 1
+                if i > MAX_RETRIES:
+                    raise ValueError(f"RPC error count {i}, last error {str(e)}.  Bailing out.")
+                rand_delay = randint(0, 250) / 1000
+                sleep(delay + rand_delay)
+                delay *= 2
+                print(f"Request Error {str(e)}, retry count {i}")
+
+        cg_prices = pd.DataFrame(cg_return.json()['prices'], columns=['block_day', 'price_usd'])
+        cg_prices.block_day = pd.to_datetime(cg_prices.block_day, unit = 'ms')
+        cg_prices['symbol'] = token
+        cg_prices['cg_id'] = cg_id
+        cg_prices['address'] = COINGECKO_TOKENS[token]['address']
+        cg_prices['chain'] = COINGECKO_TOKENS[token]['chain']
+        cg_prices['decimals'] = COINGECKO_TOKENS[token]['decimals']
+
+        return_val = pd.concat([return_val, cg_prices], axis=0).reset_index(drop=True)
+
+    return_val = standardise_types(return_val)
+
+    context.add_output_metadata(
+        {
+            "num_records": len(return_val),
+            "preview": MetadataValue.md(return_val.head().to_markdown()),
+        }
+    )
+
+    return return_val
 
 if __name__ == "__main__":
 
@@ -1249,4 +1325,5 @@ if __name__ == "__main__":
     # elapsed = end - start
     # ic(elapsed)
     
-    ic(safety_module_rpc())
+    ic(coingecko_data_by_day())
+
