@@ -732,6 +732,29 @@ BALANCER_BPT_TOKENS ={
       ],
 }
 
+CONFIG_SM_TOKENS = {
+    "stkAAVE": {
+        "stk_token_address": "0x4da27a545c0c5b758a6ba100e3a049001de870f5",
+        "stk_token_symbol": "stkAAVE",
+        "decimals": 18,
+        "unstaked_token_address": "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
+        "unstaked_token_symbol": "AAVE",
+        "reward_token_address": "0x4da27a545c0c5b758a6ba100e3a049001de870f5",
+        "reward_token_symbol": "AAVE",
+        "bal_pool_address": None
+    },
+    "stkABPT": {
+        "stk_token_address": "0xa1116930326d21fb917d5a27f1e9943a9595fb47",
+        "stk_token_symbol": "stkABPT",
+        "decimals": 18,
+        "unstaked_token_address": "0x41a08648c3766f9f9d85598ff102a08f4ef84f84",
+        "unstaked_token_symbol": "ABPT",
+        "reward_token_address": "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
+        "reward_token_symbol": "AAVE",
+        "bal_pool_address": '0xc697051d1c6296c24ae3bcef39aca743861d9a81'
+    },
+}
+
 if __name__ == "__main__":
     
     # print(list(CONFIG_TOKENS.keys()))

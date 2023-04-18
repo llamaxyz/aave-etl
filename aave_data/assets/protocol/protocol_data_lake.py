@@ -46,8 +46,7 @@ from aave_data.resources.helpers import (
 )
 
 
-INITIAL_RETRY = 0.01 #seconds
-MAX_RETRIES = 10
+
 
 from aave_data.assets.financials.data_lake import (
     market_day_multipartition,
@@ -56,8 +55,11 @@ from aave_data.assets.financials.data_lake import (
     # aave_oracle_prices_by_day
 )
 
+INITIAL_RETRY = 0.01 #seconds
+MAX_RETRIES = 10
+DAILY_PARTITION_START_DATE=datetime(2022,2,26,0,0,0, tzinfo=timezone.utc)
 
-DAILY_PARTITION_START_DATE = '2023-01-01',
+daily_partitions_def = DailyPartitionsDefinition(start_date=DAILY_PARTITION_START_DATE)
 
 chain_day_multipartition = MultiPartitionsDefinition(
     {
@@ -711,6 +713,7 @@ def emode_config_by_day(
 
 
 @asset(
+    # partitions_def=DailyPartitionsDefinition(start_date=DAILY_PARTITION_START_DATE),
     partitions_def=DailyPartitionsDefinition(start_date='2022-02-26'),
     compute_kind="python",
     code_version="1",
@@ -1122,31 +1125,118 @@ def balancer_bpt_data_by_day(
 
     return bal_bpt_data
 
+# DAILY_PARTITION_START_DATE = '2022-02-26',
 
-def bal_dev():
-    
-    block_height = 17058323
+
+@asset(
+    partitions_def=daily_partitions_def,
+    compute_kind="python",
+    code_version="1",
+    io_manager_key = 'protocol_data_lake_io_manager',
+    ins={
+        "blocks_by_day": AssetIn(key_prefix="warehouse"),
+    }
+)
+def safety_module_rpc(
+    context,
+    blocks_by_day: pd.DataFrame,
+)-> pd.DataFrame:
+    """
+    Gets Safety Module token data from RPC sources for a day
+    and stores in a dataframe
+
+    """
+    date = context.partition_key
+    partition_datetime = datetime.strptime(date, '%Y-%m-%d').replace(tzinfo=timezone.utc)
+    context.log.info(f"date: {date}")
     chain = "ethereum"
-    date = '2023-04-07'
-    partition_datetime = datetime.strptime(date, '%Y-%m-%d')
-    
-    bal_bpt_data = pd.DataFrame()
-    for bpt in BALANCER_BPT_TOKENS[chain]:
-        bpt_data = get_balancer_bpt_data(chain, bpt['pool'], bpt['decimals'], block_height)
-        bpt_row = pd.DataFrame(bpt, index=[0])
-        bpt_data_df = pd.DataFrame(bpt_data, index=[0])
-        bpt_row = pd.concat([bpt_row, bpt_data_df], axis=1)
-        bal_bpt_data = pd.concat([bal_bpt_data, bpt_row], axis=0).reset_index(drop=True)
-    
-    bal_bpt_data['date'] = partition_datetime
-    bal_bpt_data['block_height'] = block_height
-    bal_bpt_data['chain'] = chain
-    bal_bpt_data = standardise_types(bal_bpt_data)
-    
-    
+    context.log.info(f"chain: {chain}")
+    block_height = int(blocks_by_day.loc[(blocks_by_day.chain == chain) & (blocks_by_day.block_day == partition_datetime)].block_height.values[0])
+    context.log.info(f"block_height: {block_height}")
 
-    return bal_bpt_data
+    # block_height = 17072018
+    # partition_datetime = datetime(2023, 4, 16, 0, 0, 0, tzinfo=timezone.utc)
 
+    # setup the Web3 connection
+    w3 = Web3(Web3.HTTPProvider(CONFIG_CHAINS[chain]['web3_rpc_url']))
+
+    return_val = pd.DataFrame()
+    for sm_token in CONFIG_SM_TOKENS.keys():
+        
+        stoken = CONFIG_SM_TOKENS[sm_token]['stk_token_address']
+        token = CONFIG_SM_TOKENS[sm_token]['unstaked_token_address']
+        reward_token = CONFIG_SM_TOKENS[sm_token]['reward_token_address']
+        decimals = CONFIG_SM_TOKENS[sm_token]['decimals']
+
+        # multicast return handlers are redefined due to decimals
+        def _convert_to_float(x):
+            return x / 10 ** decimals
+        
+        def _assets_handler(x):
+            return {
+                'emission_per_second' : _convert_to_float(x[0]),
+                'emission_per_day' : _convert_to_float(x[0]) * 86400,
+                'last_update_timestamp' : datetime.utcfromtimestamp(x[1]),
+                'index' : _convert_to_float(x[2]),
+            }
+
+        # set up the multiple call objects (one for each address)
+        calls = [
+            Call(stoken, ['totalSupply()(uint256)'], [['stk_token_supply', _convert_to_float]]),
+            Call(token, ['totalSupply()(uint256)'], [['unstaked_token_supply', _convert_to_float]]),
+            Call(stoken, ['assets(address)((uint128,uint128,uint256))', stoken], [['asset_config', _assets_handler]]),
+        ]
+
+        # configure the multicall object
+        if block_height is None:
+            multi = Multicall(calls, _w3 = w3)
+        else:
+            multi = Multicall(calls, _w3 = w3, block_id = block_height)
+
+        # exponential backoff retries on the function call to deal with transient RPC errors
+        i = 0
+        delay = INITIAL_RETRY
+        while True:
+            try:
+                multi_output = multi()
+                break
+            except Exception as e:
+                i += 1
+                if i > MAX_RETRIES:
+                    raise ValueError(f"RPC error count {i}, last error {str(e)}.  Bailing out.")
+                rand_delay = randint(0, 250) / 1000
+                sleep(delay + rand_delay)
+                delay *= 2
+                print(f"Request Error {str(e)}, retry count {i}")
+
+        # add the metadata to the output dataframe
+        if multi_output is not None:
+            output_row = pd.DataFrame(multi_output['asset_config'], index=[0])
+            output_row['stk_token_supply'] = multi_output['stk_token_supply']
+            output_row['unstaked_token_supply'] = multi_output['unstaked_token_supply']
+            output_row['block_day'] = partition_datetime
+            output_row['block_height'] = block_height
+            output_row['stk_token_address'] = stoken
+            output_row['stk_token_symbol'] = CONFIG_SM_TOKENS[sm_token]['stk_token_symbol']
+            output_row['unstaked_token_address'] = token
+            output_row['unstaked_token_symbol'] = CONFIG_SM_TOKENS[sm_token]['unstaked_token_symbol']
+            output_row['reward_token_address'] = reward_token
+            output_row['reward_token_symbol'] = CONFIG_SM_TOKENS[sm_token]['reward_token_symbol']
+
+            output_row.drop(columns=['index'], inplace=True)
+        else:
+            output_row = pd.DataFrame()
+        
+        return_val = pd.concat([return_val, output_row], axis=0).reset_index(drop=True)
+        return_val = standardise_types(return_val)
+
+    context.add_output_metadata(
+        {
+            "num_records": len(return_val),
+            "preview": MetadataValue.md(return_val.head().to_markdown()),
+        }
+    )
+    return return_val
 
 
 
@@ -1159,4 +1249,4 @@ if __name__ == "__main__":
     # elapsed = end - start
     # ic(elapsed)
     
-    ic(bal_dev())
+    ic(safety_module_rpc())

@@ -23,7 +23,7 @@ from aave_data.assets.protocol import protocol_data_lake, protocol_data_warehous
 from aave_data.assets.financials.data_lake import market_day_multipartition
 from aave_data.resources.bigquery_io_manager import bigquery_io_manager
 from aave_data.resources.financials_config import FINANCIAL_PARTITION_START_DATE
-from aave_data.assets.protocol.protocol_data_lake import DAILY_PARTITION_START_DATE, chain_day_multipartition
+from aave_data.assets.protocol.protocol_data_lake import daily_partitions_def, chain_day_multipartition
 
 
 
@@ -244,6 +244,7 @@ data_lake_unpartitioned_assets = [
 
 daily_partitioned_assets = [
     'protocol_data_lake/matic_lsd_token_supply_by_day',
+    'protocol_data_lake/safety_module_rpc',
     ]
 
 liquidity_depth_assets = [
@@ -282,7 +283,7 @@ warehouse_datamart_job = define_asset_job(
 daily_partitioned_job = define_asset_job(
     name='daily_partitioned',
     selection=AssetSelection.keys(*daily_partitioned_assets),
-    partitions_def=DailyPartitionsDefinition(start_date='2022-02-26')
+    partitions_def=daily_partitions_def
 )
 
 chain_day_partitioned_job = define_asset_job(
