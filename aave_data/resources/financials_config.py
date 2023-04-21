@@ -739,7 +739,7 @@ CONFIG_SM_TOKENS = {
         "decimals": 18,
         "unstaked_token_address": "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
         "unstaked_token_symbol": "AAVE",
-        "reward_token_address": "0x4da27a545c0c5b758a6ba100e3a049001de870f5",
+        "reward_token_address": "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
         "reward_token_symbol": "AAVE",
         "bal_pool_address": None
     },
