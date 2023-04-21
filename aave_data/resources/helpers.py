@@ -1177,18 +1177,76 @@ def get_balancer_bpt_data(
     
     return multi_output
     
+def get_token_holders_from_covalent(
+        chain_id: int,
+        block_height: int,
+        token_address: str,
+) -> pd.DataFrame:
+    """Queries the Covalent API
+        to get events by topic_hash for a given address
+    Args:
+        chain_id:  chain id of the network
+        block_height:  block height to query
+        token_address:  str address of contract to get token holders for
+    Returns:
+        pd.DataFrame of events.  Raw blockchain ints converted to floats with decimals.
+    """
+    page = 0
+    has_more = True
+
+    token_holders = pd.DataFrame()
+    while has_more:
+        covalent_api_url = f'https://api.covalenthq.com/v1/{chain_id}/tokens/{token_address}/token_holders_v2/?'\
+                            + f'block-height={block_height}'\
+                            + f'&page-number={page}&key={COVALENT_KEY}'
+        
+        # ic(covalent_api_url)
+
+        #pylint: disable=E1137,E1101
+        i = 0
+        delay = INITIAL_RETRY
+        while True:
+            response = requests.get(covalent_api_url, timeout=300)#, auth=(API_KEY, API_KEY))
+            if response.status_code == requests.codes.ok:
+                break
+            i += 1
+            if i > MAX_RETRIES:
+                raise ValueError(f"Covalent token balances API error count {i}, last error {response.status_code} {response.reason}.  Bailing out.")
+            rand_delay = randint(0, 250) / 1000
+            sleep(delay + rand_delay)
+            delay *= 2
+            print(f"Request Error {response.status_code} {response.reason}, retry count {i}")
+        #pylint: enable=E1137,E1101
+
+        api_response_df = pd.DataFrame(response.json()['data']['items'])
+        token_holders = pd.concat([token_holders, api_response_df], ignore_index=True)
+
+        has_more = response.json()['data']['pagination']['has_more']
+        page += 1
+        # if page > 3:
+        #     has_more = False
+
+    token_holders.total_supply = token_holders.total_supply.astype(float) / 10 ** token_holders.contract_decimals
+    token_holders.balance = token_holders.balance.astype(float) / 10 ** token_holders.contract_decimals
+
+    token_holders = standardise_types(token_holders)
+
+    return token_holders
         
         
 if __name__ == "__main__":
 
     pass
+    out = get_token_holders_from_covalent(1, 16902116, '0xa1116930326d21fb917d5a27f1e9943a9595fb47')
+    ic(out)
+
     # out = get_quote_from_1inch(137, '0x3A58a54C066FdC0f2D55FC9C89F0415C92eBf3C4', 18, '0x3A58a54C066FdC0f2D55FC9C89F0415C92eBf3C4', 18, 10000000)
     # out = get_quote_from_1inch(1, '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', 18, '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', 18, 1)
     # ic(out)
     # out = get_aave_oracle_price('ethereum_v3', '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', 16902116)
+    # # ic(out)
+    # out = get_balancer_bpt_data('ethereum', '0x9001cbbd96f54a658ff4e6e65ab564ded76a5431', 18, 16992952)
     # ic(out)
-    out = get_balancer_bpt_data('ethereum', '0x9001cbbd96f54a658ff4e6e65ab564ded76a5431', 18, 16992952)
-    ic(out)
 
     # out = get_v3_incentives_data('aave_rwa', 'ethereum', 16902116)
     # smol = out.drop(columns=['incentive_controller_address','reward_oracle_address','reward_token_address'])
