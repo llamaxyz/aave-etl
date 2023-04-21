@@ -40,7 +40,7 @@ from {{ source('protocol_data_lake','safety_module_rpc') }} s
     s.unstaked_token_address = pu.reserve
   )
 --   left join protocol_data_lake.coingecko_data_by_day cg on (
-  left join {{ source('protocol_data_lake','coingecko_data_by_day') }} pr on (
+  left join {{ source('protocol_data_lake','coingecko_data_by_day') }} cg on (
     s.block_day = cg.block_day and
     s.stk_token_address = cg.address
   )
