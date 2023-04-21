@@ -393,7 +393,7 @@ warehouse_datamart_schedule = ScheduleDefinition(
 
 daily_partitioned_schedule = build_schedule_from_partitioned_job(
     job=daily_partitioned_job,
-    minute_of_hour=45,
+    minute_of_hour=15,
     hour_of_day=2,
     name="daily_partitioned_schedule",
 )
