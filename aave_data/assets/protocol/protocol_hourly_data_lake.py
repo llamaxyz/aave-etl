@@ -65,7 +65,7 @@ market_hour_multipartition = MultiPartitionsDefinition(
     compute_kind="python",
     #group_name='data_lake',
     code_version="1",
-    io_manager_key = 'data_lake_io_manager'
+    io_manager_key = 'protocol_data_lake_io_manager'
     # freshness_policy=FreshnessPolicy(maximum_lag_minutes=6*60),
 )
 def block_numbers_by_hour(context) -> pd.DataFrame:
