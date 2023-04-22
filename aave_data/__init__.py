@@ -386,14 +386,14 @@ data_lake_unpartitioned_schedule = ScheduleDefinition(
 
 warehouse_datamart_schedule = ScheduleDefinition(
     job = warehouse_datamart_job,
-    cron_schedule="30 2 * * *",
+    cron_schedule=["15 2 * * *", "30 2 * * *" ],
     execution_timezone='UTC',
     name="warehouse_datamart_schedule"
     )
 
 daily_partitioned_schedule = build_schedule_from_partitioned_job(
     job=daily_partitioned_job,
-    minute_of_hour=15,
+    minute_of_hour=25,
     hour_of_day=2,
     name="daily_partitioned_schedule",
 )
@@ -408,7 +408,7 @@ liquidity_depth_schedule = ScheduleDefinition(
 chain_day_partitioned_schedule = build_schedule_from_partitioned_job(
     job=chain_day_partitioned_job,
     hour_of_day=2,
-    minute_of_hour=15,
+    minute_of_hour=0,
     name="chain_day_partitioned_schedule",
 )
 ####################################################
