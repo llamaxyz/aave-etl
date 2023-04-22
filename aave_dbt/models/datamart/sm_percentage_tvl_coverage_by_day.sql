@@ -3,18 +3,9 @@
 with tvl as (
 select 
   block_day
-  , sum(tvl_usd) as tvl
--- from datamart.asset_tvl_by_day 
-from {{ ref('asset_tvl_by_day') }}
-where market in (
-  'ethereum_v1'
-  , 'ethereum_v2'
-  , 'ethereum_v3'
-  , 'aave_arc'
-  , 'avax_v2'
-  , 'polygon_v2'
-  , 'polygon_v3'
-)
+  , sum(tvl) as tvl
+-- from datamart.sm_covered_markets_tvl_by_day 
+from {{ ref('sm_covered_markets_tvl_by_day') }}
 group by block_day
 )
 
