@@ -19,7 +19,7 @@ from dagster import (
     build_schedule_from_partitioned_job
 )
 from aave_data.assets.financials import data_lake, data_warehouse
-from aave_data.assets.protocol import protocol_data_lake, protocol_data_warehouse
+from aave_data.assets.protocol import protocol_data_lake, protocol_data_warehouse, protocol_hourly_data_lake
 from aave_data.assets.financials.data_lake import market_day_multipartition
 from aave_data.resources.bigquery_io_manager import bigquery_io_manager
 from aave_data.resources.financials_config import FINANCIAL_PARTITION_START_DATE
@@ -216,6 +216,12 @@ protocol_data_lake_assets = load_assets_from_modules(
     group_name="protocol_data_lake"
 )
 
+protocol_hourly_data_lake_assets = load_assets_from_modules(
+    modules=[protocol_hourly_data_lake],
+    key_prefix="protocol_hourly_data_lake",
+    group_name="protocol_hourly_data_lake"
+)
+
 warehouse_assets = load_assets_from_modules(
     modules=[data_warehouse, protocol_data_warehouse],
     key_prefix="warehouse",
@@ -256,6 +262,7 @@ liquidity_depth_assets = [
 chain_day_partitioned_assets = [
     'protocol_data_lake/balancer_bpt_data_by_day',
 ]
+
 
 
 data_lake_partitioned_job = define_asset_job(
@@ -451,7 +458,7 @@ minimal_sensor = build_asset_reconciliation_sensor(
 
 
 defs = Definitions(
-    assets=[*financials_data_lake_assets, *protocol_data_lake_assets, *warehouse_assets, *dbt_assets],
+    assets=[*financials_data_lake_assets, *protocol_data_lake_assets, *protocol_hourly_data_lake_assets, *warehouse_assets, *dbt_assets],
     jobs=[
           financials_root_job,
           data_lake_unpartitioned_job,
