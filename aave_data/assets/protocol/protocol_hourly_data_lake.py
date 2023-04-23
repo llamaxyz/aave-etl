@@ -54,7 +54,7 @@ from aave_data.resources.helpers import (
 
 INITIAL_RETRY = 0.01 #seconds
 MAX_RETRIES = 10
-HOURLY_PARTITION_START_DATE=datetime(2023,4,1,0,0,0, tzinfo=timezone.utc)
+HOURLY_PARTITION_START_DATE=datetime(2023,4,15,0,0,0, tzinfo=timezone.utc)
 
 market_hour_multipartition = MultiPartitionsDefinition(
     {
