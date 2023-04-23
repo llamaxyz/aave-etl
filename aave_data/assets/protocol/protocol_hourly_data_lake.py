@@ -14,14 +14,18 @@ from dagster import (AssetIn,  # SourceAsset,; Output,
                      #PartitionMapping, PartitionsDefinition,
                      StaticPartitionsDefinition, asset, #op,
                      #LastPartitionMapping,
-                    #  IdentityPartitionMapping,
+                     IdentityPartitionMapping,
                     #  FreshnessPolicy,
                     #  MultiPartitionKey,
                     #  build_op_context,
-                    #  MultiPartitionMapping,
-                    #  DimensionPartitionMapping,
-                    #  StaticPartitionMapping,
-                     HourlyPartitionsDefinition
+                     MultiPartitionMapping,
+                     DimensionPartitionMapping,
+                     TimeWindowPartitionMapping,
+                     StaticPartitionMapping,
+                     HourlyPartitionsDefinition,
+                     LastPartitionMapping,
+                    #  AssetKey
+                    AutoMaterializePolicy
 )
 from icecream import ic
 # from subgrounds.subgrounds import Subgrounds
@@ -50,14 +54,29 @@ from aave_data.resources.helpers import (
 
 INITIAL_RETRY = 0.01 #seconds
 MAX_RETRIES = 10
-HOURLY_PARTITION_START_DATE=datetime(2023,4,15,0,0,0, tzinfo=timezone.utc)
+HOURLY_PARTITION_START_DATE=datetime(2023,4,1,0,0,0, tzinfo=timezone.utc)
 
 market_hour_multipartition = MultiPartitionsDefinition(
     {
-        "time": HourlyPartitionsDefinition(start_date=HOURLY_PARTITION_START_DATE),
+        "time": HourlyPartitionsDefinition(start_date=HOURLY_PARTITION_START_DATE, end_offset=1),
         "market": StaticPartitionsDefinition(['ethereum_v3','polygon_v3']),
     }
 )
+
+
+market_day_hour_multipartition_mapping = MultiPartitionMapping(
+    {   
+        "date": DimensionPartitionMapping(
+            dimension_name='time',
+            partition_mapping=LastPartitionMapping()
+        ),
+        "market": DimensionPartitionMapping(
+            dimension_name='market',
+            partition_mapping=IdentityPartitionMapping()
+        )
+    }
+)
+
 
 
 @asset(
@@ -134,3 +153,106 @@ def block_numbers_by_hour(context) -> pd.DataFrame:
         }
     )
     return return_val
+
+
+@asset(
+    partitions_def=market_hour_multipartition,
+    compute_kind="python",
+    #group_name='data_lake',
+    code_version="1",
+    io_manager_key = 'protocol_data_lake_io_manager',
+    # freshness_policy=FreshnessPolicy(maximum_lag_minutes=6*60),
+    # auto_materialize_policy=AutoMaterializePolicy.eager(), # not implemented with partition mapping
+    ins={
+        "block_numbers_by_hour": AssetIn(key_prefix="protocol_hourly_data_lake"),
+        "market_tokens_by_day": AssetIn(key_prefix="financials_data_lake", partition_mapping=market_day_hour_multipartition_mapping),
+    }
+)
+def protocol_data_by_hour(
+    context,
+    block_numbers_by_hour,
+    market_tokens_by_day,
+    # market_tokens_by_day_fallback
+    ):# -> pd.DataFrame:
+    """
+    Table of the each token in a market with configuration and protocol data
+    Data is retrieved on-chain using the Aave Protocol Data Provider (or equivalent)
+
+    Args:
+        context: dagster context object
+        market_tokens_by_day: the output of market_tokens_by_day for a given market
+
+    Returns:
+        A dataframe market config & protocol data for each token in a market
+    """
+
+    market = context.partition_key.keys_by_dimension['market']
+    time = context.partition_key.keys_by_dimension['time']
+    # date, market = context.partition_key.split("|")
+    partition_datetime = datetime.strptime(time, '%Y-%m-%d-%H:%M')
+    context.log.info(f"market: {market}")
+    context.log.info(f"time: {time}")
+
+    # ic(block_numbers_by_hour)
+    # ic(market_tokens_by_day)
+
+    protocol_data = pd.DataFrame()
+
+    if not market_tokens_by_day.empty:
+
+        # multicall is not supported on Harmony until block 24185753.  Don't fetch data before this block.
+        if (market == 'harmony_v3' and int(market_tokens_by_day.block_height.values[0]) < 24185753):
+            protocol_data = pd.DataFrame()
+        else:
+        
+            block_height = int(block_numbers_by_hour.block_height.values[0])
+            chain = CONFIG_MARKETS[market]["chain"]
+            
+            context.log.info(f"block_height: {block_height}")
+
+            # get the protocol data for each token in the market
+            for row in market_tokens_by_day.itertuples():
+                reserve = row.reserve
+                symbol = row.atoken_symbol
+                decimals = row.decimals
+                context.log.info(f"getting protocol data for {symbol} {reserve}")
+                protocol_row = pd.DataFrame(
+                    [
+                        {
+                            "block_hour": partition_datetime,
+                            "block_height": block_height,       
+                            "market": market,
+                            "reserve": reserve,
+                            "symbol": symbol,
+                        }
+                    ]
+                )
+                # get the raw data from on-chain
+                raw_reserve_data = get_raw_reserve_data(market, chain, reserve, decimals, block_height)
+
+                # convert the raw data to a dataframe
+                reserve_data = raw_reserve_to_dataframe(raw_reserve_data)
+
+                # add the metadata
+                protocol_row = pd.concat([protocol_row, reserve_data], axis=1)
+
+                # add the row to the return value dataframe
+                protocol_data = pd.concat([protocol_data, protocol_row], axis=0)
+        
+            # fix these values up here - more difficult to do in helper function
+            protocol_data.debt_ceiling = protocol_data.debt_ceiling / 10 ** protocol_data.debt_ceiling_decimals
+            protocol_data.debt_ceiling = protocol_data.debt_ceiling.astype(int)
+            protocol_data.liquidation_protocol_fee = protocol_data.liquidation_protocol_fee / 10000
+            protocol_data.liquidity_rate = protocol_data.liquidity_rate.astype(float)
+            protocol_data.variable_borrow_rate = protocol_data.variable_borrow_rate.astype(float)
+            protocol_data.stable_borrow_rate = protocol_data.stable_borrow_rate.astype(float)
+
+            protocol_data = standardise_types(protocol_data)
+
+    context.add_output_metadata(
+        {
+            "num_records": len(protocol_data),
+            "preview": MetadataValue.md(protocol_data.head().to_markdown()),
+        }
+    )
+

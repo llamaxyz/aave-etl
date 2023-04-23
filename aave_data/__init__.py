@@ -24,6 +24,7 @@ from aave_data.assets.financials.data_lake import market_day_multipartition
 from aave_data.resources.bigquery_io_manager import bigquery_io_manager
 from aave_data.resources.financials_config import FINANCIAL_PARTITION_START_DATE
 from aave_data.assets.protocol.protocol_data_lake import daily_partitions_def, chain_day_multipartition
+from aave_data.assets.protocol.protocol_hourly_data_lake import market_hour_multipartition, HOURLY_PARTITION_START_DATE
 
 
 
@@ -314,6 +315,13 @@ liquidity_depth_job = define_asset_job(
     selection=AssetSelection.keys(*liquidity_depth_assets, 'liquidity_depth_lsd'),
 )
 
+data_lake_hourly_partitioned_job = define_asset_job(
+    name='data_lake_hourly_partitioned',
+    selection= (
+            AssetSelection.groups('protocol_hourly_data_lake')
+    ),
+    partitions_def=market_hour_multipartition
+)
 
 ############################################
 # Schedules
@@ -415,8 +423,14 @@ liquidity_depth_schedule = ScheduleDefinition(
 chain_day_partitioned_schedule = build_schedule_from_partitioned_job(
     job=chain_day_partitioned_job,
     hour_of_day=2,
-    minute_of_hour=0,
+    minute_of_hour=25,
     name="chain_day_partitioned_schedule",
+)
+
+data_lake_hourly_partitioned_schedule = build_schedule_from_partitioned_job(
+    job=data_lake_hourly_partitioned_job,
+    minute_of_hour=10,
+    name="data_lake_hourly_partitioned_schedule",
 )
 ####################################################
 # Sensor Code - not working pending sensor performance improvements
@@ -466,6 +480,7 @@ defs = Definitions(
           warehouse_datamart_job,
           daily_partitioned_job,
           chain_day_partitioned_job,
+          data_lake_hourly_partitioned_job,
           ],
     schedules = [
         financials_root_schedule,
@@ -474,9 +489,10 @@ defs = Definitions(
         data_lake_partitioned_schedule,
         daily_partitioned_schedule,
         liquidity_depth_schedule,
-        chain_day_partitioned_schedule
+        chain_day_partitioned_schedule,
+        data_lake_hourly_partitioned_schedule,
         ],
-    sensors=[financials_data_lake_sensor, financials_warehouse_sensor, dbt_sensor, minimal_sensor],
+    # sensors=[financials_data_lake_sensor, financials_warehouse_sensor, dbt_sensor, minimal_sensor],
     resources=resource_defs[dagster_deployment],
 )
 
