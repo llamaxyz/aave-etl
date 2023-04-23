@@ -27,10 +27,10 @@ setup(
     name="aave_data",
     packages=find_packages(exclude=["quickstart_gcp_tests","aave_data_tests"]),
     install_requires=[
-        "dagster==1.2.6",
-        "dagster-gcp==0.18.6",
-        "dagster-cloud==1.2.6",
-        "dagster-dbt==0.18.6",
+        "dagster==1.3.1",
+        "dagster-gcp==0.19.1",
+        "dagster-cloud==1.3.1",
+        "dagster-dbt==0.19.1",
         "dbt-bigquery",
         "boto3",  # used by Dagster Cloud Serverless
         "pandas",
