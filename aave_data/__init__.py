@@ -267,6 +267,8 @@ chain_day_partitioned_assets = [
 datamart_hourly_assets = [
     'market_config_by_hour',
     'market_state_by_hour',
+    'market_config_by_time',
+    'market_state_by_time',
 ]
 
 
