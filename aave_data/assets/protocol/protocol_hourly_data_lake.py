@@ -233,11 +233,11 @@ def protocol_data_by_hour(
                 # convert the raw data to a dataframe
                 reserve_data = raw_reserve_to_dataframe(raw_reserve_data)
 
-                # add the metadata
-                protocol_row = pd.concat([protocol_row, reserve_data], axis=1)
-
-                # add the row to the return value dataframe
-                protocol_data = pd.concat([protocol_data, protocol_row], axis=0)
+                if not reserve_data.empty:
+                    # add the metadata
+                    protocol_row = pd.concat([protocol_row, reserve_data], axis=1)
+                    # add the row to the return value dataframe
+                    protocol_data = pd.concat([protocol_data, protocol_row], axis=0)
 
             if not protocol_data.empty:
                 # fix these values up here - more difficult to do in helper function
