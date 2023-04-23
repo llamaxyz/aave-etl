@@ -32,7 +32,7 @@ select
 -- from protocol_data_lake.protocol_data_by_hour p
 from {{ source('protocol_data_lake','protocol_data_by_hour')}} p
 --   left join protocol_data_lake.emode_config_by_day e on (
-  left join {{ source('protocol_data_lake','emode_config_by_day')}} e
+  left join {{ source('protocol_data_lake','emode_config_by_day')}} e on (
     date_trunc(p.block_hour, day) = e.block_day and
     p.market = e.market and 
     p.reserve_emode_category = e.reserve_emode_category
