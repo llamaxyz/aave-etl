@@ -173,7 +173,7 @@ def protocol_data_by_hour(
     block_numbers_by_hour,
     market_tokens_by_day,
     # market_tokens_by_day_fallback
-    ):# -> pd.DataFrame:
+    ) -> pd.DataFrame:
     """
     Table of the each token in a market with configuration and protocol data
     Data is retrieved on-chain using the Aave Protocol Data Provider (or equivalent)
@@ -255,4 +255,6 @@ def protocol_data_by_hour(
             "preview": MetadataValue.md(protocol_data.head().to_markdown()),
         }
     )
+
+    return protocol_data
 
