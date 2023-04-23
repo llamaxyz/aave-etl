@@ -264,6 +264,11 @@ chain_day_partitioned_assets = [
     'protocol_data_lake/balancer_bpt_data_by_day',
 ]
 
+datamart_hourly_assets = [
+    'market_config_by_hour',
+    'market_state_by_hour',
+]
+
 
 
 data_lake_partitioned_job = define_asset_job(
@@ -321,6 +326,13 @@ data_lake_hourly_partitioned_job = define_asset_job(
             AssetSelection.groups('protocol_hourly_data_lake')
     ),
     partitions_def=market_hour_multipartition
+)
+
+datamart_hourly_job = define_asset_job(
+    name='datamart_hourly',
+    selection= (
+            AssetSelection.keys(*datamart_hourly_assets)
+    ),
 )
 
 ############################################
@@ -432,6 +444,12 @@ data_lake_hourly_partitioned_schedule = build_schedule_from_partitioned_job(
     minute_of_hour=10,
     name="data_lake_hourly_partitioned_schedule",
 )
+
+datamart_hourly_schedule = build_schedule_from_partitioned_job(
+    job=datamart_hourly_job,
+    minute_of_hour=15,
+    name="datamart_hourly_schedule",
+)
 ####################################################
 # Sensor Code - not working pending sensor performance improvements
 ############################################
@@ -481,6 +499,7 @@ defs = Definitions(
           daily_partitioned_job,
           chain_day_partitioned_job,
           data_lake_hourly_partitioned_job,
+          datamart_hourly_job
           ],
     schedules = [
         financials_root_schedule,
@@ -491,6 +510,7 @@ defs = Definitions(
         liquidity_depth_schedule,
         chain_day_partitioned_schedule,
         data_lake_hourly_partitioned_schedule,
+        datamart_hourly_schedule,
         ],
     # sensors=[financials_data_lake_sensor, financials_warehouse_sensor, dbt_sensor, minimal_sensor],
     resources=resource_defs[dagster_deployment],

@@ -17,6 +17,7 @@ sources:
       - name: matic_lsd_token_supply_by_day
       - name: safety_module_rpc
       - name: coingecko_data_by_day
+      - name: protocol_data_by_hour
   - name: warehouse
     tables:
       - name: atoken_measures_by_day
