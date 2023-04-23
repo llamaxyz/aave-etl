@@ -445,9 +445,10 @@ data_lake_hourly_partitioned_schedule = build_schedule_from_partitioned_job(
     name="data_lake_hourly_partitioned_schedule",
 )
 
-datamart_hourly_schedule = build_schedule_from_partitioned_job(
+datamart_hourly_schedule = ScheduleDefinition(
     job=datamart_hourly_job,
-    minute_of_hour=15,
+    cron_schedule="15 * * * *",
+    execution_timezone='UTC',
     name="datamart_hourly_schedule",
 )
 ####################################################

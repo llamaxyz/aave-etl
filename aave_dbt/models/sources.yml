@@ -18,6 +18,7 @@ sources:
       - name: safety_module_rpc
       - name: coingecko_data_by_day
       - name: protocol_data_by_hour
+      - name: emode_config_by_day
   - name: warehouse
     tables:
       - name: atoken_measures_by_day
