@@ -853,7 +853,7 @@ def liquidity_depth_raw(context):
     Returns:
         A dataframe of the liquidity depth of the tokens at the time the function is called
     """
-    CONCURRENT_REQUESTS = 20
+    CONCURRENT_REQUESTS = 5
     
     # construct the ouput dataframe
     rows = []
