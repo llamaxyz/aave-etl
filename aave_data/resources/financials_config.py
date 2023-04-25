@@ -515,6 +515,17 @@ CONFIG_TOKENS = {
                 }
             }
         },
+    },
+    "arbitrum_v3": {
+        "arbitrum_v3_treasury": {
+            "address": "0x053d55f9b5af8694c503eb288a1b7e552f590710",
+            "tokens": {
+                "ARB": {
+                    "address": "0x912CE59144191C1204E64559FE8253a0e49E6548",
+                    "decimals": 18,
+                }
+            }
+        },
     }
 }
 
@@ -763,6 +774,14 @@ COINGECKO_TOKENS = {
         "chain": "ethereum",
         "decimals": 18,
         "start_date": "2022-01-01",
+    },
+    "ARB": {
+        "cg_id": "arbitrum",
+        "symbol": "ARB",
+        "address": "0xa1116930326d21fb917d5a27f1e9943a9595fb47",
+        "chain": "arbitrum",
+        "decimals": 18,
+        "start_date": "2023-03-26",
     },
 }
 
