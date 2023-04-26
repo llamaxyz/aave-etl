@@ -781,7 +781,7 @@ COINGECKO_TOKENS = {
         "address": "0xa1116930326d21fb917d5a27f1e9943a9595fb47",
         "chain": "arbitrum",
         "decimals": 18,
-        "start_date": "2023-03-26",
+        "start_date": "2023-01-20",
     },
 }
 
