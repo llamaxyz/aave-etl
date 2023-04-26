@@ -737,14 +737,18 @@ def get_raw_reserve_data(
     if (CONFIG_MARKETS[market]['version'] == 1) and (reserve == '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2'):
         reserve = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
 
-    # check if the reserve exists in the pool
-    tokens_check = Call(
-        data_provider, ['getReserveTokensAddresses(address)((address,address,address))', reserve],
-        [['reserve_tokens_addresses', None]]
-        ,_w3 = w3
-        ,block_id = block_height)()
+    # check if the reserve exists in the pool (skip for aave v1, all reserves are old enough)
+    if CONFIG_MARKETS[market]['version'] == 1:
+        check_address = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
+    else:
+        tokens_check = Call(
+            data_provider, ['getReserveTokensAddresses(address)((address,address,address))', reserve],
+            [['reserve_tokens_addresses', None]]
+            ,_w3 = w3
+            ,block_id = block_height)()
+        check_address = tokens_check['reserve_tokens_addresses'][0]
 
-    if tokens_check['reserve_tokens_addresses'][0] == '0x0000000000000000000000000000000000000000':
+    if check_address == '0x0000000000000000000000000000000000000000':
         multicall_output = dict()
     else:
 
@@ -857,7 +861,7 @@ def get_raw_reserve_data(
             Call(data_provider, ['getUnbackedMintCap(address)(uint256)', reserve], [['unbacked_mint_cap', None]]),
             Call(data_provider, ['getDebtCeiling(address)(uint256)', reserve], [['debt_ceiling', None]]),
             Call(data_provider, ['getDebtCeilingDecimals()(uint256)'], [['debt_ceiling_decimals', None]]),
-            
+            # Call(data_provider, ['getFlashLoanEnabled(address)(bool)', reserve], [['flash_loan_enabled', None]]),
         ]
         
         # calls specific to v2
