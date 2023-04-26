@@ -1,4 +1,4 @@
--- {{ config(materialized='table') }}
+{{ config(materialized='table') }}
 
 -- lookup table for the native chain gas tokens
 with gas_token_markets as (
@@ -124,8 +124,8 @@ select
   , t.tokens_out_internal
   , t.minted_to_treasury_amount
   , t.minted_amount
-  , p.usd_price as start_usd_price
-  , lead(p.usd_price) over (partition by t.collector, t.chain, t.market, t.token, t.symbol order by t.block_day) as end_usd_price
+  , coalesce(p.usd_price, c.price_usd) as start_usd_price
+  , lead(coalesce(p.usd_price, c.price_usd)) over (partition by t.collector, t.chain, t.market, t.token, t.symbol order by t.block_day) as end_usd_price
   , coalesce(r.sm_stkAAVE_claims, 0) as sm_stkAAVE_claims
   , coalesce(r.sm_stkABPT_claims, 0) as sm_stkABPT_claims
   , coalesce(r.lm_aave_v2_claims, 0) as lm_aave_v2_claims
@@ -134,10 +134,13 @@ select
   -- , coalesce(r.lm_aave_v2_owed, 0) as lm_aave_v2_owed
 from token_measures_reserves t 
   -- left join financials_data_lake.aave_oracle_prices_by_day p on (t.underlying_reserve = p.reserve and t.block_day = p.block_day and t.market = p.market)
+  -- left join protocol_data_lake.coingecko_data_by_day c on (t.underlying_reserve = c.address and t.block_day = c.block_day and t.chain = c.chain)
   -- left join warehouse.user_rewards_by_day r on (t.market = r.market and t.block_day = r.block_day and t.collector = r.vault_address and t.token = r.token_address)
   left join {{ source('financials_data_lake','aave_oracle_prices_by_day')}} p on (t.underlying_reserve = p.reserve and t.block_day = p.block_day and t.market = p.market)
+  left join {{ source('protocol_data_lake','coingecko_data_by_day')}} c on (t.underlying_reserve = c.address and t.block_day = c.block_day and t.chain = c.chain)
   left join {{ source('warehouse','user_rewards_by_day')}} r on (t.market = r.market and t.block_day = r.block_day and t.collector = r.vault_address and t.token = r.token_address)
 )
+
 
 , token_level_calcs_staging as (
 -- apply the fix for double transfer on liqs on V3 - PR682
@@ -339,10 +342,10 @@ select
   , b.balance_group
   , b.stable_class
 from long_format l
---   left join financials_data_lake.tx_classification t on (l.measure = t.measure)
---   left join financials_data_lake.display_names d on (l.collector = d.collector and l.chain = d.chain and l.market = d.market)
---   left join warehouse.aave_internal_addresses c on (l.collector = c.contract_address and l.chain = c.chain)
---   left join warehouse.balance_group_lookup b on (l.market = b.market and l.token = b.atoken)
+  -- left join financials_data_lake.tx_classification t on (l.measure = t.measure)
+  -- left join financials_data_lake.display_names d on (l.collector = d.collector and l.chain = d.chain and l.market = d.market)
+  -- left join warehouse.aave_internal_addresses c on (l.collector = c.contract_address and l.chain = c.chain)
+  -- left join warehouse.balance_group_lookup b on (l.market = b.market and l.token = b.atoken)
   left join {{ source('financials_data_lake','tx_classification') }} t on (l.measure = t.measure)
   left join {{ source('financials_data_lake','display_names') }} d on (l.collector = d.collector and l.chain = d.chain and l.market = d.market)
   left join {{ source('warehouse','aave_internal_addresses') }} c on (l.collector = c.contract_address and l.chain = c.chain)
