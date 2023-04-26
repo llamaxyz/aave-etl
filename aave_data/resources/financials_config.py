@@ -778,7 +778,7 @@ COINGECKO_TOKENS = {
     "ARB": {
         "cg_id": "arbitrum",
         "symbol": "ARB",
-        "address": "0xa1116930326d21fb917d5a27f1e9943a9595fb47",
+        "address": "0x912ce59144191c1204e64559fe8253a0e49e6548",
         "chain": "arbitrum",
         "decimals": 18,
         "start_date": "2023-01-20",
