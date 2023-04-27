@@ -38,7 +38,7 @@ select
 -- from datamart.all_financials
 from {{ref('all_financials')}}
 where 1=1
-  and measure in ('end_balance_usd', 'end_accrued_fees_usd')
+  and measure in ('end_balance', 'end_accrued_fees')
   and collector_label != 'Ethereum V2 Incentives Controller' -- excluded from treasury holdings, included in protocol holdings
   and currency = 'native'
 )
