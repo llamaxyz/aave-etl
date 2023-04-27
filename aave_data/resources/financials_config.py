@@ -279,6 +279,8 @@ CONFIG_MARKETS = {
         "version": 2,
         "pool": "0x8dFf5E27EA6b7AC08EbFdf9eB090F32ee9a30fcf",
         "collector": "0x7734280A4337F37Fbf4651073Db7c28C80B339e9",
+        "collector_change_date": datetime(2023,4,23,0,0,0),
+        "collector_v2": "0xe8599f3cc5d38a9ad6f3684cd5cea72f10dbc383", 
         "protocol_data_provider": "0x7551b5D2763519d4e37e8B81929D336De671d46d",
         "oracle": "0x0229F777B0fAb107F9591a41d5F02E4e98dB6f2d",
         "incentives_controller": "0x357D51124f59836DeD84c8a1730D72B749d8BC23",
@@ -300,6 +302,8 @@ CONFIG_MARKETS = {
         "version": 2,
         "pool": "0x4F01AeD16D97E3aB5ab2B501154DC9bb0F1A5A2C",
         "collector": "0x467b92aF281d14cB6809913AD016a607b5ba8A36",
+        "collector_change_date": datetime(2023,4,23,0,0,0),
+        "collector_v2": "0x5ba7fd868c40c16f7adfae6cf87121e13fc2f7a0", #collector contract changed on 2022-07-07
         "protocol_data_provider": "0x65285E9dfab318f57051ab2b139ccCf232945451",
         "oracle": "0xdC336Cd4769f4cC7E9d726DA53e6d3fC710cEB89",
         "incentives_controller": "0x01D83Fe6A10D2f2B7AF17034343746188272cAc9",
