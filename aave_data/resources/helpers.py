@@ -1249,15 +1249,147 @@ def get_token_holders_from_covalent(
     token_holders = standardise_types(token_holders)
 
     return token_holders
-        
-        
+
+
+def get_quote_from_paraswap(
+    chain_id: str,
+    from_token: str,
+    from_token_decimals: int,
+    to_token: str,
+    to_token_decimals: int,
+    from_token_amount) -> float:
+    """
+    Get swap rate from Paraswap V5 API.
+    Uses the decimals vars to convert the from and to amounts to the correct number of decimals.
+
+    Uses requests library to make the API call (synchronous)
+
+    Args:
+        chain_id: chain_id of the network
+        from_token: from token address
+        from_token_decimals: number of decimals of from token
+        to_token: to token address
+        to_token_decimals: number of decimals of to token
+        from_token_amount: amount of from token
+
+    Returns:
+        float: amount of to_token received from the swap
+
+    
+    """
+    # convert from_token_amount to the correct number of decimals
+    from_amount_converted = int(from_token_amount * 10 ** from_token_decimals)
+
+    # construct the URL
+    # paraswap_url = f"https://api.1inch.exchange/v5.0/{chain_id}/quote?fromTokenAddress={from_token}&toTokenAddress={to_token}&amount={from_amount_converted}"
+    paraswap_url = f"https://apiv5.paraswap.io/prices?srcToken={from_token}&srcDecimals={from_token_decimals}"\
+                 + f"&destToken={to_token}&destDecimals={to_token_decimals}&amount={from_amount_converted}&side=SELL&network={chain_id}"\
+                 + f"&maxImpact=100"
+
+    # use exponential backoff logic to handle transient API errors
+    i = 0
+    delay = INITIAL_RETRY
+    while True:
+        response = requests.get(paraswap_url, timeout=300)
+        if response.status_code == requests.codes.ok:
+            break
+        elif response.status_code == requests.codes.bad:
+            # request error, don't retry
+            print(f"Request Error {response.status_code} {response.reason} {response.json()['description']}")
+            response.raise_for_status()
+        i += 1
+        if i > MAX_RETRIES:
+            raise ValueError(f"1Inch Quote API error count {i}, last error {response.status_code} {response.reason}.  Bailing out.")
+        rand_delay = randint(0, 250) / 1000
+        sleep(delay + rand_delay)
+        delay *= 2
+        print(f"Request Error {response.status_code} {response.reason}, retry count {i}")
+
+    # parse the response
+    response_json = response.json()
+    # ic(response_json)
+
+    quote_amount = int(response_json['priceRoute']['destAmount']) / 10 ** to_token_decimals
+
+    return quote_amount
+
+async def get_quote_from_paraswap_async(
+    chain_id: str,
+    from_token: str,
+    from_token_decimals: int,
+    to_token: str,
+    to_token_decimals: int,
+    from_token_amount: float,
+    semaphore: asyncio.Semaphore) -> float:
+    """
+    Get swap rate from Paraswap V5 API.
+    Uses the decimals vars to convert the from and to amounts to the correct number of decimals.
+
+    Uses httpx library to make the API call (asynchronous)
+
+    Args:
+        chain_id: chain_id of the network
+        from_token: from token address
+        from_token_decimals: number of decimals of from token
+        to_token: to token address
+        to_token_decimals: number of decimals of to token
+        from_token_amount: amount of from token
+        semaphore: asyncio.Semaphore to limit the number of concurrent requests
+
+    Returns:
+        float: amount of to_token received from the swap
+
+    """
+    # convert from_token_amount to the correct number of decimals
+    from_amount_converted = int(from_token_amount * 10 ** from_token_decimals)
+
+    # construct the URL
+    # oneinch_url = f"https://api.1inch.exchange/v5.0/{chain_id}/quote?fromTokenAddress={from_token}&toTokenAddress={to_token}&amount={from_amount_converted}"
+    paraswap_url = f"https://apiv5.paraswap.io/prices?srcToken={from_token}&srcDecimals={from_token_decimals}"\
+                 + f"&destToken={to_token}&destDecimals={to_token_decimals}&amount={from_amount_converted}&side=SELL&network={chain_id}"\
+                 + f"&maxImpact=100"
+
+    async with semaphore:
+        async with httpx.AsyncClient() as client:
+            
+            # use exponential backoff logic to handle transient API errors
+            i = 0
+            delay = INITIAL_RETRY
+            while True:
+                response = await client.get(paraswap_url, timeout=300)
+                if response.status_code == requests.codes.ok:
+                    break
+                elif response.status_code == requests.codes.bad:
+                    # request error, don't retry
+                    print(f"Request Error {response.status_code} {response.reason_phrase} {response.json()['description']}")
+                    response.raise_for_status()
+                i += 1
+                if i > MAX_RETRIES:
+                    raise ValueError(f"1Inch Quote API error count {i}, last error {response.status_code} {response.reason_phrase}.  Bailing out.")
+                rand_delay = randint(0, 250) / 1000
+                sleep(delay + rand_delay)
+                delay *= 2
+                print(f"Request Error {response.status_code} {response.reason_phrase}, retry count {i}")
+
+    # parse the response
+    response_json = response.json()
+    # ic(response_json)
+
+    quote_amount = int(response_json['priceRoute']['destAmount']) / 10 ** to_token_decimals
+
+    return quote_amount
+
 if __name__ == "__main__":
 
     # pass
     # out = get_token_holders_from_covalent(1, 16902116, '0xa1116930326d21fb917d5a27f1e9943a9595fb47')
     # ic(out)
 
-    # out = get_quote_from_1inch(137, '0x3A58a54C066FdC0f2D55FC9C89F0415C92eBf3C4', 18, '0x3A58a54C066FdC0f2D55FC9C89F0415C92eBf3C4', 18, 10000000)
+    one_inch_answer = get_quote_from_1inch(42161, '0x5979d7b546e38e414f7e9822514be443a4800529', 18, '0x82af49447d8a07e3bd95bd0d56f35241523fbab1', 18, 100)
+    ic(one_inch_answer)
+    paraswap_answer = get_quote_from_paraswap(42161, '0x5979d7b546e38e414f7e9822514be443a4800529', 18, '0x82af49447d8a07e3bd95bd0d56f35241523fbab1', 18, 100)
+    ic(paraswap_answer)
+
     # out = get_quote_from_1inch(1, '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', 18, '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', 18, 1)
     # ic(out)
     # out = get_aave_oracle_price('ethereum_v3', '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', 16902116)
@@ -1287,10 +1419,10 @@ if __name__ == "__main__":
     # mtt = get_events_by_topic_hash_from_covalent(15154950, 15154960, 43114, '0x794a61358D6845594F94dc1DB02A252b5b4814aD', '0xbfa21aa5d5f9a1f0120a95e7c0749f389863cbdbfff531aa7339077a5bc919de')
     # out = get_raw_reserve_data('ethereum_v3','ethereum','0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2', 18, 16902116)
     # out = get_raw_reserve_data('ethereum_v2','ethereum','0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2', 18, 16902116)
-    out = get_raw_reserve_data('ethereum_v3','ethereum','0x5a98fcbea516cf06857215779fd812ca3bef1b32', 18, 17048772)
-    ic(out)
-    out2 = raw_reserve_to_dataframe(out)
-    ic(out2)
+    # out = get_raw_reserve_data('ethereum_v3','ethereum','0x5a98fcbea516cf06857215779fd812ca3bef1b32', 18, 17048772)
+    # ic(out)
+    # out2 = raw_reserve_to_dataframe(out)
+    # ic(out2)
     # # from datetime import datetime
 
     # # out = {'reserve_config': {'decimals': 18, 'ltv': 8000, 'liquidation_threshold': 8250, 'liquidation_bonus': 10500, 'reserve_factor': 1500, 'usage_as_collateral_enabled': True, 'borrowing_enabled': True, 'stable_borrow_rate_enabled': False, 'is_active': True, 'is_frozen': False}, 'reserve_data': {'unbacked_atokens': 0.0, 'scaled_accrued_to_treasury': 1.774051652369331, 'atoken_supply': 172761.88639544294, 'stable_debt': 0.0, 'variable_debt': 104109.67095672512, 'liquidity_rate': 0.019784087388165828, 'variable_borrow_rate': 0.0386241186359518, 'stable_borrow_rate': 0.09813065119573873, 'average_stable_rate': 0.0, 'liquidity_index': 1.0029317607983557, 'variable_borrow_index': 1.0058429263973083, 'last_update_timestamp': datetime(2023, 3, 25, 1, 23, 47)}, 'reserve_emode_category': 1, 'borrow_cap': 1400000, 'supply_cap': 1800000, 'is_paused': False, 'siloed_borrowing': False, 'liquidation_protocol_fee': 1000, 'unbacked_mint_cap': 0, 'debt_ceiling': 0, 'debt_ceiling_decimals': 2}

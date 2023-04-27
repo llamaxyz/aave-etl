@@ -43,6 +43,8 @@ from aave_data.resources.helpers import (
     get_quote_from_1inch_async,
     get_aave_oracle_price,
     get_balancer_bpt_data,
+    get_quote_from_paraswap,
+    get_quote_from_paraswap_async,
 )
 
 
@@ -837,7 +839,7 @@ def matic_lsd_token_supply_by_day(
 )
 def liquidity_depth_raw(context):
     """
-    Uses the 1inch API to get the liquidity depth of the configured
+    Uses the Paraswap to get the liquidity depth of the configured
     tokens with respect to the to_asset
     
     Used for risk management in looped lsd assets
@@ -853,7 +855,7 @@ def liquidity_depth_raw(context):
     Returns:
         A dataframe of the liquidity depth of the tokens at the time the function is called
     """
-    CONCURRENT_REQUESTS = 5
+    CONCURRENT_REQUESTS = 20
     
     # construct the ouput dataframe
     rows = []
@@ -926,7 +928,7 @@ def liquidity_depth_raw(context):
     async def sweep():
         semaphore = asyncio.Semaphore(CONCURRENT_REQUESTS)
         tasks = output.apply(
-            lambda x: get_quote_from_1inch_async(
+            lambda x: get_quote_from_paraswap_async(
                     x.chain_id,
                     x.from_asset_address,
                     x.from_asset_decimals,
@@ -1011,7 +1013,7 @@ def liquidity_depth_raw(context):
     async def sweep():
         semaphore = asyncio.Semaphore(CONCURRENT_REQUESTS)
         tasks = detail_sweep.apply(
-            lambda x: get_quote_from_1inch_async(
+            lambda x: get_quote_from_paraswap_async(
                     x.chain_id,
                     x.from_asset_address,
                     x.from_asset_decimals,
