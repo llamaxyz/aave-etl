@@ -17,7 +17,12 @@ from dagster import (AssetIn,  # SourceAsset,; Output,
                      IdentityPartitionMapping,
                      FreshnessPolicy,
                      MultiPartitionKey,
-                     build_op_context
+                     build_op_context,
+                     MultiPartitionMapping,
+                     DimensionPartitionMapping,
+                     StaticPartitionMapping,
+                     TimeWindowPartitionMapping,
+                     AutoMaterializePolicy
 )
 from icecream import ic
 # from subgrounds.subgrounds import Subgrounds
@@ -50,8 +55,9 @@ MAX_RETRIES = 10
 
 market_day_multipartition = MultiPartitionsDefinition(
     {
-        "date": DailyPartitionsDefinition(start_date=FINANCIAL_PARTITION_START_DATE),
-        "market": StaticPartitionsDefinition(list(CONFIG_MARKETS.keys())),
+        "date": DailyPartitionsDefinition(start_date=FINANCIAL_PARTITION_START_DATE, end_offset=1),
+        # "market": StaticPartitionsDefinition(list(CONFIG_MARKETS.keys())),
+        "market": StaticPartitionsDefinition(['ethereum_v2','ethereum_v3','polygon_v3']),
     }
 )
 
@@ -84,13 +90,14 @@ def block_numbers_by_day(context) -> pd.DataFrame:
     # market = context.partition_key.keys_by_dimension['market']
     # date = context.partition_key.keys_by_dimension['date']
     date, market = context.partition_key.split("|")
-    partition_datetime = datetime.strptime(date, '%Y-%m-%d')
+    block_day = datetime.strptime(date, '%Y-%m-%d') - timedelta(days=1)
     context.log.info(f"market: {market}")
-    context.log.info(f"date: {date}")
+    context.log.info(f"partition_date: {date}")
+    context.log.info(f"block_day: {block_day}")
     config_chain = CONFIG_MARKETS[market]['chain']
     llama_chain = CONFIG_CHAINS[config_chain]['defillama_chain']
 
-    unix_timestamp = partition_datetime.timestamp()
+    unix_timestamp = block_day.timestamp()
 
     endpoint = f'https://coins.llama.fi/block/{llama_chain}/{unix_timestamp:.0f}'
 
@@ -102,7 +109,7 @@ def block_numbers_by_day(context) -> pd.DataFrame:
     block_height = vals['height']
     block_time = datetime.utcfromtimestamp(vals['timestamp'])
 
-    end_block_day = partition_datetime + timedelta(days=1)
+    end_block_day = block_day + timedelta(days=1)
     end_block_day_unix = end_block_day.timestamp()
 
     endpoint = f'https://coins.llama.fi/block/{llama_chain}/{end_block_day_unix:.0f}'
@@ -114,7 +121,7 @@ def block_numbers_by_day(context) -> pd.DataFrame:
 
     end_block = vals['height'] - 1
 
-    return_val = pd.DataFrame([[partition_datetime, block_time, block_height, end_block]],
+    return_val = pd.DataFrame([[block_day, block_time, block_height, end_block]],
                         columns=['block_day', 'block_time', 'block_height', 'end_block'])
 
 
@@ -158,8 +165,10 @@ def market_tokens_by_day(context, block_numbers_by_day) -> pd.DataFrame: #pylint
 
     # market = context.partition_key.keys_by_dimension['market']
     date, market = context.partition_key.split("|")
-    block_height = int(block_numbers_by_day.block_height.values[0])
-    block_day = block_numbers_by_day.block_day.values[0]
+    # block_numbers_by_day holds the block heights for the previous day (start and end)
+    # partition_date block_height is 1 block past the end block for the previous day (block_numbers_by_day.end_block + 1)
+    block_height = int(block_numbers_by_day.end_block.values[0] + 1)
+    block_day = block_day = datetime.strptime(date, '%Y-%m-%d')
     token_source = CONFIG_MARKETS[market]['token_source']
 
     context.log.info(f"market: {market}")
@@ -251,7 +260,9 @@ def aave_oracle_prices_by_day(context, market_tokens_by_day) -> pd.DataFrame:  #
             )  # type: ignore
             eth_context = build_op_context(partition_key=pkey)
             eth_block_numbers_by_day = block_numbers_by_day(eth_context)
-            eth_block_height = int(eth_block_numbers_by_day.block_height.values[0])
+            # block_numbers_by_day holds the block heights for the previous day (start and end)
+            # partition_date block_height is 1 block past the end block for the previous day (block_numbers_by_day.end_block + 1)
+            eth_block_height = int(eth_block_numbers_by_day.end_block.values[0]+1)
             eth_usd_price = float(feed_registry.functions.latestAnswer(eth_address, usd_address).call(block_identifier = eth_block_height) / 10**8)
         else:
             eth_usd_price = float(0)
@@ -509,11 +520,10 @@ def non_atoken_transfers_by_day(context, block_numbers_by_day) -> pd.DataFrame: 
     code_version="1",
     io_manager_key = 'data_lake_io_manager',
     ins={
-        "block_numbers_by_day": AssetIn(key_prefix="financials_data_lake"),
         "market_tokens_by_day": AssetIn(key_prefix="financials_data_lake"),
     }
 )
-def collector_atoken_balances_by_day(context, market_tokens_by_day, block_numbers_by_day) -> pd.DataFrame:  # type: ignore pylint: disable=W0621
+def collector_atoken_balances_by_day(context, market_tokens_by_day) -> pd.DataFrame:  # type: ignore pylint: disable=W0621
     """
     Table of the aave market token balances in the collector contracts for each market
 
@@ -528,18 +538,17 @@ def collector_atoken_balances_by_day(context, market_tokens_by_day, block_number
         A dataframe with the balances of each token for each collector contract
 
     """
-    block_height = int(block_numbers_by_day.block_height.values[0])
-    chain = block_numbers_by_day.chain.values[0]
+    
     # market = context.partition_key.keys_by_dimension['market']
     # date = context.partition_key.keys_by_dimension['date']
     date, market = context.partition_key.split("|")
     chain = CONFIG_MARKETS[market]['chain']
-    partition_datetime = datetime.strptime(date, '%Y-%m-%d')
+    block_day = market_tokens_by_day.block_day
+    block_height = int(market_tokens_by_day.block_height.values[0])
 
     # handle changed collector contracts
     if 'collector_change_date' in CONFIG_MARKETS[market]:
-        partition_datetime = datetime.strptime(date, '%Y-%m-%d')
-        if partition_datetime > CONFIG_MARKETS[market]['collector_change_date']:
+        if block_day > CONFIG_MARKETS[market]['collector_change_date']:
             collectors = [CONFIG_MARKETS[market]['collector'],CONFIG_MARKETS[market]['collector_v2']]
         else:
             collectors = [CONFIG_MARKETS[market]['collector']]
@@ -592,7 +601,7 @@ def collector_atoken_balances_by_day(context, market_tokens_by_day, block_number
                         'token': token, 
                         'symbol': symbol,
                         'block_height': block_height, 
-                        'block_day': partition_datetime.replace(tzinfo=timezone.utc),
+                        'block_day': block_day,
                         'balance': row_balance,
                         'scaled_balance': row_scaled_balance
                     }
@@ -642,12 +651,15 @@ def non_atoken_balances_by_day(context, block_numbers_by_day) -> pd.DataFrame:  
 
     """
     # iterate through the atokens & call the covalent API then assemble the results into a dataframe
-    start_block = block_numbers_by_day.block_height.values[0]
+
+    # block_numbers_by_day holds the block heights for the previous day (start and end)
+    # partition_date block_height is 1 block past the end block for the previous day (block_numbers_by_day.end_block + 1)
+    block_height = int(block_numbers_by_day.end_block.values[0] + 1)
     # market = context.partition_key.keys_by_dimension['market']
     # date = context.partition_key.keys_by_dimension['date']
     date, market = context.partition_key.split("|")
     chain = CONFIG_MARKETS[market]['chain']
-    partition_datetime = datetime.strptime(date, '%Y-%m-%d')
+    block_day = datetime.strptime(date, '%Y-%m-%d')
 
     context.log.info(f"market: {market}")
     context.log.info(f"date: {date}")
@@ -664,7 +676,7 @@ def non_atoken_balances_by_day(context, block_numbers_by_day) -> pd.DataFrame:  
                     token_address,
                     token_decimals,
                     chain,
-                    start_block
+                    block_height
                     )
                 output_row = {
                     'contract_address': wallet_address, 
@@ -673,8 +685,8 @@ def non_atoken_balances_by_day(context, block_numbers_by_day) -> pd.DataFrame:  
                     'token': token_address, 
                     'decimals': token_decimals,
                     'symbol': token,
-                    'block_height': start_block, 
-                    'block_day': partition_datetime.replace(tzinfo=timezone.utc),
+                    'block_height': block_height, 
+                    'block_day': block_day,
                     'balance': balance
                 }
                 balance_row = pd.DataFrame(output_row, index=[0])
@@ -1927,6 +1939,67 @@ def eth_balances_by_day(context, block_numbers_by_day) -> pd.DataFrame:  # type:
     )
 
     return balance_output
+
+# this mapping returns the market's partition for the previous day
+market_previous_day_multipartiton_mapping = MultiPartitionMapping(
+    {   
+        "date": DimensionPartitionMapping(
+            dimension_name='date',
+            partition_mapping=TimeWindowPartitionMapping(start_offset=-1, end_offset=-1)
+        ),
+        "market": DimensionPartitionMapping(
+            dimension_name='market',
+            partition_mapping=IdentityPartitionMapping()
+        )
+    }
+)
+
+# @asset(
+#     partitions_def=market_day_multipartition,
+#     compute_kind="python", 
+#     #group_name='data_lake',
+#     code_version="1",
+#     io_manager_key = 'data_lake_io_manager',
+#     ins={
+#         "block_numbers_by_day": AssetIn(key_prefix="financials_data_lake", partition_mapping=market_previous_day_multipartiton_mapping),
+#     },
+#     # auto_materialize_policy=AutoMaterializePolicy.eager()
+# )
+# def upstream_partition_ref(context, block_numbers_by_day): 
+#     # start_block = block_numbers_by_day.block_height.values[0]
+#     date, market = context.partition_key.split("|")
+#     # chain = CONFIG_MARKETS[market]['chain']
+#     partition_datetime = datetime.strptime(date, '%Y-%m-%d')
+
+#     context.log.info(f"market: {market}")
+#     context.log.info(f"date: {date}")
+
+#     # access prior partition
+#     # block_day should be date-1
+#     ic(block_numbers_by_day)
+#     block_day_from_upstream = block_numbers_by_day.block_day.values[0]
+#     context.log.info(f"block_day_from_upstream: {block_day_from_upstream}")
+
+#     return_value = pd.DataFrame(
+#         [
+#             {
+#                 "block_day" : partition_datetime,
+#                 "upstream_block_day": block_day_from_upstream,
+#             }
+#         ]
+#     )
+    
+#     return_value = standardise_types(return_value)
+
+#     context.add_output_metadata(
+#             {
+#                 "num_records": len(return_value),
+#                 "preview": MetadataValue.md(return_value.head().to_markdown()),
+#             }
+#         )
+
+#     return return_value
+
 # Test assets for the io manager
 
 

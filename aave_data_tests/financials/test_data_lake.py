@@ -538,7 +538,7 @@ def test_collector_atoken_balances_by_day():
     expected = standardise_types(expected)
     ic(expected)
 
-    result = collector_atoken_balances_by_day(context, market_tokens_by_day_sample_output, block_numbers_by_day_sample_output)
+    result = collector_atoken_balances_by_day(context, market_tokens_by_day_sample_output)
     ic(result)
     
     assert_frame_equal(result, expected, check_exact=True)  # type: ignore
