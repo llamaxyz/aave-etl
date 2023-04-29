@@ -56,8 +56,7 @@ MAX_RETRIES = 10
 market_day_multipartition = MultiPartitionsDefinition(
     {
         "date": DailyPartitionsDefinition(start_date=FINANCIAL_PARTITION_START_DATE, end_offset=1),
-        # "market": StaticPartitionsDefinition(list(CONFIG_MARKETS.keys())),
-        "market": StaticPartitionsDefinition(['ethereum_v2','ethereum_v3','polygon_v3']),
+        "market": StaticPartitionsDefinition(list(CONFIG_MARKETS.keys())),
     }
 )
 
@@ -168,7 +167,7 @@ def market_tokens_by_day(context, block_numbers_by_day) -> pd.DataFrame: #pylint
     # block_numbers_by_day holds the block heights for the previous day (start and end)
     # partition_date block_height is 1 block past the end block for the previous day (block_numbers_by_day.end_block + 1)
     block_height = int(block_numbers_by_day.end_block.values[0] + 1)
-    block_day = block_day = datetime.strptime(date, '%Y-%m-%d')
+    block_day = datetime.strptime(date, '%Y-%m-%d')
     token_source = CONFIG_MARKETS[market]['token_source']
 
     context.log.info(f"market: {market}")
@@ -1093,7 +1092,7 @@ def treasury_accrued_incentives_by_day(context, block_numbers_by_day) -> pd.Data
 
     date, market = context.partition_key.split("|")
     chain = CONFIG_MARKETS[market]['chain']
-    partition_datetime = datetime.strptime(date, '%Y-%m-%d')
+    block_day = datetime.strptime(date, '%Y-%m-%d')
 
     context.log.info(f"market: {market}")
     context.log.info(f"date: {date}")
@@ -1169,7 +1168,7 @@ def treasury_accrued_incentives_by_day(context, block_numbers_by_day) -> pd.Data
         # initialise web3
         web3 = Web3(Web3.HTTPProvider(CONFIG_CHAINS[chain]['web3_rpc_url']))
         collector_contract = Web3.to_checksum_address(CONFIG_MARKETS[market]['collector'])
-        block_height = int(block_numbers_by_day['block_height'].values[0])
+        block_height = int(block_numbers_by_day.end_block.values[0] + 1)
         incentives_controller_address = Web3.to_checksum_address(CONFIG_MARKETS[market]['incentives_controller'])
 
         
@@ -1201,7 +1200,7 @@ def treasury_accrued_incentives_by_day(context, block_numbers_by_day) -> pd.Data
                             'market': market,
                             'collector_contract': collector_contract.lower(),
                             'block_height': block_height,
-                            'block_day': block_numbers_by_day['block_day'].values[0],
+                            'block_day': block_day,
                             'rewards_token_address': rewards_token.lower(),
                             'rewards_token_symbol': rewards_token_symbol,
                             'accrued_rewards': rewards_token_balance,
@@ -1223,7 +1222,7 @@ def treasury_accrued_incentives_by_day(context, block_numbers_by_day) -> pd.Data
                             'market': market,
                             'collector_contract': collector_contract.lower(),
                             'block_height': block_height,
-                            'block_day': block_numbers_by_day['block_day'].values[0],
+                            'block_day': block_day,
                             'rewards_token_address': CONFIG_MARKETS[market]['rewards_token'].lower(),
                             'rewards_token_symbol': CONFIG_MARKETS[market]['rewards_token_symbol'],
                             'accrued_rewards': rewards_token_balance,
@@ -1889,16 +1888,15 @@ def eth_balances_by_day(context, block_numbers_by_day) -> pd.DataFrame:  # type:
 
     """
     
-    start_block = block_numbers_by_day.block_height.values[0]
     date, market = context.partition_key.split("|")
     chain = CONFIG_MARKETS[market]['chain']
-    partition_datetime = datetime.strptime(date, '%Y-%m-%d')
+    block_day = datetime.strptime(date, '%Y-%m-%d')
 
     context.log.info(f"market: {market}")
     context.log.info(f"date: {date}")
 
     collector = CONFIG_MARKETS[market]['collector']
-    block_height = block_numbers_by_day.block_height.values[0]
+    block_height = int(block_numbers_by_day.end_block.values[0] + 1)
 
     w3 = Web3(Web3.HTTPProvider(CONFIG_CHAINS[chain]['web3_rpc_url']))
 
@@ -1906,7 +1904,7 @@ def eth_balances_by_day(context, block_numbers_by_day) -> pd.DataFrame:  # type:
     delay = INITIAL_RETRY
     while True:
         try:
-            balance = w3.eth.get_balance(Web3.to_checksum_address(collector), block_identifier=int(block_height)) / 1e18
+            balance = w3.eth.get_balance(Web3.to_checksum_address(collector), block_identifier=block_height) / 1e18
             break
         except Exception as e:
             i += 1
@@ -1918,8 +1916,8 @@ def eth_balances_by_day(context, block_numbers_by_day) -> pd.DataFrame:  # type:
             print(f"Request Error {str(e)}, retry count {i}")
 
     balance_list = {
-                    'block_height': start_block, 
-                    'block_day': partition_datetime.replace(tzinfo=timezone.utc),
+                    'block_height': block_height, 
+                    'block_day': block_day,
                     'chain': chain,
                     'market': market,
                     'collector': collector,

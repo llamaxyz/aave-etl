@@ -61,11 +61,11 @@ INITIAL_RETRY = 0.01 #seconds
 MAX_RETRIES = 10
 DAILY_PARTITION_START_DATE=datetime(2022,2,26,0,0,0, tzinfo=timezone.utc)
 
-daily_partitions_def = DailyPartitionsDefinition(start_date=DAILY_PARTITION_START_DATE)
+daily_partitions_def = DailyPartitionsDefinition(start_date=DAILY_PARTITION_START_DATE, end_offset=1)
 
 chain_day_multipartition = MultiPartitionsDefinition(
     {
-        "date": DailyPartitionsDefinition(start_date='2023-04-06'),
+        "date": DailyPartitionsDefinition(start_date='2023-04-06', end_offset=1),
         "chain": StaticPartitionsDefinition(list(BALANCER_BPT_TOKENS.keys())),
     }
 )
@@ -217,9 +217,9 @@ def raw_incentives_by_day(
 
     """
     date, market = context.partition_key.split("|")
-    partition_datetime = datetime.strptime(date, '%Y-%m-%d')
+    block_day = datetime.strptime(date, '%Y-%m-%d')
     chain = CONFIG_MARKETS[market]["chain"]
-    block_height = int(block_numbers_by_day.block_height.values[0])
+    block_height = int(block_numbers_by_day.end_block.values[0] + 1)
 
     #initialise Web3 and variables
     w3 = Web3(Web3.HTTPProvider(CONFIG_CHAINS[chain]['web3_rpc_url']))
@@ -576,7 +576,7 @@ def raw_incentives_by_day(
                         'price_feed_decimals']:
                 all_rewards[col] = all_rewards[col].astype(int)
 
-            all_rewards.insert(0, 'block_day', partition_datetime)
+            all_rewards.insert(0, 'block_day', block_day)
             all_rewards.insert(1, 'block_height', block_height)
             all_rewards.insert(2, 'market', market)
 
@@ -620,7 +620,7 @@ def emode_config_by_day(
 
     """
     date, market = context.partition_key.split("|")
-    partition_datetime = datetime.strptime(date, '%Y-%m-%d')
+    block_day = datetime.strptime(date, '%Y-%m-%d')
     chain = CONFIG_MARKETS[market]["chain"]
     
     try:
@@ -685,7 +685,7 @@ def emode_config_by_day(
             ouput_row = pd.DataFrame(call_output['emode_data'], index=[0])
             emode_output = pd.concat([emode_output, ouput_row])
         
-        emode_output['block_day'] = partition_datetime
+        emode_output['block_day'] = block_day
         emode_output['block_height'] = block_height
         emode_output['market'] = market
         emode_output = emode_output[
@@ -716,7 +716,8 @@ def emode_config_by_day(
 
 @asset(
     # partitions_def=DailyPartitionsDefinition(start_date=DAILY_PARTITION_START_DATE),
-    partitions_def=DailyPartitionsDefinition(start_date='2022-02-26'),
+    # partitions_def=DailyPartitionsDefinition(start_date='2022-02-26', end_offset=1),
+    partitions_def=daily_partitions_def,
     compute_kind="python",
     code_version="1",
     io_manager_key = 'protocol_data_lake_io_manager',
@@ -744,7 +745,8 @@ def matic_lsd_token_supply_by_day(
 
     """
     date = context.partition_key
-    partition_datetime = datetime.strptime(date, '%Y-%m-%d').replace(tzinfo=timezone.utc)
+    block_day = datetime.strptime(date, '%Y-%m-%d').replace(tzinfo=timezone.utc)
+    prev_block_day = block_day - timedelta(days=1)
     context.log.info(f"date: {date}")
     
     TOKENS = {
@@ -774,7 +776,7 @@ def matic_lsd_token_supply_by_day(
 
     for chain in TOKENS:
         context.log.info(f"chain: {chain}")
-        block_height = int(blocks_by_day.loc[(blocks_by_day.chain == chain) & (blocks_by_day.block_day == partition_datetime)].block_height.values[0])
+        block_height = int(blocks_by_day.loc[(blocks_by_day.chain == chain) & (blocks_by_day.block_day == prev_block_day)].end_block.values[0]+1)
         context.log.info(f"block_height: {block_height}")
 
         # setup the Web3 connection
@@ -809,7 +811,7 @@ def matic_lsd_token_supply_by_day(
         chain_data.columns = ['address', 'total_supply']
         chain_data['chain'] = chain
         chain_data['block_height'] = block_height
-        chain_data['block_day'] = partition_datetime
+        chain_data['block_day'] = block_day
         
         # chain_data['symbol'] = chain_data.address.map({TOKENS[chain][token]['address']: token for token in TOKENS[chain]})
         chain_data['symbol'] = pd.Series(TOKENS[chain].keys())
@@ -1096,12 +1098,12 @@ def balancer_bpt_data_by_day(
     # chain, date = context.partition_key.split("|")
     chain = context.partition_key.keys_by_dimension['chain']
     date = context.partition_key.keys_by_dimension['date']
-    partition_datetime = datetime.strptime(date, '%Y-%m-%d')
+    block_day = datetime.strptime(date, '%Y-%m-%d')
     context.log.info(f"market: {chain}")
     context.log.info(f"date: {date}")
 
     # get the blocks for the day
-    block_height = int(block_numbers_by_day.block_height.values[0])
+    block_height = int(block_numbers_by_day.end_block.values[0] + 1)
 
     bal_bpt_data = pd.DataFrame()
     for bpt in BALANCER_BPT_TOKENS[chain]:
@@ -1113,7 +1115,7 @@ def balancer_bpt_data_by_day(
             bal_bpt_data = pd.concat([bal_bpt_data, bpt_row], axis=0).reset_index(drop=True)
     
     if not bal_bpt_data.empty:
-        bal_bpt_data['block_day'] = partition_datetime
+        bal_bpt_data['block_day'] = block_day
         bal_bpt_data['block_height'] = block_height
         bal_bpt_data['chain'] = chain
         bal_bpt_data = standardise_types(bal_bpt_data)
@@ -1156,11 +1158,12 @@ def safety_module_rpc(
 
     """
     date = context.partition_key
-    partition_datetime = datetime.strptime(date, '%Y-%m-%d').replace(tzinfo=timezone.utc)
+    block_day = datetime.strptime(date, '%Y-%m-%d').replace(tzinfo=timezone.utc)
+    prev_block_day = block_day - timedelta(days=1)
     context.log.info(f"date: {date}")
     chain = "ethereum"
     context.log.info(f"chain: {chain}")
-    block_height = int(blocks_by_day.loc[(blocks_by_day.chain == chain) & (blocks_by_day.block_day == partition_datetime)].block_height.values[0])
+    block_height = int(blocks_by_day.loc[(blocks_by_day.chain == chain) & (blocks_by_day.block_day == prev_block_day)].end_block.values[0] + 1)
     context.log.info(f"block_height: {block_height}")
 
     # block_height = 17072018
@@ -1223,7 +1226,7 @@ def safety_module_rpc(
             output_row = pd.DataFrame(multi_output['asset_config'], index=[0])
             output_row['stk_token_supply'] = multi_output['stk_token_supply']
             output_row['unstaked_token_supply'] = multi_output['unstaked_token_supply']
-            output_row['block_day'] = partition_datetime
+            output_row['block_day'] = block_day
             output_row['block_height'] = block_height
             output_row['stk_token_address'] = stoken
             output_row['stk_token_symbol'] = CONFIG_SM_TOKENS[sm_token]['stk_token_symbol']
