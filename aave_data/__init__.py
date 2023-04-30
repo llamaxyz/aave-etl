@@ -365,7 +365,7 @@ def get_multipartition_keys_with_dimension_value(
 
 
 @schedule(
-    cron_schedule="0 2 * * *",
+    cron_schedule="0 1 * * *",
     job=financials_root_job,
     execution_timezone='UTC',
     name="financials_root_schedule",
@@ -386,7 +386,7 @@ def financials_root_schedule(context):
         )
 
 @schedule(
-    cron_schedule="0 2 * * *",
+    cron_schedule="0 1 * * *",
     job=data_lake_partitioned_job,
     execution_timezone='UTC',
     name="data_lake_partitioned_schedule",
@@ -408,14 +408,14 @@ def data_lake_partitioned_schedule(context):
 
 data_lake_unpartitioned_schedule = ScheduleDefinition(
     job = data_lake_unpartitioned_job,
-    cron_schedule="0 2 * * *",
+    cron_schedule="0 1 * * *",
     execution_timezone='UTC',
     name="data_lake_unpartitioned_schedule"
     )
 
 warehouse_datamart_schedule = ScheduleDefinition(
     job = warehouse_datamart_job,
-    cron_schedule=["15 2 * * *", "30 2 * * *" ],
+    cron_schedule=["15 1 * * *", "30 1 * * *" ],
     execution_timezone='UTC',
     name="warehouse_datamart_schedule"
     )
@@ -423,7 +423,7 @@ warehouse_datamart_schedule = ScheduleDefinition(
 daily_partitioned_schedule = build_schedule_from_partitioned_job(
     job=daily_partitioned_job,
     minute_of_hour=25,
-    hour_of_day=2,
+    hour_of_day=1,
     name="daily_partitioned_schedule",
 )
 
@@ -436,7 +436,7 @@ liquidity_depth_schedule = ScheduleDefinition(
 
 chain_day_partitioned_schedule = build_schedule_from_partitioned_job(
     job=chain_day_partitioned_job,
-    hour_of_day=2,
+    hour_of_day=1,
     minute_of_hour=25,
     name="chain_day_partitioned_schedule",
 )
