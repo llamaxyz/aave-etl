@@ -542,7 +542,7 @@ def collector_atoken_balances_by_day(context, market_tokens_by_day) -> pd.DataFr
     # date = context.partition_key.keys_by_dimension['date']
     date, market = context.partition_key.split("|")
     chain = CONFIG_MARKETS[market]['chain']
-    block_day = market_tokens_by_day.block_day
+    block_day = datetime.fromtimestamp(int(market_tokens_by_day.block_day.values[0])/1e9, tz=timezone.utc)
     block_height = int(market_tokens_by_day.block_height.values[0])
 
     # handle changed collector contracts
