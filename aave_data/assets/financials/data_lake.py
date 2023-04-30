@@ -371,7 +371,7 @@ def collector_atoken_transfers_by_day(context, market_tokens_by_day, block_numbe
 
     # handle changed collector contracts
     if 'collector_change_date' in CONFIG_MARKETS[market]:
-        partition_datetime = datetime.strptime(date, '%Y-%m-%d')
+        partition_datetime = datetime.strptime(date, '%Y-%m-%d').replace(tzinfo=timezone.utc)
         if partition_datetime > CONFIG_MARKETS[market]['collector_change_date']:
             collectors = [CONFIG_MARKETS[market]['collector'],CONFIG_MARKETS[market]['collector_v2']]
         else:
