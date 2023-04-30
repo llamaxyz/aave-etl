@@ -1,6 +1,6 @@
 """ Contains config objects for use in financials """
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 FINANCIAL_PARTITION_START_DATE = '2022-01-01'
@@ -279,7 +279,7 @@ CONFIG_MARKETS = {
         "version": 2,
         "pool": "0x8dFf5E27EA6b7AC08EbFdf9eB090F32ee9a30fcf",
         "collector": "0x7734280A4337F37Fbf4651073Db7c28C80B339e9",
-        "collector_change_date": datetime(2023,4,23,0,0,0),
+        "collector_change_date": datetime(2023,4,23,0,0,0, tzinfo=timezone.utc),
         "collector_v2": "0xe8599f3cc5d38a9ad6f3684cd5cea72f10dbc383", 
         "protocol_data_provider": "0x7551b5D2763519d4e37e8B81929D336De671d46d",
         "oracle": "0x0229F777B0fAb107F9591a41d5F02E4e98dB6f2d",
@@ -302,7 +302,7 @@ CONFIG_MARKETS = {
         "version": 2,
         "pool": "0x4F01AeD16D97E3aB5ab2B501154DC9bb0F1A5A2C",
         "collector": "0x467b92aF281d14cB6809913AD016a607b5ba8A36",
-        "collector_change_date": datetime(2023,4,23,0,0,0),
+        "collector_change_date": datetime(2023,4,23,0,0,0, tzinfo=timezone.utc),
         "collector_v2": "0x5ba7fd868c40c16f7adfae6cf87121e13fc2f7a0", #collector contract changed on 2022-07-07
         "protocol_data_provider": "0x65285E9dfab318f57051ab2b139ccCf232945451",
         "oracle": "0xdC336Cd4769f4cC7E9d726DA53e6d3fC710cEB89",
@@ -452,7 +452,7 @@ CONFIG_MARKETS = {
         "pool": "0x398ec7346dcd622edc5ae82352f02be94c62d119",
         "pool_address_provider": "0x24a42fd28c976a61df5d00d0599c34c4f90748c8",
         "collector": "0xe3d9988f676457123c5fd01297605efdd0cba1ae",
-        "collector_change_date": datetime(2022,7,7,0,0,0),
+        "collector_change_date": datetime(2022,7,7,0,0,0, tzinfo=timezone.utc),
         "collector_v2": "0x464C71f6c2F760DdA6093dCB91C24c39e5d6e18c", #collector contract changed on 2022-07-07
         "protocol_data_provider": None,
         "oracle": "0x76b47460d7f7c5222cfb6b6a75615ab10895dde4",
