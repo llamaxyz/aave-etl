@@ -1,8 +1,11 @@
 {{ config(materialized='table') }}
 
+-- Upstream table all_treasury_balances uses end of day balances
+-- This is translated to a start of day balance by incrementing the block day by 1
+
 with stables as (
 select
-  block_day
+  date_add(block_day, interval 1 day) as block_day
   , display_chain
   , sum(value_usd) as stablecoin_value_usd
 -- from datamart.all_treasury_balances
@@ -12,7 +15,7 @@ group by block_day, display_chain
 )
 , totals as (
 select
-  block_day
+  date_add(block_day, interval 1 day) as block_day
   , display_chain
   , sum(value_usd) as value_usd
 -- from datamart.all_treasury_balances
@@ -21,7 +24,7 @@ group by block_day, display_chain
 )
 , ex_aave as (
 select
-  block_day
+  date_add(block_day, interval 1 day) as block_day
   , display_chain
   , sum(value_usd) as ex_aave_value_usd
 -- from datamart.all_treasury_balances

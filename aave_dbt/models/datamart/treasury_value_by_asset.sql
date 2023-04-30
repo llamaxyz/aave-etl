@@ -1,7 +1,10 @@
 {{ config(materialized='table') }}
 
+-- Upstream table all_treasury_balances uses end of day balances
+-- This is translated to a start of day balance by incrementing the block day by 1
+
 select
-  block_day
+  date_add(block_day, interval 1 day) as block_day
   , display_chain
   , display_market
   , collector_label
