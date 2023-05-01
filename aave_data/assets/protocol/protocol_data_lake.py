@@ -61,11 +61,11 @@ INITIAL_RETRY = 0.01 #seconds
 MAX_RETRIES = 10
 DAILY_PARTITION_START_DATE=datetime(2022,2,26,0,0,0, tzinfo=timezone.utc)
 
-daily_partitions_def = DailyPartitionsDefinition(start_date=DAILY_PARTITION_START_DATE, end_offset=1)
+daily_partitions_def = DailyPartitionsDefinition(start_date=DAILY_PARTITION_START_DATE, end_offset=1, timezone="UTC")
 
 chain_day_multipartition = MultiPartitionsDefinition(
     {
-        "date": DailyPartitionsDefinition(start_date='2023-04-06', end_offset=1),
+        "date": DailyPartitionsDefinition(start_date='2023-04-06', end_offset=1, timezone="UTC"),
         "chain": StaticPartitionsDefinition(list(BALANCER_BPT_TOKENS.keys())),
     }
 )
@@ -1085,6 +1085,8 @@ def balancer_bpt_data_by_day(
     """
     Table of the each token in a market with configuration and protocol data
     Data is retrieved on-chain using the Aave Protocol Data Provider (or equivalent)
+
+    Requires access to the previous d
 
     Args:
         context: dagster context object

@@ -386,7 +386,7 @@ def financials_root_schedule(context):
         )
 
 @schedule(
-    cron_schedule="0 1 * * *",
+    cron_schedule="1 1 * * *",
     job=data_lake_partitioned_job,
     execution_timezone='UTC',
     name="data_lake_partitioned_schedule",

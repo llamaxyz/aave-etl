@@ -58,7 +58,7 @@ HOURLY_PARTITION_START_DATE=datetime(2023,4,15,0,0,0, tzinfo=timezone.utc)
 
 market_hour_multipartition = MultiPartitionsDefinition(
     {
-        "time": HourlyPartitionsDefinition(start_date=HOURLY_PARTITION_START_DATE, end_offset=1),
+        "time": HourlyPartitionsDefinition(start_date=HOURLY_PARTITION_START_DATE, end_offset=1, timezone="UTC"),
         "market": StaticPartitionsDefinition(['ethereum_v3','polygon_v3']),
     }
 )

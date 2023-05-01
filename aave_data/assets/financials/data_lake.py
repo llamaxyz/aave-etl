@@ -55,7 +55,7 @@ MAX_RETRIES = 10
 
 market_day_multipartition = MultiPartitionsDefinition(
     {
-        "date": DailyPartitionsDefinition(start_date=FINANCIAL_PARTITION_START_DATE, end_offset=1),
+        "date": DailyPartitionsDefinition(start_date=FINANCIAL_PARTITION_START_DATE, end_offset=1, timezone="UTC"),
         "market": StaticPartitionsDefinition(list(CONFIG_MARKETS.keys())),
     }
 )
