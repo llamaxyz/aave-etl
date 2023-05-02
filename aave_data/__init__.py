@@ -341,70 +341,12 @@ datamart_hourly_job = define_asset_job(
 # Schedules
 ############################################
 
-financials_daily_partition = DailyPartitionsDefinition(start_date=FINANCIAL_PARTITION_START_DATE)
-
-def get_multipartition_keys_with_dimension_value(
-    partition_def: MultiPartitionsDefinition, 
-    dimension_values: dict,
-):
-    """ Helper function for schedule
-        Returns a list of partition keys that match the given dimension values
-    """
-    matching_keys = []
-    for partition_key in partition_def.get_partition_keys():
-
-        date, market = partition_key.split("|")
-        if all(
-            [
-                date == value
-                for dimension, value in dimension_values.items()
-            ]
-        ):
-            matching_keys.append(partition_key)
-    return matching_keys
-
-
-@schedule(
-    cron_schedule="0 1 * * *",
-    job=financials_root_job,
-    execution_timezone='UTC',
-    name="financials_root_schedule",
-)
-def financials_root_schedule(context):
-    time_partitions = financials_daily_partition.get_partition_keys(context.scheduled_execution_time)
-
-    # Run for the latest time partition. Prior partitions will have been handled by prior ticks.
-    curr_date = time_partitions[-1]
-    context.log.info(f"Constructing run schedule for current date: {curr_date}")
-    for multipartition_key in get_multipartition_keys_with_dimension_value(
-        market_day_multipartition, {"date": curr_date}
-    ):
-        context.log.info(f"Generating run request for partition {multipartition_key}")
-        yield financials_root_job.run_request_for_partition(
-            partition_key=multipartition_key,
-            run_key=multipartition_key,
-        )
-
-@schedule(
-    cron_schedule="1 1 * * *",
+data_lake_partitioned_schedule = build_schedule_from_partitioned_job(
     job=data_lake_partitioned_job,
-    execution_timezone='UTC',
+    minute_of_hour=0,
+    hour_of_day=1,
     name="data_lake_partitioned_schedule",
 )
-def data_lake_partitioned_schedule(context):
-    time_partitions = financials_daily_partition.get_partition_keys(context.scheduled_execution_time)
-
-    # Run for the latest time partition. Prior partitions will have been handled by prior ticks.
-    curr_date = time_partitions[-1]
-    context.log.info(f"Constructing run schedule for current date: {curr_date}")
-    for multipartition_key in get_multipartition_keys_with_dimension_value(
-        market_day_multipartition, {"date": curr_date}
-    ):
-        context.log.info(f"Generating run request for partition {multipartition_key}")
-        yield data_lake_partitioned_job.run_request_for_partition(
-            partition_key=multipartition_key,
-            run_key=multipartition_key,
-        )
 
 data_lake_unpartitioned_schedule = ScheduleDefinition(
     job = data_lake_unpartitioned_job,
@@ -453,49 +395,14 @@ datamart_hourly_schedule = ScheduleDefinition(
     execution_timezone='UTC',
     name="datamart_hourly_schedule",
 )
-####################################################
-# Sensor Code - not working pending sensor performance improvements
+
 ############################################
-
-
-financials_data_lake_sensor = build_asset_reconciliation_sensor(
-    name="financials_data_lake_sensor",
-    asset_selection=AssetSelection.groups('financials_data_lake') - AssetSelection.keys('financials_data_lake/block_numbers_by_day'),# - AssetSelection.assets(*dbt_assets),
-    minimum_interval_seconds=60*3
-)
-
-financials_warehouse_sensor = build_asset_reconciliation_sensor(
-    name="financials_warehouse_sensor",
-    asset_selection=AssetSelection.groups('warehouse'),
-    minimum_interval_seconds=60*3
-)
-
-dbt_sensor = build_asset_reconciliation_sensor(
-    name="dbt_sensor",
-    asset_selection=AssetSelection.assets(*dbt_assets),
-    minimum_interval_seconds=60*3
-)
-# # both_list = minimal_list.append(exclude_list)
-minimal_sensor = build_asset_reconciliation_sensor(
-    name="minimal_sensor",
-    asset_selection=AssetSelection.keys('financials_data_lake/market_tokens_by_day'),
-    # asset_selection=AssetSelection.groups('financials_data_lake') - AssetSelection.keys(*exclude_list) - AssetSelection.keys('financials_data_lake/block_numbers_by_day'),
-    # asset_selection=AssetSelection.groups('financials_data_lake'),
-    minimum_interval_seconds=60*3
-)
-# financials_sensor = build_asset_reconciliation_sensor(
-#     name="financials_sensor",
-#     # asset_selection=AssetSelection.keys(*data_lake_chunk_1), 
-#     asset_selection=AssetSelection.all() - AssetSelection.keys('financials_data_lake/block_numbers_by_day'),
-#     minimum_interval_seconds=60*3
-# )
-#####################################################################
-
+# Definitions
+############################################
 
 defs = Definitions(
     assets=[*financials_data_lake_assets, *protocol_data_lake_assets, *protocol_hourly_data_lake_assets, *warehouse_assets, *dbt_assets],
     jobs=[
-          financials_root_job,
           data_lake_unpartitioned_job,
           data_lake_partitioned_job,
           warehouse_datamart_job,
@@ -505,7 +412,6 @@ defs = Definitions(
           datamart_hourly_job
           ],
     schedules = [
-        financials_root_schedule,
         warehouse_datamart_schedule,
         data_lake_unpartitioned_schedule,
         data_lake_partitioned_schedule,
@@ -515,26 +421,8 @@ defs = Definitions(
         data_lake_hourly_partitioned_schedule,
         datamart_hourly_schedule,
         ],
-    # sensors=[financials_data_lake_sensor, financials_warehouse_sensor, dbt_sensor, minimal_sensor],
     resources=resource_defs[dagster_deployment],
 )
 
 
 
-
-# from dagster import  build_sensor_context, DagsterInstance
-# if __name__ == "__main__":
-
-#     # you may need to change this line to get your prod dagster instance
-#     with DagsterInstance.get() as instance:
-#         sensor = build_asset_reconciliation_sensor(AssetSelection.groups('financials_data_lake') - AssetSelection.keys('financials_data_lake/block_numbers_by_day'))
-#         cursor = sensor.evaluate_tick(
-#             build_sensor_context(
-#                 instance=instance,
-#                 repository_def=defs,
-#             )
-#         )
-    # context = build_schedule_context()
-    # pass
-    # schedules = schedule_def(context)
-    # print(schedule_def)
