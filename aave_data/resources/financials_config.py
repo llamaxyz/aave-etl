@@ -188,7 +188,8 @@ CONFIG_MARKETS = {
         "atoken_prefix": "a",
         "oracle_base_currency": 'wei',
         "block_table_master": True,
-        "price_rank": 3
+        "price_rank": 3,
+        "paraswap_fee_claimer": '0x9abf798f5314bfd793a9e57a654bed35af4a1d60'
     },
     "aave_amm": {
         "chain": "ethereum",
@@ -272,7 +273,8 @@ CONFIG_MARKETS = {
         "atoken_prefix": "aEth",
         "oracle_base_currency": 'usd',
         "block_table_master": False,
-        "price_rank": 1
+        "price_rank": 1,
+        "paraswap_fee_claimer": '0x9abf798f5314bfd793a9e57a654bed35af4a1d60'
     },
     "polygon_v2": {
         "chain": "polygon",
@@ -295,7 +297,8 @@ CONFIG_MARKETS = {
         "atoken_prefix": "am",
         "oracle_base_currency": 'wei',
         "block_table_master": True,
-        "price_rank": 2
+        "price_rank": 2,
+        "paraswap_fee_claimer": '0x9abf798f5314bfd793a9e57a654bed35af4a1d60'
     },
     "avax_v2": {
         "chain": "avalanche",
@@ -318,7 +321,8 @@ CONFIG_MARKETS = {
         "atoken_prefix": "av",
         "oracle_base_currency": 'usd',
         "block_table_master": True,
-        "price_rank": 2
+        "price_rank": 2,
+        "paraswap_fee_claimer": '0x9abf798f5314bfd793a9e57a654bed35af4a1d60'
     },
     "polygon_v3": {
         "chain": "polygon",
@@ -339,7 +343,8 @@ CONFIG_MARKETS = {
         "atoken_prefix": "aPol",
         "oracle_base_currency": 'usd',
         "block_table_master": False,
-        "price_rank": 1
+        "price_rank": 1,
+        "paraswap_fee_claimer": '0x9abf798f5314bfd793a9e57a654bed35af4a1d60'
     },
     "avax_v3": {
         "chain": "avalanche",
@@ -360,7 +365,8 @@ CONFIG_MARKETS = {
         "atoken_prefix": "aAva",
         "oracle_base_currency": 'usd',
         "block_table_master": False,
-        "price_rank": 1
+        "price_rank": 1,
+        "paraswap_fee_claimer": '0x9abf798f5314bfd793a9e57a654bed35af4a1d60'
     },
     "optimism_v3": {
         "chain": "optimism",
@@ -381,7 +387,8 @@ CONFIG_MARKETS = {
         "atoken_prefix": "aOpt",
         "oracle_base_currency": 'usd',
         "block_table_master": True,
-        "price_rank": 1
+        "price_rank": 1,
+        "paraswap_fee_claimer": '0x9abf798f5314bfd793a9e57a654bed35af4a1d60'
     },
     "arbitrum_v3": {
         "chain": "arbitrum",
@@ -402,7 +409,8 @@ CONFIG_MARKETS = {
         "atoken_prefix": "aArb",
         "oracle_base_currency": 'usd',
         "block_table_master": True,
-        "price_rank": 1
+        "price_rank": 1,
+        "paraswap_fee_claimer": '0x9abf798f5314bfd793a9e57a654bed35af4a1d60'
     },
     "fantom_v3": {
         "chain": "fantom",
@@ -423,7 +431,8 @@ CONFIG_MARKETS = {
         "atoken_prefix": "aFan",
         "oracle_base_currency": 'usd',
         "block_table_master": True,
-        "price_rank": 1
+        "price_rank": 1,
+        "paraswap_fee_claimer": '0x9abf798f5314bfd793a9e57a654bed35af4a1d60'
     },
     "harmony_v3": {
         "chain": "harmony",
@@ -444,7 +453,7 @@ CONFIG_MARKETS = {
         "atoken_prefix": "aHar",
         "oracle_base_currency": 'usd',
         "block_table_master": True,
-        "price_rank": 1
+        "price_rank": 1,
     },
     "ethereum_v1": {
         "chain": "ethereum",

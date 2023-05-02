@@ -31,6 +31,7 @@ from eth_utils.conversions import to_bytes
 from shroomdk import ShroomDK
 from time import sleep
 from random import randint
+from multicall import Call, Multicall
 
 from aave_data.resources.financials_config import * #pylint: disable=wildcard-import, unused-wildcard-import
 
@@ -1938,121 +1939,133 @@ def eth_balances_by_day(context, block_numbers_by_day) -> pd.DataFrame:  # type:
 
     return balance_output
 
-# this mapping returns the market's partition for the previous day
-market_previous_day_multipartiton_mapping = MultiPartitionMapping(
-    {   
-        "date": DimensionPartitionMapping(
-            dimension_name='date',
-            partition_mapping=TimeWindowPartitionMapping(start_offset=-1, end_offset=-1)
-        ),
-        "market": DimensionPartitionMapping(
-            dimension_name='market',
-            partition_mapping=IdentityPartitionMapping()
-        )
+@asset(
+    partitions_def=market_day_multipartition,
+    compute_kind="python",
+    #group_name='data_lake',
+    code_version="1",
+    io_manager_key = 'data_lake_io_manager',
+    ins={
+        "market_tokens_by_day": AssetIn(key_prefix="financials_data_lake"),
     }
 )
+def paraswap_claimable_fees(context, market_tokens_by_day) -> pd.DataFrame:  # type: ignore pylint: disable=W0621
+    """Table of the unclaimed paraswap fees for each market
 
-# @asset(
-#     partitions_def=market_day_multipartition,
-#     compute_kind="python", 
-#     #group_name='data_lake',
-#     code_version="1",
-#     io_manager_key = 'data_lake_io_manager',
-#     ins={
-#         "block_numbers_by_day": AssetIn(key_prefix="financials_data_lake", partition_mapping=market_previous_day_multipartiton_mapping),
-#     },
-#     # auto_materialize_policy=AutoMaterializePolicy.eager()
-# )
-# def upstream_partition_ref(context, block_numbers_by_day): 
-#     # start_block = block_numbers_by_day.block_height.values[0]
-#     date, market = context.partition_key.split("|")
-#     # chain = CONFIG_MARKETS[market]['chain']
-#     partition_datetime = datetime.strptime(date, '%Y-%m-%d')
+    Uses multicall.py to access an RPC node and call paraswap fee claimer contract
+    If there is no fee claimer contract then an empty dataframe is returned
 
-#     context.log.info(f"market: {market}")
-#     context.log.info(f"date: {date}")
+    IMPORTANT - this asset may contain duplicate values across the multiple partitions in a chain
+      example - USDC on etheruem v2 and v3
+      This will be deduplicated in the warehouse table
 
-#     # access prior partition
-#     # block_day should be date-1
-#     ic(block_numbers_by_day)
-#     block_day_from_upstream = block_numbers_by_day.block_day.values[0]
-#     context.log.info(f"block_day_from_upstream: {block_day_from_upstream}")
+    Args:
+        context: dagster context object
+        market_tokens_by_day: the output of market_tokens_by_day for a given market
 
-#     return_value = pd.DataFrame(
-#         [
-#             {
-#                 "block_day" : partition_datetime,
-#                 "upstream_block_day": block_day_from_upstream,
-#             }
-#         ]
-#     )
+    Returns:
+        A dataframe market, token and the underlying reserve oracle price at the block height
+
+    """
+
+    date, market = context.partition_key.split("|")
+
+    context.log.info(f"date: {date}")
+    context.log.info(f"market: {market}")
+
+    chain = CONFIG_MARKETS[market]['chain']
+
+    # bail if the date is before the fee claimer contract was deployed
+    if datetime.strptime(date, '%Y-%m-%d') < datetime(2022,12,7):
+        return pd.DataFrame()
+
+    # bail if there is no market
+    if market_tokens_by_day.empty:
+        return pd.DataFrame()
+    else:
+        block_height = int(market_tokens_by_day.block_height.values[0])
+        context.log.info(f"market: {market}")
+        context.log.info(f"date: {date}")
+        context.log.info(f"block_height: {block_height}")
+ 
+    # bail if there is no fee claimer contract
+    if 'paraswap_fee_claimer' not in CONFIG_MARKETS[market]:
+        return pd.DataFrame()
+    else:
+        fee_claimer = CONFIG_MARKETS[market]['paraswap_fee_claimer']
     
-#     return_value = standardise_types(return_value)
+    # on-chain function takes a list
+    tokens = market_tokens_by_day.reserve.to_list()
 
-#     context.add_output_metadata(
-#             {
-#                 "num_records": len(return_value),
-#                 "preview": MetadataValue.md(return_value.head().to_markdown()),
-#             }
-#         )
+    # initialise the web3 object
+    w3 = Web3(Web3.HTTPProvider(CONFIG_CHAINS[chain]['web3_rpc_url']))
 
-#     return return_value
+    # build the call object
+    fee_claim_call = Call(
+        fee_claimer,
+        ['batchGetClaimable(address[])(uint256[])', tokens],
+        [['claimable', None]],
+        _w3 = w3,
+        block_id = block_height
+    )
+    
+    # execute the call
+    # exponential backoff retries on the function call to deal with transient RPC errors
+    i = 0
+    delay = INITIAL_RETRY
+    while True:
+        try:
+            call_output = fee_claim_call()
+            break
+        except Exception as e:
+            i += 1
+            if i > MAX_RETRIES:
+                raise ValueError(f"RPC error count {i}, last error {str(e)}.  Bailing out.")
+            rand_delay = randint(0, 250) / 1000
+            sleep(delay + rand_delay)
+            delay *= 2
+            print(f"Request Error {str(e)}, retry count {i}")
 
-# Test assets for the io manager
+    # output is a tuple, join it back to the original dataframe
+    claimable_raw = pd.DataFrame(call_output['claimable'], columns=['claimable_raw'])
+    market_tokens_by_day = market_tokens_by_day.join(claimable_raw, how='left')
+    
+    # tidy up
+    market_tokens_by_day['claimable'] = market_tokens_by_day['claimable_raw'].astype(float) / 10 ** market_tokens_by_day['decimals']
+    market_tokens_by_day['chain'] = chain
+    market_tokens_by_day['paraswap_fee_claimer'] = fee_claimer
+
+    market_tokens_by_day = market_tokens_by_day[['block_day','chain','market','reserve','symbol','claimable']]
+
+    context.add_output_metadata(
+        {
+            "num_records": len(market_tokens_by_day),
+            "preview": MetadataValue.md(market_tokens_by_day.head().to_markdown()),
+        }
+    )
+
+    return market_tokens_by_day
 
 
-# @asset(
-#     partitions_def = DailyPartitionsDefinition(start_date=FINANCIAL_PARTITION_START_DATE),
-#     compute_kind="python",
-#     group_name='test_group',
-#     io_manager_key = 'data_lake_io_manager'
-# )
-# def daily_asset(context):
-#     return pd.DataFrame(
-#         [
-#             {
-#             'string_col': context.partition_key
-#             }
-#         ]
-#     )
 
-# @asset(
-#     partitions_def = DailyPartitionsDefinition(start_date=FINANCIAL_PARTITION_START_DATE),
-#     compute_kind="python",
-#     group_name='test_group',
-#     io_manager_key = 'data_lake_io_manager'
-# )
-# def daily_asset_downstream(context, daily_asset):
+if __name__ == "__main__":
 
-#     ic(daily_asset)
-#     return_value = daily_asset
-#     return_value['additional_col'] = 'additional value'
-#     raise ValueError('force crash')
-#     return return_value
+    # chain = 'ethereum'
+    # market = 'ethereum_v2'
+    # block_height = 17171071
+    # tokens = ['0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2','0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48']
+    # w3 = Web3(Web3.HTTPProvider(CONFIG_CHAINS[chain]['web3_rpc_url']))
+    # fee_claimer = CONFIG_MARKETS[market]['paraswap_fee_claimer']
 
-# @asset(
-#     compute_kind="python",
-#     group_name='test_group',
-#     io_manager_key = 'data_lake_io_manager'
-# )
-# def no_partition_asset(context):
-#     return pd.DataFrame(
-#         [
-#             {
-#             'string_col': 'unpartitioned asset'            }
-#         ]
-#     )
+    # fee_claim_call = Call(
+    #     fee_claimer,
+    #     ['batchGetClaimable(address[])(uint256[])', tokens],
+    #     [['claimable', None]],
+    #     _w3 = w3,
+    #     block_id = block_height
+    # )
+    
+    # call_output = fee_claim_call()
 
-# @asset(
-#     compute_kind="python",
-#     group_name='test_group',
-#     io_manager_key = 'data_lake_io_manager'
-# )
-# def no_partition_asset_downstream(context, no_partition_asset):
-#     ic(no_partition_asset)
-#     return_value = no_partition_asset
-#     return_value['additional_col'] = 'additional value'
-#     raise ValueError('force crash')
-#     return return_value
-# 
-################################
+    # ic(call_output)
+    pass
