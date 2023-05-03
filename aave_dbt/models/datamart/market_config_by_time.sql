@@ -75,9 +75,9 @@ select
   , c.display_market
   , a.reserve_symbol
 from deduplicated d
-  left join {{ ref('chains_markets') }} c on (m.market = c.market)
+  left join {{ ref('chains_markets') }} c on (d.market = c.market)
   -- left join datamart.chains_markets c on (d.market = c.market)
-  left join {{ ref('aave_atokens') }} a on (m.market = a.market and m.reserve = a.reserve)
+  left join {{ ref('aave_atokens') }} a on (d.market = a.market and d.reserve = a.reserve)
   -- left join datamart.aave_atokens a on (d.market = a.market and d.reserve = a.reserve)
 order by d.market, d.atoken_symbol, d.block_time
 
