@@ -31,6 +31,7 @@ setup(
         "dagster-gcp==0.19.1",
         "dagster-cloud==1.3.1",
         "dagster-dbt==0.19.1",
+        "dbt-core==1.4.6", #pin due to probs with 1.5.0
         "dbt-bigquery",
         "boto3",  # used by Dagster Cloud Serverless
         "pandas",
