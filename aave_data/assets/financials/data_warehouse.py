@@ -653,6 +653,51 @@ def balance_group_lookup(
 
     return return_val
 
+@asset(
+    compute_kind='python',
+    code_version="1",
+    io_manager_key = 'data_warehouse_io_manager',
+    ins={
+        "paraswap_claimable_fees": AssetIn(key_prefix="financials_data_lake"),
+    }
+)
+def paraswap_fees(
+            context,
+            paraswap_claimable_fees,
+            ) -> pd.DataFrame:
+    """
+    Deduplicates the paraswap fees table
+    
+    Args:
+        context: dagster context object
+        paraswap_claimable_fees: the output of paraswap_claimable_fees
+
+    Returns:
+        A dataframe of outstanding paraswap fees to be claimed
+
+    """
+
+    # get the latest day from the table
+    latest_day = paraswap_claimable_fees.block_day.max()
+    context.log.info(f'block day {latest_day}')
+
+    fees = paraswap_claimable_fees[['block_day','chain','market','reserve','symbol','claimable']]
+
+    # deduplicate the fees
+    fees = fees.sort_values(['block_day','chain','reserve','market'], ascending=[True,True,True,True]).drop_duplicates(['block_day','chain','reserve'], keep='last')
+    
+    # drop the zeroes
+    fees = fees.loc[fees.claimable > 0]
+
+    context.add_output_metadata(
+        {
+            "num_records": len(fees),
+            "preview": MetadataValue.md(fees.head().to_markdown()),
+        }
+    )
+
+    return fees
+
 # if __name__ == "__main__":
     # test_blocks_by_day()
     # test_atoken_measures_by_day()
