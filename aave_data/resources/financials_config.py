@@ -564,6 +564,23 @@ CONFIG_1INCH = {
             }
         },
     },
+    "polygon_usdc": {
+        "market": "polygon_v3",
+        "chain": "polygon",
+        "loop_market": "MATIC",
+        "to_asset": {
+            "USDC": {
+                    "address": "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
+                    "decimals": 6,
+                }
+            },
+        "from_assets": {
+            "WMATIC": {
+                    "address": "0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270",
+                    "decimals": 18,
+                },
+        },
+    },
     "ethereum_eth": {
         "market": "ethereum_v3",
         "chain": "ethereum",
