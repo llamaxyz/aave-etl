@@ -227,7 +227,7 @@ def atoken_measures_by_day(
         "non_atoken_balances_by_day": AssetIn(key_prefix="financials_data_lake"),
         "non_atoken_transfers_by_day": AssetIn(key_prefix="financials_data_lake"),
         "aave_internal_addresses": AssetIn(key_prefix="warehouse"),
-        # "paraswap_fees": AssetIn(key_prefix="warehouse"),
+        "paraswap_fees": AssetIn(key_prefix="warehouse"),
     }
 )
 def non_atoken_measures_by_day(
@@ -235,7 +235,7 @@ def non_atoken_measures_by_day(
             non_atoken_balances_by_day,
             non_atoken_transfers_by_day,
             aave_internal_addresses,
-            # paraswap_fees
+            paraswap_fees
             ) -> pd.DataFrame:
     """
     Joins all measures relevant to the non-atokens into one table
@@ -258,6 +258,7 @@ def non_atoken_measures_by_day(
     mc = pd.DataFrame(mc, columns=['market','chain'])
 
     return_val = non_atoken_balances_by_day
+    return_val.drop(columns=['block_height', 'decimals'], inplace=True)
     if not return_val.empty:
         return_val = return_val.merge(mc, how='left')
         if not non_atoken_transfers_by_day.empty:
@@ -311,14 +312,26 @@ def non_atoken_measures_by_day(
             # join transfers to main table
             return_val = return_val.merge(transfers, how='left')
 
-            # add paraswap fees
-            # return_val = return_val.merge(paraswap_fees, how='left')
+            # add paraswap fees by concat and sum
+            paraswap_fees.rename(
+                columns={
+                    'reserve':'token',
+                    'paraswap_fee_claimer':'contract_address',
+                    'claimable':'paraswap_fees_claimable'
+                }, 
+                inplace=True
+            )
+
+            return_val = pd.concat([return_val, paraswap_fees])
+            return_val = return_val.fillna(float(0))
+            return_val = return_val.groupby(['block_day','chain','market','contract_address','token','symbol',]).sum().reset_index()
 
         else:
             return_val['tokens_in_external'] = float(0)
             return_val['tokens_in_internal'] = float(0)
             return_val['tokens_out_external'] = float(0)
             return_val['tokens_out_internal'] = float(0)
+            return_val['paraswap_fees_claimable'] = float(0)
         # ic(return_val)
         return_val = return_val.fillna(float(0))
         
