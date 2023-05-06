@@ -687,10 +687,10 @@ def paraswap_fees(
     latest_day = paraswap_claimable_fees.block_day.max()
     context.log.info(f'block day {latest_day}')
 
-    fees = paraswap_claimable_fees[['block_day','chain','market','fee_claimer','reserve','symbol','claimable']]
+    fees = paraswap_claimable_fees[['block_day','chain','market','paraswap_fee_claimer','reserve','symbol','claimable']]
 
     # deduplicate the fees
-    fees = fees.sort_values(['block_day','chain','reserve','market','fee_claimer'], ascending=[True,True,True,True,True]).drop_duplicates(['block_day','chain','fee_claimer','reserve',], keep='last')
+    fees = fees.sort_values(['block_day','chain','reserve','market','paraswap_fee_claimer'], ascending=[True,True,True,True,True]).drop_duplicates(['block_day','chain','paraswap_fee_claimer','reserve',], keep='last')
     
     # drop the zeroes
     fees = fees.loc[fees.claimable > 0]
