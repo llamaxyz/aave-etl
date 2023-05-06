@@ -29,7 +29,7 @@ from icecream import ic
 from eth_abi.abi import decode
 from eth_utils.conversions import to_bytes
 from shroomdk import ShroomDK
-from time import sleep
+from time import sleep, time
 from random import randint
 from multicall import Call, Multicall
 
@@ -1275,7 +1275,7 @@ def user_lm_rewards_claimed(context, block_numbers_by_day):
     """
 
     date, market = context.partition_key.split("|")
-    chain = CONFIG_MARKETS[market]['chain']
+    # chain = CONFIG_MARKETS[market]['chain']
     partition_datetime = datetime.strptime(date, '%Y-%m-%d')
 
     context.log.info(f"market: {market}")
@@ -1301,15 +1301,14 @@ def user_lm_rewards_claimed(context, block_numbers_by_day):
                 when contract_address = '0xa1116930326d21fb917d5a27f1e9943a9595fb47' then 'ecosystem_reserve'
                 when contract_address = '0x4da27a545c0c5b758a6ba100e3a049001de870f5' then 'ecosystem_reserve'
                 end as reward_vault
-            , sum(event_inputs:amount) / 1e18 as amount
-            from ethereum.core.fact_event_logs
+            , sum(decoded_log:amount) / 1e18 as amount
+            from ethereum.core.fact_decoded_event_logs
             where event_name = 'RewardsClaimed'
             and block_number >= {start_block}
             and block_number < {end_block}
             and contract_address in ('0xd784927ff2f95ba542bfc824c8a8a98f3495f6b5', 
                                      '0xa1116930326d21fb917d5a27f1e9943a9595fb47', 
                                      '0x4da27a545c0c5b758a6ba100e3a049001de870f5')
-            and tx_status = 'SUCCESS'
             group by block_day, contract_address, contract_name
             )
 
@@ -1345,9 +1344,13 @@ def user_lm_rewards_claimed(context, block_numbers_by_day):
 
         # initialise the query
         sdk = ShroomDK(FLIPSIDE_API_KEY)
+        # time the FLipside query
+        start_time = time()
         query_result = sdk.query(sql)
-        
+        elapsed_time = time() - start_time
+        context.log.info(f"Flipside query time: {elapsed_time:.6f}s")
         rewards_claimed = pd.DataFrame(data=query_result.rows, columns=[x.lower() for x in query_result.columns])
+        rewards_claimed.drop(columns=['__row_index'], inplace=True)
         rewards_claimed.block_day = pd.to_datetime(rewards_claimed.block_day, utc=True)
         rewards_claimed.rename(columns={
             'sm_stkaave_claims': 'sm_stkAAVE_claims',
@@ -1366,6 +1369,7 @@ def user_lm_rewards_claimed(context, block_numbers_by_day):
         {
             "num_records": len(rewards_claimed),
             "preview": MetadataValue.md(rewards_claimed.head().to_markdown()),
+            "flipside_query_time": elapsed_time
         }
     )
 
@@ -1582,7 +1586,7 @@ def streaming_payments_state(context, block_numbers_by_day):
 
     # start_block = block_numbers_by_day.block_height.values[0]
     end_block = block_numbers_by_day.loc[block_numbers_by_day.market == 'ethereum_v2'].end_block.max()
-    ic(end_block)
+    # ic(end_block)
     
     # define the Flipside query
     sql = f"""
@@ -1657,9 +1661,15 @@ def streaming_payments_state(context, block_numbers_by_day):
 
     # initialise the query
     sdk = ShroomDK(FLIPSIDE_API_KEY)
+    # time the FLipside query
+    start_time = time()
     query_result = sdk.query(sql, timeout_minutes=10)
+    elapsed_time = time() - start_time
+    context.log.info(f"Flipside query time: {elapsed_time:.6f}s")
+    
     
     streams = pd.DataFrame(data=query_result.rows, columns=[x.lower() for x in query_result.columns])
+    streams.drop(columns=['__row_index'], inplace=True)
     streams.deposit_day = pd.to_datetime(streams.deposit_day, utc=True)
 
     streams['start_time'] = pd.to_datetime(streams.start_time_s, unit = 's', utc=True)
@@ -1684,6 +1694,7 @@ def streaming_payments_state(context, block_numbers_by_day):
         {
             "num_records": len(streams),
             "preview": MetadataValue.md(streams.head().to_markdown()),
+            "flipside_query_time": elapsed_time,
         }
     )
 
