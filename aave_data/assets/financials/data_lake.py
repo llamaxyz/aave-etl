@@ -1995,8 +1995,8 @@ def paraswap_claimable_fees(context, market_tokens_by_day) -> pd.DataFrame:  # t
         return pd.DataFrame()
     else:
         block_height = int(market_tokens_by_day.block_height.values[0])
-        context.log.info(f"market: {market}")
-        context.log.info(f"date: {date}")
+        # context.log.info(f"market: {market}")
+        # context.log.info(f"date: {date}")
         context.log.info(f"block_height: {block_height}")
  
     # bail if there is no fee claimer contract
@@ -2046,7 +2046,7 @@ def paraswap_claimable_fees(context, market_tokens_by_day) -> pd.DataFrame:  # t
     market_tokens_by_day['chain'] = chain
     market_tokens_by_day['paraswap_fee_claimer'] = fee_claimer
 
-    market_tokens_by_day = market_tokens_by_day[['block_day','chain','market','reserve','symbol','claimable']]
+    market_tokens_by_day = market_tokens_by_day[['block_day','chain','market','paraswap_fee_claimer','reserve','symbol','claimable']]
 
     context.add_output_metadata(
         {
