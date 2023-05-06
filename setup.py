@@ -41,7 +41,7 @@ setup(
         "requests",
         "httpx", # async http requests
         "subgrounds",  # API for accessing subgraphs easily
-        "shroomdk==1.0.2",  # API for accessing shroom Flipside Crypto data tables via SQL
+        "shroomdk==2.0.3",  # API for accessing shroom Flipside Crypto data tables via SQL
         # "web3==6.0.0", # installed in dagster_cloud_post_install.sh due to version clash with multicall
         # "multicall==0.7.1" # installed in dagster_cloud_post_install.sh due to version clash with web3
     ],
