@@ -227,13 +227,15 @@ def atoken_measures_by_day(
         "non_atoken_balances_by_day": AssetIn(key_prefix="financials_data_lake"),
         "non_atoken_transfers_by_day": AssetIn(key_prefix="financials_data_lake"),
         "aave_internal_addresses": AssetIn(key_prefix="warehouse"),
+        # "paraswap_fees": AssetIn(key_prefix="warehouse"),
     }
 )
 def non_atoken_measures_by_day(
             context,
             non_atoken_balances_by_day,
             non_atoken_transfers_by_day,
-            aave_internal_addresses
+            aave_internal_addresses,
+            # paraswap_fees
             ) -> pd.DataFrame:
     """
     Joins all measures relevant to the non-atokens into one table
@@ -243,6 +245,7 @@ def non_atoken_measures_by_day(
         non_atoken_balances_by_day: the output of non_atoken_balances_by_day
         non_atoken_transfers_by_day: the output of non_atoken_transfers_by_day
         internal_external_addresses: the output of internal_external_addresses
+        paraswap_fees: the output of paraswap_fees
 
     Returns:
         A dataframe with a row for each non-atoken on the day, and the output of all the measures
@@ -307,6 +310,9 @@ def non_atoken_measures_by_day(
 
             # join transfers to main table
             return_val = return_val.merge(transfers, how='left')
+
+            # add paraswap fees
+            # return_val = return_val.merge(paraswap_fees, how='left')
 
         else:
             return_val['tokens_in_external'] = float(0)
@@ -681,10 +687,10 @@ def paraswap_fees(
     latest_day = paraswap_claimable_fees.block_day.max()
     context.log.info(f'block day {latest_day}')
 
-    fees = paraswap_claimable_fees[['block_day','chain','market','reserve','symbol','claimable']]
+    fees = paraswap_claimable_fees[['block_day','chain','market','fee_claimer','reserve','symbol','claimable']]
 
     # deduplicate the fees
-    fees = fees.sort_values(['block_day','chain','reserve','market'], ascending=[True,True,True,True]).drop_duplicates(['block_day','chain','reserve'], keep='last')
+    fees = fees.sort_values(['block_day','chain','reserve','market','fee_claimer'], ascending=[True,True,True,True,True]).drop_duplicates(['block_day','chain','fee_claimer','reserve',], keep='last')
     
     # drop the zeroes
     fees = fees.loc[fees.claimable > 0]
