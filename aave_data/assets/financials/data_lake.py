@@ -1362,6 +1362,7 @@ def user_lm_rewards_claimed(context, block_numbers_by_day):
 
     else:
         rewards_claimed = pd.DataFrame()
+        elapsed_time = 0
 
     rewards_claimed = standardise_types(rewards_claimed)
     
