@@ -590,13 +590,15 @@ def aave_internal_addresses(
         "market_tokens_by_day": AssetIn(key_prefix="financials_data_lake"),
         "balance_group_lists": AssetIn(key_prefix="financials_data_lake"),
         "eth_balances_by_day": AssetIn(key_prefix="financials_data_lake"),
+        "non_atoken_measures_by_day": AssetIn(key_prefix="warehouse"),
     }
 )
 def balance_group_lookup(
             context,
             market_tokens_by_day,
             balance_group_lists,
-            eth_balances_by_day
+            eth_balances_by_day,
+            non_atoken_measures_by_day
             ) -> pd.DataFrame:
     """
     Converts the balance_group_lists into a lookup table
@@ -621,31 +623,21 @@ def balance_group_lookup(
     v1_tokens = return_val.loc[return_val.market == 'ethereum_v1'].copy()
     v1_tokens.atoken = v1_tokens.reserve
     return_val = pd.concat([return_val, v1_tokens])
-    # add the non-atokens
-    non_atokens = pd.DataFrame()
-    for market in CONFIG_TOKENS.keys():
-        for contract in CONFIG_TOKENS[market].keys():
-            for token in CONFIG_TOKENS[market][contract]['tokens'].keys():
-                token_row = pd.DataFrame(
-                    [
-                        {
-                            'market': market,
-                            'atoken': CONFIG_TOKENS[market][contract]['tokens'][token]['address'],
-                            'atoken_symbol': token,
-                            'reserve': CONFIG_TOKENS[market][contract]['tokens'][token]['address'],
-                            'symbol': token,
-                        }
-                    ]
-                )
-                non_atokens = pd.concat([non_atokens, token_row])
-    non_atokens = non_atokens.drop_duplicates()
+
+    # add the non-atokens (includes the paraswap tokens)
+    non_atokens = non_atoken_measures_by_day[['market','token','symbol']].copy().drop_duplicates()
+    non_atokens.rename(columns={'token':'reserve'}, inplace=True)
+    non_atokens['atoken'] = non_atokens['reserve']
+    non_atokens['atoken_symbol'] = non_atokens['symbol']
     return_val = pd.concat([return_val, non_atokens])
+
     # add the gas tokens
     gas_tokens = eth_balances_by_day[['market','wrapped_gas_token','gas_token']].copy().drop_duplicates()
     gas_tokens.rename(columns={'wrapped_gas_token':'atoken', 'gas_token':'atoken_symbol'}, inplace=True)
     gas_tokens['reserve'] = gas_tokens['atoken']
     gas_tokens['symbol'] = gas_tokens['atoken_symbol']
     return_val = pd.concat([return_val, gas_tokens])
+
     # merge the chain names
     return_val = return_val.merge(mc, on='market', how='left')
     
