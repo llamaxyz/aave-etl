@@ -1348,7 +1348,9 @@ def user_lm_rewards_claimed(context, block_numbers_by_day):
         start_time = time()
         query_result = sdk.query(sql)
         elapsed_time = time() - start_time
+        query_id = query_result.query_id
         context.log.info(f"Flipside query time: {elapsed_time:.6f}s")
+        context.log.info(f"Flipside query id: {query_id}")
         rewards_claimed = pd.DataFrame(data=query_result.rows, columns=[x.lower() for x in query_result.columns])
         rewards_claimed.drop(columns=['__row_index'], inplace=True)
         rewards_claimed.block_day = pd.to_datetime(rewards_claimed.block_day, utc=True)
@@ -1363,6 +1365,7 @@ def user_lm_rewards_claimed(context, block_numbers_by_day):
     else:
         rewards_claimed = pd.DataFrame()
         elapsed_time = 0
+        query_id = None
 
     rewards_claimed = standardise_types(rewards_claimed)
     
@@ -1370,7 +1373,8 @@ def user_lm_rewards_claimed(context, block_numbers_by_day):
         {
             "num_records": len(rewards_claimed),
             "preview": MetadataValue.md(rewards_claimed.head().to_markdown()),
-            "flipside_query_time": elapsed_time
+            "flipside_query_time": elapsed_time,
+            "flipside_query_id": query_id
         }
     )
 
@@ -1666,7 +1670,9 @@ def streaming_payments_state(context, block_numbers_by_day):
     start_time = time()
     query_result = sdk.query(sql, timeout_minutes=10)
     elapsed_time = time() - start_time
+    query_id = query_result.query_id
     context.log.info(f"Flipside query time: {elapsed_time:.6f}s")
+    context.log.info(f"Flipside query id: {query_id}")
     
     
     streams = pd.DataFrame(data=query_result.rows, columns=[x.lower() for x in query_result.columns])
@@ -1696,6 +1702,7 @@ def streaming_payments_state(context, block_numbers_by_day):
             "num_records": len(streams),
             "preview": MetadataValue.md(streams.head().to_markdown()),
             "flipside_query_time": elapsed_time,
+            "flipside_query_id": query_id,
         }
     )
 
