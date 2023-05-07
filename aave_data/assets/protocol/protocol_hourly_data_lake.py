@@ -125,20 +125,8 @@ def block_numbers_by_hour(context) -> pd.DataFrame:
     block_height = vals['height']
     block_time = datetime.utcfromtimestamp(vals['timestamp'])
 
-    end_block_hour = partition_datetime + timedelta(hours=1)
-    end_block_day_hour = end_block_hour.timestamp()
-
-    endpoint = f'https://coins.llama.fi/block/{llama_chain}/{end_block_day_hour:.0f}'
-
-    response = requests.get(endpoint, timeout=300)
-    response.raise_for_status()
-
-    vals = response.json()
-
-    end_block = vals['height'] - 1
-
-    return_val = pd.DataFrame([[partition_datetime, block_time, block_height, end_block]],
-                        columns=['block_hour', 'block_time', 'block_height', 'end_block'])
+    return_val = pd.DataFrame([[partition_datetime, block_time, block_height]],
+                        columns=['block_hour', 'block_time', 'block_height'])
 
 
     return_val['chain'] = config_chain
