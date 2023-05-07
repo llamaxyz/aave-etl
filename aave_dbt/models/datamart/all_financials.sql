@@ -32,6 +32,7 @@ select
   , tokens_out_internal
   , minted_to_treasury_amount
   , minted_amount
+  , 0 as paraswap_fees_claimable
 -- from warehouse.atoken_measures_by_day
 from  {{ source('warehouse','atoken_measures_by_day')}}
 union all
@@ -51,6 +52,7 @@ select
   , tokens_out_internal
   , 0 as minted_to_treasury_amount
   , 0 as minted_amount
+  , paraswap_fees_claimable
 -- from warehouse.non_atoken_measures_by_day
 from  {{ source('warehouse','non_atoken_measures_by_day')}}
 union all
@@ -70,6 +72,7 @@ select distinct
   , 0 as tokens_out_internal
   , 0 as minted_to_treasury_amount
   , 0 as minted_amount
+  , 0 as paraswap_fees_claimable
 -- from financials_data_lake.eth_balances_by_day e
 from  {{ source('financials_data_lake','eth_balances_by_day')}} e
   left join gas_token_markets m on (
@@ -77,6 +80,7 @@ from  {{ source('financials_data_lake','eth_balances_by_day')}} e
     e.collector = m.collector
   )
 )
+
 
 -- add underlying reserve to join pricing
 , token_measures_reserves as (
@@ -98,10 +102,13 @@ select
   , t.tokens_out_internal
   , t.minted_to_treasury_amount
   , t.minted_amount
+  , t.paraswap_fees_claimable
 from token_measures t 
   -- left join datamart.aave_atokens a on (t.token = a.atoken and t.chain = a.chain)
   left join {{ref('aave_atokens')}} a on (t.token = a.atoken and t.chain = a.chain)
 )
+
+
 
 , balances_prices as (
 select
@@ -132,6 +139,8 @@ select
   -- , coalesce(r.sm_stkAAVE_owed, 0) as sm_stkAAVE_owed not implemented yet
   -- , coalesce(r.sm_stkABPT_owed, 0) as sm_stkABPT_owed
   -- , coalesce(r.lm_aave_v2_owed, 0) as lm_aave_v2_owed
+  , t.paraswap_fees_claimable as start_paraswap_fees_claimable
+  , lead(t.paraswap_fees_claimable) over (partition by t.collector, t.chain, t.market, t.token, t.symbol order by t.block_day) as end_paraswap_fees_claimable
 from token_measures_reserves t 
   -- left join financials_data_lake.aave_oracle_prices_by_day p on (t.underlying_reserve = p.reserve and t.block_day = p.block_day and t.market = p.market)
   -- left join protocol_data_lake.coingecko_data_by_day c on (t.underlying_reserve = c.address and t.block_day = c.block_day and t.chain = c.chain)
@@ -171,6 +180,8 @@ select
   , sm_stkAAVE_claims
   , sm_stkABPT_claims
   , lm_aave_v2_claims
+  , start_paraswap_fees_claimable
+  , end_paraswap_fees_claimable
   , case
       when scaled_balance = 0 then (tokens_in_external+tokens_in_internal-minted_amount)/(1+1)
       else (tokens_in_external+tokens_in_internal-minted_amount)/(1+start_balance/scaled_balance) 
@@ -205,12 +216,15 @@ select
   , sm_stkAAVE_claims
   , sm_stkABPT_claims
   , lm_aave_v2_claims
+  , start_paraswap_fees_claimable
+  , end_paraswap_fees_claimable
   , 0 as liq_adjust
 from balances_prices
 where 1=1
   and end_balance is not null
   and market not in ('arbitrum_v3','avax_v3','fantom_v3','harmony_v3','optimism_v3','polygon_v3')
 )
+
 
 , token_level_calcs as (
 select 
@@ -234,21 +248,21 @@ select
   , tokens_out_internal
   , minted_to_treasury_amount
   , minted_amount
-  , end_accrued_fees - start_accrued_fees + minted_to_treasury_amount as protocol_fees_accrued
+  , end_accrued_fees - start_accrued_fees + minted_to_treasury_amount + end_paraswap_fees_claimable - start_paraswap_fees_claimable as protocol_fees_accrued
   , start_usd_price
   , end_usd_price 
   , sm_stkAAVE_claims
   , sm_stkABPT_claims
   , lm_aave_v2_claims
+  , start_paraswap_fees_claimable
+  , end_paraswap_fees_claimable
   , liq_adjust
   , tokens_in_external - liq_adjust - minted_amount + minted_to_treasury_amount as tokens_in_external_adjust -- liqs only occur externally
   , tokens_in_external - liq_adjust - minted_amount as protocol_fees_received
-  -- todo the following code is slightly different from hex & needs careful validation - checked OK
   , case when collector = '0x25f2226b597e8f9514b3f68f00f494cf4f286491' and market = 'ethereum_v2'
       then tokens_out_external - (sm_stkAAVE_claims + sm_stkABPT_claims) else 0 end as ecosystem_reserve_spend
   , case when not (collector in ('0xd784927ff2f95ba542bfc824c8a8a98f3495f6b5', '0x25f2226b597e8f9514b3f68f00f494cf4f286491') and chain = 'ethereum')
       then tokens_out_external else 0 end as treasury_spend
-  -- end new code
   , end_balance - (tokens_in_external + tokens_in_internal  - liq_adjust - minted_amount + minted_to_treasury_amount) + tokens_out_external + tokens_out_internal - start_balance as atoken_interest
   , (end_balance + end_accrued_fees) * (end_usd_price - start_usd_price) as price_change_usd
   , start_balance * start_usd_price as start_balance_usd
@@ -262,21 +276,20 @@ select
   , (tokens_in_external - liq_adjust - minted_amount + minted_to_treasury_amount) * start_usd_price as tokens_in_external_adjust_usd
   , (tokens_in_external - liq_adjust - minted_amount) * start_usd_price as protocol_fees_received_usd
   , (end_balance - (tokens_in_external + tokens_in_internal  - liq_adjust - minted_amount + minted_to_treasury_amount) + tokens_out_external + tokens_out_internal - start_balance) * start_usd_price as atoken_interest_usd
-  , (end_accrued_fees - start_accrued_fees + minted_to_treasury_amount) * start_usd_price as protocol_fees_accrued_usd
+  , (end_accrued_fees - start_accrued_fees + minted_to_treasury_amount + end_paraswap_fees_claimable - start_paraswap_fees_claimable) * start_usd_price as protocol_fees_accrued_usd
   , minted_to_treasury_amount * start_usd_price as minted_to_treasury_amount_usd
   , sm_stkAAVE_claims * start_usd_price as sm_stkAAVE_claims_usd
   , sm_stkABPT_claims * start_usd_price as sm_stkABPT_claims_usd
   , lm_aave_v2_claims * start_usd_price as lm_aave_v2_claims_usd
-  -- todo the following code is slightly different from hex & needs careful validation - checked OK
+  , start_paraswap_fees_claimable * start_usd_price as start_paraswap_fees_claimable_usd
+  , end_paraswap_fees_claimable * end_usd_price as end_paraswap_fees_claimable_usd
   , case when collector = '0x25f2226b597e8f9514b3f68f00f494cf4f286491' and market = 'ethereum_v2'
       then (tokens_out_external - (sm_stkAAVE_claims + sm_stkABPT_claims)) * start_usd_price else 0 end as ecosystem_reserve_spend_usd
   , case when not (collector in ('0xd784927ff2f95ba542bfc824c8a8a98f3495f6b5', '0x25f2226b597e8f9514b3f68f00f494cf4f286491') and chain = 'ethereum')
       then tokens_out_external * start_usd_price else 0 end as treasury_spend_usd
-  -- end new code
   from token_level_calcs_staging
 )
 
--- select start_balance_usd from token_level_calcs
 , unpivot_source as (
 select
   collector
@@ -301,6 +314,8 @@ select
   , sm_stkAAVE_claims_usd
   , sm_stkABPT_claims_usd
   , lm_aave_v2_claims_usd
+  , start_paraswap_fees_claimable_usd
+  , end_paraswap_fees_claimable_usd
   , ecosystem_reserve_spend_usd
   , treasury_spend_usd
   , price_change_usd
@@ -318,16 +333,20 @@ select
   , sm_stkAAVE_claims
   , sm_stkABPT_claims
   , lm_aave_v2_claims
+  , start_paraswap_fees_claimable
+  , end_paraswap_fees_claimable
   , ecosystem_reserve_spend
   , treasury_spend
 from token_level_calcs
 )
 
+
+
 , long_format as (
 select
   *
 from unpivot_source
-unpivot(value for measure in (start_balance_usd, end_balance_usd, start_accrued_fees_usd, end_accrued_fees_usd, tokens_in_internal_usd, tokens_in_external_adjust_usd, tokens_out_external_usd, tokens_out_internal_usd, protocol_fees_received_usd, protocol_fees_accrued_usd, atoken_interest_usd, sm_stkAAVE_claims_usd, sm_stkABPT_claims_usd, lm_aave_v2_claims_usd, ecosystem_reserve_spend_usd, treasury_spend_usd, price_change_usd, start_balance, end_balance, start_accrued_fees, end_accrued_fees, tokens_in_internal, tokens_in_external_adjust, tokens_out_external, tokens_out_internal, protocol_fees_received, protocol_fees_accrued, atoken_interest, sm_stkAAVE_claims, sm_stkABPT_claims, lm_aave_v2_claims, ecosystem_reserve_spend, treasury_spend))
+unpivot(value for measure in (start_balance_usd, end_balance_usd, start_accrued_fees_usd, end_accrued_fees_usd, tokens_in_internal_usd, tokens_in_external_adjust_usd, tokens_out_external_usd, tokens_out_internal_usd, protocol_fees_received_usd, protocol_fees_accrued_usd, atoken_interest_usd, sm_stkAAVE_claims_usd, sm_stkABPT_claims_usd, lm_aave_v2_claims_usd, start_paraswap_fees_claimable_usd, end_paraswap_fees_claimable_usd, ecosystem_reserve_spend_usd, treasury_spend_usd, price_change_usd, start_balance, end_balance, start_accrued_fees, end_accrued_fees, tokens_in_internal, tokens_in_external_adjust, tokens_out_external, tokens_out_internal, protocol_fees_received, protocol_fees_accrued, atoken_interest, sm_stkAAVE_claims, sm_stkABPT_claims, lm_aave_v2_claims, start_paraswap_fees_claimable, end_paraswap_fees_claimable, ecosystem_reserve_spend, treasury_spend))
 )
 
 
@@ -345,7 +364,7 @@ from long_format l
   -- left join financials_data_lake.tx_classification t on (l.measure = t.measure)
   -- left join financials_data_lake.display_names d on (l.collector = d.collector and l.chain = d.chain and l.market = d.market)
   -- left join warehouse.aave_internal_addresses c on (l.collector = c.contract_address and l.chain = c.chain)
-  -- left join warehouse.balance_group_lookup b on (l.market = b.market and l.token = b.atoken)
+  -- left join warehouse.balance_group_lookup b on (l.market = b.market and l.token = b.atoken and l.underlying_reserve = b.reserve and l.symbol = b.atoken_symbol)
   left join {{ source('financials_data_lake','tx_classification') }} t on (l.measure = t.measure)
   left join {{ source('financials_data_lake','display_names') }} d on (l.collector = d.collector and l.chain = d.chain and l.market = d.market)
   left join {{ source('warehouse','aave_internal_addresses') }} c on (l.collector = c.contract_address and l.chain = c.chain)
