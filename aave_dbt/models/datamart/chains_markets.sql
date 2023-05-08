@@ -7,5 +7,5 @@ select distinct
   , display_name as display_market 
 -- from financials_data_lake.display_names
 from {{ source('financials_data_lake','display_names')}}
-where display_name not in ("Ecosystem Reserve", 'Incentives Controller V2')
+where display_name not in ("Ecosystem Reserve", 'Incentives Controller V2', 'Paraswap Fee Claimer')
 order by chain, market
