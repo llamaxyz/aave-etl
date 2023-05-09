@@ -165,7 +165,6 @@ def get_market_tokens_at_block_aave(
     return subgraph_data  # type: ignore
 
 
-
 def get_token_transfers_from_covalent(start_block: int,
                              end_block: int,
                              chain_id: int,
@@ -1379,71 +1378,104 @@ async def get_quote_from_paraswap_async(
 
     return quote_amount
 
+def get_market_tokens_at_block_rpc(
+        market: str,
+        block_height: int,
+        markets_config: dict) -> pd.DataFrame:
+    """Gets Aave token details for market at a given block height
+
+    Uses direct RPC calls to the Pool contract
+
+    Args:
+        market: the market name as per the config object key
+        block_height: block height for the time travel subgraph call
+        markets_config: pipeline config dict, with market as key and each value having a
+                    subgraph_url and pool_id property
+
+    Returns:
+        A dataframe with details from the subgraph
+
+    """
+    #pylint: disable=E1137,E1101
+    chain = markets_config[market]['chain']
+
+    # setup the Web3 connection
+    w3 = Web3(Web3.HTTPProvider(CONFIG_CHAINS[chain]['web3_rpc_url']))
+
+    # get the pool address
+    pool_address = markets_config[market]['pool']
+    protocol_data_provider = markets_config[market]['protocol_data_provider']
+
+    # get the token addresses from the pool
+    # pool_call = Call(address, ['getReservesList ()((address[]))'], [[address, None]]
+    # pool_call = Call(
+    #     pool_address,
+    #     ['getReservesList()(address[])'],
+    #     [['reserves', None]],
+    #     _w3 = w3,
+    #     block_id = block_height
+    # )
+    reserves_call = Call(
+        protocol_data_provider,
+        ['getAllReservesTokens()((string,address)[])'],
+        [['reserves', None]],
+        _w3 = w3,
+        block_id = block_height
+    )
+
+    reserves_call = Call(
+        protocol_data_provider,
+        ['getAllATokens()((string,address)[])'],
+        [['reserves', None]],
+        _w3 = w3,
+        block_id = block_height
+    )
+
+    # execute the call
+    reserves_call_output = reserves_call()
+
+    ic(reserves_call_output)
+
+    # # grab the token addresses in an iterable
+    # addresses = [TOKENS[chain][token]['address'] for token in TOKENS[chain]]
+
+    # # set up the multiple call objects (one for each address)
+    # chain_calls = [Call(address, ['totalSupply()((uint256))'], [[address, None]]) for address in addresses]
+
+    # # configure the mulitcall object
+    # chain_multi = Multicall(chain_calls, _w3 = w3, block_id = block_height)
+
+    # # exponential backoff retries on the function call to deal with transient RPC errors
+    # i = 0
+    # delay = INITIAL_RETRY
+    # while True:
+    #     try:
+    #         chain_output = chain_multi()
+    #         break
+    #     except Exception as e:
+    #         i += 1
+    #         if i > MAX_RETRIES:
+    #             raise ValueError(f"RPC error count {i}, last error {str(e)}.  Bailing out.")
+    #         rand_delay = randint(0, 250) / 1000
+    #         sleep(delay + rand_delay)
+    #         delay *= 2
+    #         print(f"Request Error {str(e)}, retry count {i}")
+    
+    # chain_data = pd.DataFrame(chain_output).T.reset_index()
+    # chain_data.columns = ['address', 'total_supply']
+    # chain_data['chain'] = chain
+    # chain_data['block_height'] = block_height
+    # chain_data['block_day'] = block_day
+    
+    # # chain_data['symbol'] = chain_data.address.map({TOKENS[chain][token]['address']: token for token in TOKENS[chain]})
+    # chain_data['symbol'] = pd.Series(TOKENS[chain].keys())
+    # chain_data['decimals'] = pd.Series([TOKENS[chain][token]['decimals'] for token in TOKENS[chain]])
+    # chain_data.total_supply = chain_data.total_supply.astype(float) / 10**chain_data.decimals
+    # chain_data = chain_data[['block_day', 'block_height', 'chain', 'address', 'symbol', 'decimals', 'total_supply']]
+    
+    # supply_data = pd.concat([supply_data, chain_data]).reset_index(drop=True)
+    return pd.DataFrame()
+
 if __name__ == "__main__":
 
-    # pass
-    # out = get_token_holders_from_covalent(1, 16902116, '0xa1116930326d21fb917d5a27f1e9943a9595fb47')
-    # ic(out)
-
-    one_inch_answer = get_quote_from_1inch(42161, '0x5979d7b546e38e414f7e9822514be443a4800529', 18, '0x82af49447d8a07e3bd95bd0d56f35241523fbab1', 18, 100)
-    ic(one_inch_answer)
-    paraswap_answer = get_quote_from_paraswap(42161, '0x5979d7b546e38e414f7e9822514be443a4800529', 18, '0x82af49447d8a07e3bd95bd0d56f35241523fbab1', 18, 100)
-    ic(paraswap_answer)
-
-    # out = get_quote_from_1inch(1, '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', 18, '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', 18, 1)
-    # ic(out)
-    # out = get_aave_oracle_price('ethereum_v3', '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', 16902116)
-    # # ic(out)
-    # out = get_balancer_bpt_data('ethereum', '0x9001cbbd96f54a658ff4e6e65ab564ded76a5431', 18, 16992952)
-    # ic(out)
-
-    # out = get_v3_incentives_data('aave_rwa', 'ethereum', 16902116)
-    # smol = out.drop(columns=['incentive_controller_address','reward_oracle_address','reward_token_address'])
-    # out.emission_end_timestamp = pd.to_datetime(out.emission_end_timestamp)
-    # ic(smol)
-    # smol.to_csv('incentives.csv')
-    # print(out)
-
-    # wbtc = get_token_transfers_from_covalent(16050438, 16057596, 1, '0x464C71f6c2F760DdA6093dCB91C24c39e5d6e18c', '0xbcca60bb61934080951369a648fb03df4f96263c')
-    # weth = get_token_transfers_from_covalent(16050438, 16057596, 1, '0x464C71f6c2F760DdA6093dCB91C24c39e5d6e18c', '0x030ba81f1c18d280636f32af80b9aad02cf0854e')
-
-    # out = pd.concat([wbtc, weth]).reset_index()
-
-    # print(out.to_dict())
-    # ic(out)
-
-    # balance = get_erc20_balance_of('0x464C71f6c2F760DdA6093dCB91C24c39e5d6e18c', '0xbcca60bb61934080951369a648fb03df4f96263c', 6, 'ethereum')#, block_height=16057596)
-
-    # balance = get_erc20_balance_of('0x8a020d92d6b119978582be4d3edfdc9f7b28bf31', '0x191c10aa4af7c30e871e70c95db0e4eb77237530', 6, 'harmony', block_height=34443481)
-    # ic(balance)
-    # mtt = get_events_by_topic_hash_from_covalent(15154950, 15154960, 43114, '0x794a61358D6845594F94dc1DB02A252b5b4814aD', '0xbfa21aa5d5f9a1f0120a95e7c0749f389863cbdbfff531aa7339077a5bc919de')
-    # out = get_raw_reserve_data('ethereum_v3','ethereum','0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2', 18, 16902116)
-    # out = get_raw_reserve_data('ethereum_v2','ethereum','0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2', 18, 16902116)
-    # out = get_raw_reserve_data('ethereum_v3','ethereum','0x5a98fcbea516cf06857215779fd812ca3bef1b32', 18, 17048772)
-    # ic(out)
-    # out2 = raw_reserve_to_dataframe(out)
-    # ic(out2)
-    # # from datetime import datetime
-
-    # # out = {'reserve_config': {'decimals': 18, 'ltv': 8000, 'liquidation_threshold': 8250, 'liquidation_bonus': 10500, 'reserve_factor': 1500, 'usage_as_collateral_enabled': True, 'borrowing_enabled': True, 'stable_borrow_rate_enabled': False, 'is_active': True, 'is_frozen': False}, 'reserve_data': {'unbacked_atokens': 0.0, 'scaled_accrued_to_treasury': 1.774051652369331, 'atoken_supply': 172761.88639544294, 'stable_debt': 0.0, 'variable_debt': 104109.67095672512, 'liquidity_rate': 0.019784087388165828, 'variable_borrow_rate': 0.0386241186359518, 'stable_borrow_rate': 0.09813065119573873, 'average_stable_rate': 0.0, 'liquidity_index': 1.0029317607983557, 'variable_borrow_index': 1.0058429263973083, 'last_update_timestamp': datetime(2023, 3, 25, 1, 23, 47)}, 'reserve_emode_category': 1, 'borrow_cap': 1400000, 'supply_cap': 1800000, 'is_paused': False, 'siloed_borrowing': False, 'liquidation_protocol_fee': 1000, 'unbacked_mint_cap': 0, 'debt_ceiling': 0, 'debt_ceiling_decimals': 2}
-
-    # # out = {'reserve_config': {'decimals': 18, 'ltv': 0.75, 'liquidation_threshold': 0.8, 'liquidation_bonus': 1.05, 'reserve_factor': 0.09, 'usage_as_collateral_enabled': True, 'borrowing_enabled': True, 'stable_borrow_rate_enabled': False, 'is_active': True}, 'reserve_data': {'atoken_supply': 3797.823724736217, 'available_liquidity': 3665.948707828322, 'stable_debt': 26.081562023648097, 'variable_debt': 105.79345488424704, 'liquidity_rate': 0.00035776439641455103, 'variable_borrow_rate': 0.0042737031753279356, 'stable_borrow_rate': 0.03534212896915992, 'average_stable_rate': 0.03476004572423179, 'liquidity_index': 1.0069932511657278, 'variable_borrow_index': 1.0286044570334731, 'last_update_timestamp': datetime(2023, 3, 24, 11, 1, 23), 'scaled_accrued_to_treasury': 0, 'unbacked_atokens': 0}, 'is_frozen': True}
-    # df = raw_reserve_to_dataframe('0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2', 16902116, out)
-    # ic(df)
-    # df.info()
-    # df.to_dict()
-
-    # reserve_config = pd.DataFrame(out['reserve_config'], index=[0])
-    # reserve_data = pd.DataFrame(out['reserve_data'], index=[0])
-    # del out['reserve_config']
-    # del out['reserve_data']
-    # other_params = pd.DataFrame(out, index=[0])
-
-    # ic(reserve_config)
-    # ic(reserve_data)
-    # ic(other_params)
-
-    # out = get_raw_reserve_data('polygon_v3','polygon','0xfa68fb4628dff1028cfec22b4162fccd0d45efb6', 18, 40353814)
-    # ic(out)
-    # outdf = raw_reserve_to_dataframe(out)
-    # ic(outdf.to_dict())
+    out = get_market_tokens_at_block_rpc('metis_v3', 5602598, CONFIG_MARKETS)

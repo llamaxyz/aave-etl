@@ -13,6 +13,7 @@ from aave_data.resources.helpers import (
                             get_scaled_balance_of,
                             get_market_tokens_at_block_aave,
                             get_market_tokens_at_block_messari,
+                            get_market_tokens_at_block_rpc,
                             get_token_transfers_from_covalent,
                             get_token_transfers_from_alchemy,
                             get_events_by_topic_hash_from_covalent,
@@ -81,6 +82,60 @@ def test_get_market_tokens_at_block_messari():
     assert len(result) == expected_length, str(result)
     assert len(result_v3) == expected_length_v3, str(result_v3)
 
+
+def test_get_market_tokens_at_block_rpc():
+    """
+    Tests the market tokens function via RPC agains a reference response
+    """
+    market = "ethereum_v2"
+    block_height = 16050438
+    expected = pd.DataFrame(
+        [
+            {
+                "atoken": "0x101cc05f4a51c0319f570d5e146a8c625198e636",
+                "atoken_decimals": 18,
+                "atoken_symbol": "aTUSD",
+                "block_height": 16050438,
+                "decimals": 18,
+                "market": "ethereum_v2",
+                "name": "TrueUSD",
+                "pool": "0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9",
+                "reserve": "0x0000000000085d4780b73119b644ae5ecd22b376",
+                "symbol": "TUSD",
+            },
+            {
+                "atoken": "0xc9bc48c72154ef3e5425641a3c747242112a46af",
+                "atoken_decimals": 18,
+                "atoken_symbol": "aRAI",
+                "block_height": 16050438,
+                "decimals": 18,
+                "market": "ethereum_v2",
+                "name": "Rai Reflex Index",
+                "pool": "0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9",
+                "reserve": "0x03ab458634910aad20ef5f1c8ee96f1d6ac54919",
+                "symbol": "RAI",
+            },
+        ]
+    )
+    expected_length = 37
+    result = get_market_tokens_at_block_rpc(market, block_height, CONFIG_MARKETS)
+    result_first_2 = result.head(2)
+
+    market_v3 = "ethereum_v3"
+    block_height_v3 = 16286697
+    expected_v3 = pd.DataFrame()
+    expected_length_v3 = 0
+    result_v3 = get_market_tokens_at_block_rpc(market_v3, block_height_v3, CONFIG_MARKETS)
+
+    # result_first_2.info()
+    # expected.info()
+    # ic(result_first_2)
+    # ic(expected)
+    # assert result_first_2.equals(expected), str(result_first_2)
+    assert_frame_equal(result_first_2, expected, check_exact=True, check_like=True)
+    assert_frame_equal(result_v3, expected_v3, check_exact=True, check_like=True)
+    assert len(result) == expected_length, str(result)
+    assert len(result_v3) == expected_length_v3, str(result_v3)
 
 def test_get_market_tokens_at_block_aave():
     """
@@ -737,4 +792,5 @@ if __name__ == "__main__":
     # test_get_raw_reserve_data()
     # test_get_quote_from_1inch()
     # test_get_aave_oracle_price()
-    test_get_balancer_bpt_data()
+    # test_get_balancer_bpt_data()
+    test_get_market_tokens_at_block_rpc()
