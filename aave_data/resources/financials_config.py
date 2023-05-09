@@ -164,6 +164,15 @@ CONFIG_CHAINS = {
         "wrapped_ether": "0x6983D1E6DEf3690C4d616b13597A09e6193EA013",
         "gas_token": "ONE",
         "web3_rpc_url": "https://a.api.s0.t.hmny.io"
+    },
+    "metis": {
+        "chain_id": 1088,
+        "defillama_chain": "metis",
+        "ape_ok": False,
+        "ape_network_choice": None,
+        "wrapped_ether": "0xDeadDeAddeAddEAddeadDEaDDEAdDeaDDeAD0000",
+        "gas_token": "METIS",
+        "web3_rpc_url": 'https://andromeda.metis.io/?owner=1088'
     }
 }
 
@@ -477,6 +486,27 @@ CONFIG_MARKETS = {
         "oracle_base_currency": 'wei',
         "block_table_master": False,
         "price_rank": 6
+    },
+    "metis_v3": {
+        "chain": "metis",
+        "version": 3,
+        "pool": "0x90df02551bB792286e8D4f13E0e357b4Bf1D6a57",
+        "collector": "0xB5b64c7E00374e766272f8B442Cd261412D4b118",
+        "protocol_data_provider": "0x99411FC17Ad1B56f49719E3850B2CDcc0f9bBFd8",
+        "pool_address_provider": '0x9E7B73ffD9D2026F3ff4212c29E209E09C8A91F5',
+        "oracle": "0x38D36e85E47eA6ff0d18B0adF12E5fC8984A6f8e",
+        "incentives_controller": "0x30C1b8F0490fa0908863d6Cbd2E36400b4310A6B",
+        "incentives_ui_data_provider" : "0x3e7BC5EcE0f22DbB16c3e3EeA288a10A57d68927",
+        "rewards_token": None,
+        "rewards_token_symbol": None,
+        "rewards_token_decimals": None,
+        "subgraph": None,
+        "messari_subgraph": None,
+        "token_source": "rpc",
+        "atoken_prefix": "aMet",
+        "oracle_base_currency": 'usd',
+        "block_table_master": True,
+        "price_rank": 1,
     },
 }
 
