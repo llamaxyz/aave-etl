@@ -38,6 +38,7 @@ from aave_data.resources.financials_config import * #pylint: disable=wildcard-im
 from aave_data.resources.helpers import (
     get_market_tokens_at_block_messari,
     get_market_tokens_at_block_aave,
+    get_market_tokens_at_block_rpc,
     get_token_transfers_from_covalent,
     get_token_transfers_from_alchemy,
     get_erc20_balance_of,
@@ -177,8 +178,10 @@ def market_tokens_by_day(context, block_numbers_by_day) -> pd.DataFrame: #pylint
 
     if token_source == "aave":
         tokens = get_market_tokens_at_block_aave(market, block_height, CONFIG_MARKETS)
-    else:
+    elif token_source == "messari":
         tokens = get_market_tokens_at_block_messari(market, block_height, CONFIG_MARKETS)
+    else:
+        tokens = get_market_tokens_at_block_rpc(market, block_height, CONFIG_MARKETS)
 
     if not tokens.empty:
         tokens['block_day'] = block_day

@@ -1395,7 +1395,13 @@ def get_market_tokens_at_block_rpc(
     Returns:
         A dataframe with details from the subgraph
 
+    Raises:
+        ValueError: if ethereum_v1 is the market
+
     """
+
+    if market == 'ethereum_v1':
+        raise ValueError('ethereum_v1 is not supported, use the subgraph instead')
     #pylint: disable=E1137,E1101
     chain = markets_config[market]['chain']
 
@@ -1407,14 +1413,6 @@ def get_market_tokens_at_block_rpc(
     protocol_data_provider = markets_config[market]['protocol_data_provider']
 
     # get the token addresses from the pool
-    # pool_call = Call(address, ['getReservesList ()((address[]))'], [[address, None]]
-    # pool_call = Call(
-    #     pool_address,
-    #     ['getReservesList()(address[])'],
-    #     [['reserves', None]],
-    #     _w3 = w3,
-    #     block_id = block_height
-    # )
     reserves_call = Call(
         protocol_data_provider,
         ['getAllReservesTokens()((string,address)[])'],
@@ -1422,7 +1420,9 @@ def get_market_tokens_at_block_rpc(
         _w3 = w3,
         block_id = block_height
     )
+    reserves_call_output = reserves_call()
 
+    #
     reserves_call = Call(
         protocol_data_provider,
         ['getAllATokens()((string,address)[])'],
@@ -1431,51 +1431,85 @@ def get_market_tokens_at_block_rpc(
         block_id = block_height
     )
 
+    # build the call list
+    call_list = [
+        Call(protocol_data_provider, ['getAllReservesTokens()((string,address)[])'],[['reserves', None]]),
+        Call(protocol_data_provider, ['getAllATokens()((string,address)[])'],[['atokens', None]]),
+    ]
+
+    # configure the mulitcall object
+    reserves_multi = Multicall(call_list, _w3 = w3, block_id = block_height)
+
     # execute the call
-    reserves_call_output = reserves_call()
+    reserves_call_output = reserves_multi()
 
-    ic(reserves_call_output)
+    reserves = pd.DataFrame(reserves_call_output['reserves'], columns=['symbol','reserve'])
+    atokens = pd.DataFrame(reserves_call_output['atokens'], columns=['atoken_symbol','atoken'])
+    return_value = reserves.join(atokens)
 
-    # # grab the token addresses in an iterable
-    # addresses = [TOKENS[chain][token]['address'] for token in TOKENS[chain]]
+    # reserve_addresses = return_value['underlying_reserve'].tolist()
+    # get the stoken & vtokens from the pool
+    asv_tokens_calls = [
+        Call(protocol_data_provider, ['getReserveTokensAddresses(address)((address,address,address))', address],[[address, None]])
+        for address in return_value['reserve'].tolist()
+    ]
 
-    # # set up the multiple call objects (one for each address)
-    # chain_calls = [Call(address, ['totalSupply()((uint256))'], [[address, None]]) for address in addresses]
+    # configure the mulitcall object
+    asv_multi = Multicall(asv_tokens_calls, _w3 = w3, block_id = block_height)
 
-    # # configure the mulitcall object
-    # chain_multi = Multicall(chain_calls, _w3 = w3, block_id = block_height)
+    # execute the call
+    asv_call_output = asv_multi()
 
-    # # exponential backoff retries on the function call to deal with transient RPC errors
-    # i = 0
-    # delay = INITIAL_RETRY
-    # while True:
-    #     try:
-    #         chain_output = chain_multi()
-    #         break
-    #     except Exception as e:
-    #         i += 1
-    #         if i > MAX_RETRIES:
-    #             raise ValueError(f"RPC error count {i}, last error {str(e)}.  Bailing out.")
-    #         rand_delay = randint(0, 250) / 1000
-    #         sleep(delay + rand_delay)
-    #         delay *= 2
-    #         print(f"Request Error {str(e)}, retry count {i}")
-    
-    # chain_data = pd.DataFrame(chain_output).T.reset_index()
-    # chain_data.columns = ['address', 'total_supply']
-    # chain_data['chain'] = chain
-    # chain_data['block_height'] = block_height
-    # chain_data['block_day'] = block_day
-    
-    # # chain_data['symbol'] = chain_data.address.map({TOKENS[chain][token]['address']: token for token in TOKENS[chain]})
-    # chain_data['symbol'] = pd.Series(TOKENS[chain].keys())
-    # chain_data['decimals'] = pd.Series([TOKENS[chain][token]['decimals'] for token in TOKENS[chain]])
-    # chain_data.total_supply = chain_data.total_supply.astype(float) / 10**chain_data.decimals
-    # chain_data = chain_data[['block_day', 'block_height', 'chain', 'address', 'symbol', 'decimals', 'total_supply']]
-    
-    # supply_data = pd.concat([supply_data, chain_data]).reset_index(drop=True)
-    return pd.DataFrame()
+    # catch the case where contracts aren't deployed yet
+    if reserves_call_output['atokens'] is None:
+        return pd.DataFrame()
+
+    # join the results
+    asv = pd.DataFrame(asv_call_output).T.reset_index()
+    asv.rename(columns={"index":"reserve", 0:"atoken", 1:"stoken", 2:"vtoken"}, inplace=True)
+    asv.drop('atoken', inplace=True, axis=1)
+    return_value = return_value.merge(asv, how='left')
+
+    #construct the calls for getting decimals
+    decimal_calls = [
+        Call(address, ['decimals()(uint8)'],[[address, None]])
+        for address in return_value['reserve'].tolist()
+    ]
+
+    # configure the mulitcall object
+    decimals_multi = Multicall(decimal_calls, _w3 = w3, block_id = block_height)
+
+    # execute the call
+    decimals_call_output = decimals_multi()
+
+    # join the results
+    decimals = pd.DataFrame(list(decimals_call_output.items()), columns=['reserve','decimals'])
+    return_value = return_value.merge(decimals, how='left')
+
+    #construct the calls for getting names
+    names_calls = [
+        Call(address, ['name()(string)'],[[address, None]])
+        for address in return_value['reserve'].tolist()
+    ]
+
+    # configure the mulitcall object
+    names_multi = Multicall(names_calls, _w3 = w3, block_id = block_height)
+
+    # execute the call
+    names_call_output = names_multi()
+
+    # join the results
+    names = pd.DataFrame(list(names_call_output.items()), columns=['reserve','name'])
+    return_value = return_value.merge(names, how='left')
+
+    # patch up the MKR token
+    return_value.loc[return_value['symbol'] == 'MKR', 'name'] = 'Maker'
+    # ic(return_value)
+   
+    return return_value
 
 if __name__ == "__main__":
 
-    out = get_market_tokens_at_block_rpc('metis_v3', 5602598, CONFIG_MARKETS)
+    # out = get_market_tokens_at_block_rpc('metis_v3', 5602598, CONFIG_MARKETS)
+    out = get_market_tokens_at_block_rpc('ethereum_v2', 16286697, CONFIG_MARKETS)
+    ic(out)

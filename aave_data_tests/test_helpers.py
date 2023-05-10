@@ -121,6 +121,7 @@ def test_get_market_tokens_at_block_rpc():
     result = get_market_tokens_at_block_rpc(market, block_height, CONFIG_MARKETS)
     result_first_2 = result.head(2)
 
+    # test prior to pool being created
     market_v3 = "ethereum_v3"
     block_height_v3 = 16286697
     expected_v3 = pd.DataFrame()
