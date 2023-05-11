@@ -8,7 +8,7 @@ select distinct
   , display_chain
 -- from financials_data_lake.display_names
 from {{ source('financials_data_lake', 'display_names') }}
-where display_name not in ('Ecosystem Reserve', 'Incentives Controller V2')
+where display_name not in ('Ecosystem Reserve', 'Incentives Controller V2', 'Paraswap Fee Claimer')
 )
 
 SELECT
