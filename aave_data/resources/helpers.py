@@ -110,8 +110,8 @@ def get_market_tokens_at_block_aave(
 
     subgraph_url = markets_config[market]['subgraph']
     pool_id = markets_config[market]['pool']
-    ic(subgraph_url)
-    ic(pool_id)
+    # ic(subgraph_url)
+    # ic(pool_id)
 
     sg = Subgrounds()
     subgraph = sg.load_subgraph(subgraph_url)
@@ -1504,12 +1504,20 @@ def get_market_tokens_at_block_rpc(
 
     # patch up the MKR token
     return_value.loc[return_value['symbol'] == 'MKR', 'name'] = 'Maker'
+    
+    # add the other bits
+    return_value['pool'] = markets_config[market]['pool']
+    return_value['market'] = market
+    return_value['atoken_decimals'] = return_value.decimals 
+    return_value['block_height'] = block_height
     # ic(return_value)
+
    
     return return_value
 
 if __name__ == "__main__":
 
-    # out = get_market_tokens_at_block_rpc('metis_v3', 5602598, CONFIG_MARKETS)
-    out = get_market_tokens_at_block_rpc('ethereum_v2', 16286697, CONFIG_MARKETS)
+    out = get_market_tokens_at_block_aave('metis_v3', 5602598, CONFIG_MARKETS)
+
+    # out = get_market_tokens_at_block_rpc('ethereum_v2', 16286697, CONFIG_MARKETS)
     ic(out)

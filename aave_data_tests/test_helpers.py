@@ -102,6 +102,8 @@ def test_get_market_tokens_at_block_rpc():
                 "pool": "0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9",
                 "reserve": "0x0000000000085d4780b73119b644ae5ecd22b376",
                 "symbol": "TUSD",
+                "vtoken": '0x01c0eb1f8c6f1c1bf74ae028697ce7aa2a8b0e92',
+                "stoken": "0x7f38d60d94652072b2c44a18c0e14a481ec3c0dd"
             },
             {
                 "atoken": "0xc9bc48c72154ef3e5425641a3c747242112a46af",
@@ -114,12 +116,15 @@ def test_get_market_tokens_at_block_rpc():
                 "pool": "0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9",
                 "reserve": "0x03ab458634910aad20ef5f1c8ee96f1d6ac54919",
                 "symbol": "RAI",
+                "vtoken": '0xb5385132ee8321977fff44b60cde9fe9ab0b4e6b',
+                "stoken": "0x9c72b8476c33ae214ee3e8c20f0bc28496a62032"
             },
         ]
     )
     expected_length = 37
     result = get_market_tokens_at_block_rpc(market, block_height, CONFIG_MARKETS)
-    result_first_2 = result.head(2)
+    # result_first_2 = result.head(2)
+    result_first_2 = result.loc[result['symbol'].isin(['TUSD', 'RAI'])].reset_index(drop=True)
 
     # test prior to pool being created
     market_v3 = "ethereum_v3"
@@ -134,7 +139,7 @@ def test_get_market_tokens_at_block_rpc():
     # ic(expected)
     # assert result_first_2.equals(expected), str(result_first_2)
     assert_frame_equal(result_first_2, expected, check_exact=True, check_like=True)
-    assert_frame_equal(result_v3, expected_v3, check_exact=True, check_like=True)
+    assert_frame_equal(result_v3, expected_v3, check_exact=True)
     assert len(result) == expected_length, str(result)
     assert len(result_v3) == expected_length_v3, str(result_v3)
 
