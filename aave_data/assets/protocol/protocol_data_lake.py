@@ -684,24 +684,27 @@ def emode_config_by_day(
             call_output['emode_data']['reserve_emode_category'] = int(emode)
             ouput_row = pd.DataFrame(call_output['emode_data'], index=[0])
             emode_output = pd.concat([emode_output, ouput_row])
-        
-        emode_output['block_day'] = block_day
-        emode_output['block_height'] = block_height
-        emode_output['market'] = market
-        emode_output = emode_output[
-            [
-                'block_day',
-                'block_height',
-                'market',
-                'reserve_emode_category',
-                'emode_category_name',
-                'emode_ltv',
-                'emode_liquidation_threshold',
-                'emode_liquidation_bonus',
-                'emode_price_address',
-            ]
-        ].reset_index(drop=True)
-        emode_output = standardise_types(emode_output)
+
+        if not emode_output.empty:      
+            emode_output['block_day'] = block_day
+            emode_output['block_height'] = block_height
+            emode_output['market'] = market
+            emode_output = emode_output[
+                [
+                    'block_day',
+                    'block_height',
+                    'market',
+                    'reserve_emode_category',
+                    'emode_category_name',
+                    'emode_ltv',
+                    'emode_liquidation_threshold',
+                    'emode_liquidation_bonus',
+                    'emode_price_address',
+                ]
+            ].reset_index(drop=True)
+            emode_output = standardise_types(emode_output)
+        else:
+            emode_output = pd.DataFrame()
 
     context.add_output_metadata(
         {
