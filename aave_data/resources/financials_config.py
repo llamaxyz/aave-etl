@@ -845,6 +845,41 @@ COINGECKO_TOKENS = {
     },
 }
 
+CONFIG_COMPOUND_v2 = {
+    # using aave market to select because that's the block source.  data stored by chain
+    "ethereum_v3": {
+        "cDAI": {
+            "address": "0x5d3a536e4d6dbd6114cc1ead35777bab948e3643",
+            "ctoken_decimals": 8,
+            "underlying_address": "0x6b175474e89094c44da98b954eedeac495271d0f",
+            "underlying_symbol": "DAI",
+            "underlying_decimals": 18,
+        },
+        "cUSDC": {
+            "address": "0x39aa39c021dfbae8fac545936693ac917d5e7563",
+            "ctoken_decimals": 8,
+            "underlying_address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+            "underlying_symbol": "USDC",
+            "underlying_decimals": 6,
+        },
+        "cUSDT": {
+            "address": "0xf650c3d88d12db855b8bf7d11be6c55a4e07dcc9",
+            "ctoken_decimals": 8,
+            "underlying_address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+            "underlying_symbol": "USDT",
+            "underlying_decimals": 6,
+        },
+    }
+}
+
+CONFIG_COMPOUND_v3 = {
+    # using aave market to select because that's the block source.  data stored by chain
+    "ethereum_v3": {
+        "cUSDC": "0xc3d688b66703497daa19211eedff47f25384cdc3",
+    }
+}
+
+
 if __name__ == "__main__":
     
     # print(list(CONFIG_TOKENS.keys()))

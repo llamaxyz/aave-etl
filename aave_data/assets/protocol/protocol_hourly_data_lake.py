@@ -40,16 +40,7 @@ import asyncio
 
 from aave_data.resources.financials_config import * #pylint: disable=wildcard-import, unused-wildcard-import
 
-from aave_data.resources.helpers import (
-    get_raw_reserve_data,
-    raw_reserve_to_dataframe,
-    standardise_types,
-    get_quote_from_1inch,
-    get_quote_from_1inch_async,
-    get_aave_oracle_price,
-    get_balancer_bpt_data,
-)
-
+from aave_data.resources.helpers import *
 
 
 INITIAL_RETRY = 0.01 #seconds
@@ -247,3 +238,127 @@ def protocol_data_by_hour(
 
     return protocol_data
 
+@asset(
+    partitions_def=market_hour_multipartition,
+    compute_kind="python",
+    code_version="1",
+    io_manager_key = 'protocol_data_lake_io_manager'
+)
+def compound_v2_by_hour(
+    context,
+    block_numbers_by_hour,
+    ) -> pd.DataFrame:
+    """
+    Table Compound V2 cTokens and APRs and Borrow/Supply data
+
+    Args:
+        context: dagster context object
+        block_numbers_by_hour: the output of block_numbers_by_hour for a given market
+
+    Returns:
+        A dataframe market config & protocol data for each token in a market
+    """
+
+    market = context.partition_key.keys_by_dimension['market']
+    time = context.partition_key.keys_by_dimension['time']
+    
+    # testing vals
+    # market = 'ethereum_v3'
+    # time = '2023-05-13-06:00'
+    # block_height = 17249150
+
+    partition_datetime = datetime.strptime(time, '%Y-%m-%d-%H:%M')
+    context.log.info(f"market: {market}")
+    context.log.info(f"time: {time}")
+
+    ctoken_data = pd.DataFrame()
+
+    if market in CONFIG_COMPOUND_v2.keys():
+            
+        block_height = int(block_numbers_by_hour.block_height.values[0])
+
+        chain = CONFIG_MARKETS[market]["chain"]
+        
+        context.log.info(f"block_height: {block_height}")
+
+        # set up web3 connection
+        w3 = Web3(Web3.HTTPProvider(CONFIG_CHAINS[chain]['web3_rpc_url']))
+
+        ctokens = CONFIG_COMPOUND_v2[market]
+
+        def rate_to_apy(rate):
+            decimals = 18
+            blocks_per_day = 60 / 12 * 60 * 24 
+            days_per_year = 365
+            return (((rate / 10 ** decimals * blocks_per_day + 1) ** days_per_year)) - 1
+        
+        
+        for ctoken in ctokens.keys():
+            # ic(ctoken)
+            ctoken_address = ctokens[ctoken]['address']
+            # ic(ctoken_address)
+            ctoken_decimals = ctokens[ctoken]['ctoken_decimals']
+            underlying_decimals = ctokens[ctoken]['underlying_decimals']
+            
+
+            # configure multicall call objects
+            ctoken_calls = [
+                Call(ctoken_address, ['supplyRatePerBlock()(uint256)'],[['supply_apy', rate_to_apy]]),
+                Call(ctoken_address, ['borrowRatePerBlock()(uint256)'],[['borrow_apy', rate_to_apy]]),
+                Call(ctoken_address, ['totalSupply()(uint256)'],[['total_supply', None]]),
+                Call(ctoken_address, ['totalBorrows()(uint256)'],[['total_borrows', None]]),
+                Call(ctoken_address, ['exchangeRateStored()(uint256)'],[['exchange_rate', None]]),
+            ]
+
+            # create the multicall object
+            ctoken_multicall = Multicall(ctoken_calls, _w3 = w3, block_id = block_height)
+
+            # execute the call
+            ctoken_results = ctoken_multicall()
+            
+            exchange_rate = ctoken_results['exchange_rate'] / 10 ** (18 + underlying_decimals - ctoken_decimals)
+            ctoken_deposits = ctoken_results['total_supply'] / 10 ** ctoken_decimals * exchange_rate
+            ctoken_borrows = ctoken_results['total_borrows'] / 10 ** underlying_decimals
+            data = [ctoken,
+                 ctoken_address,
+                 ctokens[ctoken]['underlying_symbol'],
+                 ctokens[ctoken]['underlying_address'],
+                 ctoken_results['supply_apy'],
+                 ctoken_results['borrow_apy'],
+                 ctoken_deposits,
+                 ctoken_borrows,
+                 ]
+            ctoken_row = pd.DataFrame(
+                data=[data],
+                 columns=['symbol','address','underlying_symbol','underlying_address','supply_apy','borrow_apy','deposits','borrows'],
+                 index=[0]
+            )
+
+            # ic(ctoken_row)
+            ctoken_data = pd.concat([ctoken_data, ctoken_row], axis=0)
+
+        # add the other metadata
+        ctoken_data.insert(0, 'block_hour', partition_datetime)
+        ctoken_data.insert(1, 'block_height', block_height)
+        ctoken_data.insert(2, 'chain', chain)
+        ctoken_data.insert(3, 'compound_version', 'compound_v2')
+        
+        ctoken_data = standardise_types(ctoken_data)
+
+        # ic(ctoken_data)
+
+    context.add_output_metadata(
+        {
+            "num_records": len(ctoken_data),
+            "preview": MetadataValue.md(ctoken_data.head().to_markdown()),
+        }
+    )
+
+    return ctoken_data
+
+
+
+
+if __name__ == "__main__":
+
+    compound_v2_by_hour()
