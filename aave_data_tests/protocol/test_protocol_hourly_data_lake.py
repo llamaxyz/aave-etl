@@ -71,6 +71,60 @@ def test_compound_v2_by_hour():
 
     assert_frame_equal(result.head(1), expected, check_exact=True)
 
+def test_compound_v3_by_hour():
+    """
+    Tests the compound_v2_by_hour asset against a reference response
+
+    """
+    
+    pkey = MultiPartitionKey(
+        {
+            "time": '2023-05-13-06:00',
+            "market": 'ethereum_v3'
+        }
+    )  # type: ignore
+
+    context = build_op_context(partition_key=pkey)
+
+    # result = protocol_state_by_hour_op(context)
+
+    block_numbers_by_hour_sample_output = pd.DataFrame(
+        [
+            {
+                'block_hour': datetime(2023,5,13,6,0,0),
+                'block_hour': datetime(2023,5,13,6,0,0),
+                'block_height': 17249150,
+                'chain': 'ethereum',
+                'market': 'ethereum_v3',
+            }
+        ]
+    )
+
+    expected = pd.DataFrame(
+        [
+            {
+                'block_hour': datetime(2023,5,13,6,0,0),
+                'block_height': 17249150,
+                'chain': 'ethereum',
+                'compound_version': 'compound_v3',
+                'symbol': 'cUSDC',
+                "address": "0xc3d688b66703497daa19211eedff47f25384cdc3",
+                "underlying_symbol": "USDC",
+                "underlying_address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                'supply_apy': 0.023262233898528002,
+                'borrow_apy': 0.040051636467695995,
+                'deposits': 266187477.724336,
+                'borrows': 190526797.287392,
+            }
+        ]
+    )
+    expected = standardise_types(expected)
+
+    result = compound_v3_by_hour(context, block_numbers_by_hour_sample_output)
+
+    assert_frame_equal(result.head(1), expected, check_exact=True)
+
+
 if __name__ == "__main__":
 
-    test_compound_v2_by_hour()
+    test_compound_v3_by_hour()

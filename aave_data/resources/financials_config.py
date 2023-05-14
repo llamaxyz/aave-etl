@@ -875,7 +875,13 @@ CONFIG_COMPOUND_v2 = {
 CONFIG_COMPOUND_v3 = {
     # using aave market to select because that's the block source.  data stored by chain
     "ethereum_v3": {
-        "cUSDC": "0xc3d688b66703497daa19211eedff47f25384cdc3",
+        "cUSDC": {
+            "address": "0xc3d688b66703497daa19211eedff47f25384cdc3",
+            "ctoken_decimals": 6,
+            "underlying_address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+            "underlying_symbol": "USDC",
+            "underlying_decimals": 6,
+        },
     }
 }
 
