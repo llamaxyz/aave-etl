@@ -70,4 +70,33 @@ from usd_balance u
     u.token = n.token and
     u.measure = n.measure
   )
+union all 
+-- Paraswap Legacy Fees - not in financials table, hacked in here for balances only
+SELECT 
+  f.block_day
+  , f.chain
+  , c.display_chain
+  , f.market
+  , c.display_market
+  , f.paraswap_legacy_claimer as collector
+  , 'Paraswap Legacy Fees' as collector_label
+  , f.reserve 
+  , f.symbol 
+  , f.reserve as underlying_reserve
+  , f.symbol as underlying_reserve_symbol
+  , 'end_paraswap_legacy_claimable_usd' as measure
+  , 'balance' as measure_type
+  , coalesce(b.balance_group, 'Other Token') as balance_group
+  , coalesce(b.stable_class, 'unstablecoin') as stable_class
+  , f.claimable * p.usd_price as value_usd
+  , f.claimable as value_native
+-- FROM warehouse.paraswap_legacy_claimable_fees f
+--   left join datamart.chains_markets c on (f.chain = c.chain and f.market = c.market)
+--   left join warehouse.balance_group_lookup b on (f.market = b.market and f.reserve = b.reserve and f.reserve = b.atoken and f.symbol = b.atoken_symbol)
+--   left join warehouse.token_prices_by_day p on (f.block_day = p.block_day and f.chain = p.chain and f.reserve = p.reserve and f.symbol = p.symbol)
+FROM {{ source('warehouse','paraswap_legacy_claimable_fees')}} f  
+  left join {{ref('chains_markets')}} c on (f.chain = c.chain and f.market = c.market)
+  left join {{ source('warehouse','balance_group_lookup')}} b on (f.market = b.market and f.reserve = b.reserve and f.reserve = b.atoken and f.symbol = b.atoken_symbol)
+  left join {{ source('warehouse','token_prices_by_day')}} p on (f.block_day = p.block_day and f.chain = p.chain and f.reserve = p.reserve and f.symbol = p.symbol)
+
 order by market, collector_label, symbol, block_day

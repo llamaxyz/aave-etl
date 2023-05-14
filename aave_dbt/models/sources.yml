@@ -34,4 +34,5 @@ sources:
       - name: incentives_by_day
       - name: liquidity_depth
       - name: balancer_bpt_by_day
+      - name: paraswap_legacy_claimable_fees
       
