@@ -368,7 +368,7 @@ from long_format l
   left join {{ source('financials_data_lake','tx_classification') }} t on (l.measure = t.measure)
   left join {{ source('financials_data_lake','display_names') }} d on (l.collector = d.collector and l.chain = d.chain and l.market = d.market)
   left join {{ source('warehouse','aave_internal_addresses') }} c on (l.collector = c.contract_address and l.chain = c.chain)
-  left join {{ source('warehouse','balance_group_lookup') }} b on (l.market = b.market and l.token = b.atoken)
+  left join {{ source('warehouse','balance_group_lookup') }} b on (l.market = b.market and l.token = b.atoken and l.underlying_reserve = b.reserve and l.symbol = b.atoken_symbol)
 where t.measure_type is not null
 order by display_chain, display_name, block_day, symbol
 
