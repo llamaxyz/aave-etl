@@ -288,6 +288,7 @@ def compound_v2_by_hour(
 
         def rate_to_apy(rate):
             # as per https://docs.compound.finance/v2/#protocol-math
+            decimals = 18
             blocks_per_day = 60 / 12 * 60 * 24 
             days_per_year = 365
             return (((rate / 10 ** decimals * blocks_per_day + 1) ** days_per_year)) - 1
