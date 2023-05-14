@@ -73,11 +73,11 @@ from usd_balance u
 union all 
 -- Paraswap Legacy Fees - not in financials table, hacked in here for balances only
 SELECT 
-  f.block_day
+  date_add(f.block_day, interval -1 day) as block_day -- hack to align with financials table
   , f.chain
   , c.display_chain
   , f.market
-  , c.display_market
+  , 'Paraswap Legacy Fees' as display_market
   , f.paraswap_legacy_claimer as collector
   , 'Paraswap Legacy Fees' as collector_label
   , f.reserve 
