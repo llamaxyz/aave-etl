@@ -2069,6 +2069,123 @@ def paraswap_claimable_fees(context, market_tokens_by_day) -> pd.DataFrame:  # t
     return market_tokens_by_day
 
 
+@asset(
+    partitions_def=market_day_multipartition,
+    compute_kind="python",
+    code_version="1",
+    io_manager_key = 'data_lake_io_manager',
+    ins={
+        "market_tokens_by_day": AssetIn(key_prefix="financials_data_lake"),
+    }
+)
+def paraswap_legacy_fees(context, market_tokens_by_day) -> pd.DataFrame:  # type: ignore pylint: disable=W0621
+    """Table of the unclaimed paraswap fees for each market
+
+    Uses multicall.py to access an RPC node and call paraswap fee claimer contract
+    If there is no fee claimer contract then an empty dataframe is returned
+
+    IMPORTANT - this asset may contain duplicate values across the multiple partitions in a chain
+      example - USDC on etheruem v2 and v3
+      This will be deduplicated in the warehouse table
+
+    Args:
+        context: dagster context object
+        market_tokens_by_day: the output of market_tokens_by_day for a given market
+
+    Returns:
+        A dataframe market, token and the underlying reserve oracle price at the block height
+
+    """
+    FEE_CLAIMERS = {
+        'ethereum': '0xeF13101C5bbD737cFb2bF00Bbd38c626AD6952F7',
+        'polygon': '0x8b5cF413214CA9348F047D1aF402Db1b4E96c060',
+        'fantom': '0x4F14fE8c86A00D6DFB9e91239738499Fc0F587De',
+        'arbitrum': '0xA7465CCD97899edcf11C56D2d26B49125674e45F',
+        'avalanche': '0xbFcd68FD74B4B458961495F3392Bf96f46A29E67',
+        'optimism': '0xA7465CCD97899edcf11C56D2d26B49125674e45F',
+    }
+
+    date, market = context.partition_key.split("|")
+
+    context.log.info(f"date: {date}")
+    context.log.info(f"market: {market}")
+
+    chain = CONFIG_MARKETS[market]['chain']
+
+    # bail if the date is before the fee claimer contract was deployed
+    if datetime.strptime(date, '%Y-%m-%d') < datetime(2022,12,7):
+        return pd.DataFrame()
+
+    # bail if there is no market
+    if market_tokens_by_day.empty:
+        return pd.DataFrame()
+    else:
+        block_height = int(market_tokens_by_day.block_height.values[0])
+        # context.log.info(f"market: {market}")
+        # context.log.info(f"date: {date}")
+        context.log.info(f"block_height: {block_height}")
+ 
+    # bail if there is no fee claimer contract
+    if 'paraswap_legacy_claimer' not in CONFIG_MARKETS[market]:
+        return pd.DataFrame()
+    else:
+        legacy_claimer = CONFIG_MARKETS[market]['paraswap_legacy_claimer']
+        fee_claimer = FEE_CLAIMERS[chain]
+    
+    # on-chain function takes a list
+    tokens = market_tokens_by_day.reserve.to_list()
+
+    # initialise the web3 object
+    w3 = Web3(Web3.HTTPProvider(CONFIG_CHAINS[chain]['web3_rpc_url']))
+
+    # build the call object
+    fee_claim_call = Call(
+        fee_claimer,
+        ['batchGetBalance(address[],address)(uint256[])', tokens, legacy_claimer],
+        [['claimable', None]],
+        _w3 = w3,
+        block_id = block_height
+    )
+    
+    # execute the call
+    # exponential backoff retries on the function call to deal with transient RPC errors
+    i = 0
+    delay = INITIAL_RETRY
+    while True:
+        try:
+            call_output = fee_claim_call()
+            break
+        except Exception as e:
+            i += 1
+            if i > MAX_RETRIES:
+                raise ValueError(f"RPC error count {i}, last error {str(e)}.  Bailing out.")
+            rand_delay = randint(0, 250) / 1000
+            sleep(delay + rand_delay)
+            delay *= 2
+            print(f"Request Error {str(e)}, retry count {i}")
+
+    # # output is a tuple, join it back to the original dataframe
+    claimable_raw = pd.DataFrame(call_output['claimable'], columns=['claimable_raw'])
+    market_tokens_by_day = market_tokens_by_day.join(claimable_raw, how='left')
+    
+    # tidy up
+    market_tokens_by_day['claimable'] = market_tokens_by_day['claimable_raw'].astype(float) / 10 ** market_tokens_by_day['decimals']
+    market_tokens_by_day['chain'] = chain
+    market_tokens_by_day['paraswap_fee_claimer'] = fee_claimer
+    market_tokens_by_day['paraswap_legacy_claimer'] = legacy_claimer
+
+    market_tokens_by_day = market_tokens_by_day[['block_day','chain','market','paraswap_fee_claimer','paraswap_legacy_claimer','reserve','symbol','claimable']]
+
+    # ic(market_tokens_by_day)
+
+    context.add_output_metadata(
+        {
+            "num_records": len(market_tokens_by_day),
+            "preview": MetadataValue.md(market_tokens_by_day.head().to_markdown()),
+        }
+    )
+
+    return market_tokens_by_day
 
 if __name__ == "__main__":
 

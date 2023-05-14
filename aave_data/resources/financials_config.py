@@ -198,7 +198,8 @@ CONFIG_MARKETS = {
         "oracle_base_currency": 'wei',
         "block_table_master": True,
         "price_rank": 3,
-        "paraswap_fee_claimer": '0x9abf798f5314bfd793a9e57a654bed35af4a1d60'
+        "paraswap_fee_claimer": '0x9abf798f5314bfd793a9e57a654bed35af4a1d60',
+        "paraswap_legacy_claimer": '0xee56e2b3d491590b5b31738cc34d5232f378a8d5'
     },
     "aave_amm": {
         "chain": "ethereum",
@@ -283,7 +284,8 @@ CONFIG_MARKETS = {
         "oracle_base_currency": 'usd',
         "block_table_master": False,
         "price_rank": 1,
-        "paraswap_fee_claimer": '0x9abf798f5314bfd793a9e57a654bed35af4a1d60'
+        "paraswap_fee_claimer": '0x9abf798f5314bfd793a9e57a654bed35af4a1d60',
+        "paraswap_legacy_claimer": '0xee56e2b3d491590b5b31738cc34d5232f378a8d5'
     },
     "polygon_v2": {
         "chain": "polygon",
@@ -307,7 +309,8 @@ CONFIG_MARKETS = {
         "oracle_base_currency": 'wei',
         "block_table_master": True,
         "price_rank": 2,
-        "paraswap_fee_claimer": '0x9abf798f5314bfd793a9e57a654bed35af4a1d60'
+        "paraswap_fee_claimer": '0x9abf798f5314bfd793a9e57a654bed35af4a1d60',
+        "paraswap_legacy_claimer": '0xdc9a35b16db4e126cfedc41322b3a36454b1f772'
     },
     "avax_v2": {
         "chain": "avalanche",
@@ -331,7 +334,8 @@ CONFIG_MARKETS = {
         "oracle_base_currency": 'usd',
         "block_table_master": True,
         "price_rank": 2,
-        "paraswap_fee_claimer": '0x9abf798f5314bfd793a9e57a654bed35af4a1d60'
+        "paraswap_fee_claimer": '0x9abf798f5314bfd793a9e57a654bed35af4a1d60',
+        "paraswap_legacy_claimer": '0xa35b76e4935449e33c56ab24b23fcd3246f13470'
     },
     "polygon_v3": {
         "chain": "polygon",
@@ -353,7 +357,8 @@ CONFIG_MARKETS = {
         "oracle_base_currency": 'usd',
         "block_table_master": False,
         "price_rank": 1,
-        "paraswap_fee_claimer": '0x9abf798f5314bfd793a9e57a654bed35af4a1d60'
+        "paraswap_fee_claimer": '0x9abf798f5314bfd793a9e57a654bed35af4a1d60',
+        "paraswap_legacy_claimer": '0xdc9a35b16db4e126cfedc41322b3a36454b1f772'
     },
     "avax_v3": {
         "chain": "avalanche",
@@ -375,7 +380,8 @@ CONFIG_MARKETS = {
         "oracle_base_currency": 'usd',
         "block_table_master": False,
         "price_rank": 1,
-        "paraswap_fee_claimer": '0x9abf798f5314bfd793a9e57a654bed35af4a1d60'
+        "paraswap_fee_claimer": '0x9abf798f5314bfd793a9e57a654bed35af4a1d60',
+        "paraswap_legacy_claimer": '0xa35b76e4935449e33c56ab24b23fcd3246f13470'
     },
     "optimism_v3": {
         "chain": "optimism",
@@ -397,7 +403,8 @@ CONFIG_MARKETS = {
         "oracle_base_currency": 'usd',
         "block_table_master": True,
         "price_rank": 1,
-        "paraswap_fee_claimer": '0x9abf798f5314bfd793a9e57a654bed35af4a1d60'
+        "paraswap_fee_claimer": '0x9abf798f5314bfd793a9e57a654bed35af4a1d60',
+        "paraswap_legacy_claimer": '0xe50c8c619d05ff98b22adf991f17602c774f785c'
     },
     "arbitrum_v3": {
         "chain": "arbitrum",
@@ -419,7 +426,8 @@ CONFIG_MARKETS = {
         "oracle_base_currency": 'usd',
         "block_table_master": True,
         "price_rank": 1,
-        "paraswap_fee_claimer": '0x9abf798f5314bfd793a9e57a654bed35af4a1d60'
+        "paraswap_fee_claimer": '0x9abf798f5314bfd793a9e57a654bed35af4a1d60',
+        "paraswap_legacy_claimer": '0xbbd9f90699c1fa0d7a65870d241dd1f1217c96eb'
     },
     "fantom_v3": {
         "chain": "fantom",
@@ -441,7 +449,8 @@ CONFIG_MARKETS = {
         "oracle_base_currency": 'usd',
         "block_table_master": True,
         "price_rank": 1,
-        "paraswap_fee_claimer": '0x9abf798f5314bfd793a9e57a654bed35af4a1d60'
+        "paraswap_fee_claimer": '0x9abf798f5314bfd793a9e57a654bed35af4a1d60',
+        "paraswap_legacy_claimer": '0x39cb97b105173b56b5a2b4b33ad25d6a50e6c949'
     },
     "harmony_v3": {
         "chain": "harmony",
