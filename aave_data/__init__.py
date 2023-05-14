@@ -385,13 +385,13 @@ chain_day_partitioned_schedule = build_schedule_from_partitioned_job(
 
 data_lake_hourly_partitioned_schedule = build_schedule_from_partitioned_job(
     job=data_lake_hourly_partitioned_job,
-    minute_of_hour=15,
+    minute_of_hour=5,
     name="data_lake_hourly_partitioned_schedule",
 )
 
 datamart_hourly_schedule = ScheduleDefinition(
     job=datamart_hourly_job,
-    cron_schedule="20 * * * *",
+    cron_schedule="10 * * * *",
     execution_timezone='UTC',
     name="datamart_hourly_schedule",
 )
