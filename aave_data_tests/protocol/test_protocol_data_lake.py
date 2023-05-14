@@ -10,12 +10,7 @@ from icecream import ic
 from pandas.testing import assert_frame_equal
 # ic(os.getcwd())
 # from aave.financials.
-from aave_data.assets.protocol.protocol_data_lake import (
-                                                        protocol_data_by_day,
-                                                        raw_incentives_by_day,
-                                                        emode_config_by_day,
-                                                        matic_lsd_token_supply_by_day
-                                                    )
+from aave_data.assets.protocol.protocol_data_lake import *
 
 from aave_data.resources.financials_config import *  # pylint: disable=wildcard-import, unused-wildcard-import
 
@@ -308,7 +303,34 @@ def test_matic_lsd_token_supply_by_day():
 
     assert_frame_equal(result, expected, check_exact=True)
 
+def test_beacon_chain_staking_returns_by_day():
+    """
+    Tests the beacon_chain_staking_returns_by_day asset against a reference response
 
+    """
+
+    pkey =  '2023-05-13'
+
+    context = build_op_context(partition_key=pkey)
+
+    expected = pd.DataFrame(
+        [
+            {
+                'partition_date': datetime(2023,5,13,0,0,0),
+                'beaconchain_day': 892,
+                'day_start': datetime(2023,5,12,12,0,23),
+                'day_end': datetime(2023,5,13,12,0,23),
+                'apr': 0.0562568139599815,
+                'cl_apr': 0.0348226211039776,
+                'el_apr': 0.0214341928560039,
+            }
+        ]
+    )
+    expected = standardise_types(expected)
+
+    result = beacon_chain_staking_returns_by_day(context)
+
+    assert_frame_equal(result.head(1), expected, check_exact=True)
 
 
 if __name__ == "__main__":
@@ -316,4 +338,4 @@ if __name__ == "__main__":
     # test_raw_incentives_by_day()
     # test_incentives_by_day()
     # test_emode_config_by_day()
-    test_matic_lsd_token_supply_by_day()
+    test_beacon_chain_staking_returns_by_day()

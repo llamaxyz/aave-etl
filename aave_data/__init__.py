@@ -253,7 +253,12 @@ data_lake_unpartitioned_assets = [
 daily_partitioned_assets = [
     'protocol_data_lake/matic_lsd_token_supply_by_day',
     'protocol_data_lake/safety_module_rpc',
+    'protocol_data_lake/beacon_chain_staking_returns_by_day',
     ]
+
+daily_midday_partitioned_assets = [
+    'protocol_data_lake/beacon_chain_staking_returns_by_day',
+]
 
 liquidity_depth_assets = [
     'protocol_data_lake/liquidity_depth_raw',
@@ -279,6 +284,7 @@ data_lake_partitioned_job = define_asset_job(
             AssetSelection.groups('financials_data_lake', 'protocol_data_lake')
             - AssetSelection.keys(*data_lake_unpartitioned_assets)
             - AssetSelection.keys(*daily_partitioned_assets)
+            - AssetSelection.keys(*daily_midday_partitioned_assets)
             - AssetSelection.keys(*liquidity_depth_assets)
             - AssetSelection.keys(*chain_day_partitioned_assets)
     ),
@@ -300,6 +306,12 @@ warehouse_datamart_job = define_asset_job(
 daily_partitioned_job = define_asset_job(
     name='daily_partitioned',
     selection=AssetSelection.keys(*daily_partitioned_assets),
+    partitions_def=daily_partitions_def
+)
+
+daily_midday_partitioned_job = define_asset_job(
+    name='daily_midday_partitioned',
+    selection=AssetSelection.keys(*daily_midday_partitioned_assets),
     partitions_def=daily_partitions_def
 )
 
@@ -329,6 +341,7 @@ data_lake_hourly_partitioned_job = define_asset_job(
     ),
     partitions_def=market_hour_multipartition
 )
+
 
 datamart_hourly_job = define_asset_job(
     name='datamart_hourly',
@@ -369,6 +382,13 @@ daily_partitioned_schedule = build_schedule_from_partitioned_job(
     name="daily_partitioned_schedule",
 )
 
+daily_midday_partitioned_schedule = build_schedule_from_partitioned_job(
+    job=daily_midday_partitioned_job,
+    minute_of_hour=10,
+    hour_of_day=12,
+    name="daily_midday_partitioned_schedule",
+)
+
 liquidity_depth_schedule = ScheduleDefinition(
     job = liquidity_depth_job,
     cron_schedule="0 */2 * * *",
@@ -401,12 +421,19 @@ datamart_hourly_schedule = ScheduleDefinition(
 ############################################
 
 defs = Definitions(
-    assets=[*financials_data_lake_assets, *protocol_data_lake_assets, *protocol_hourly_data_lake_assets, *warehouse_assets, *dbt_assets],
+    assets=[
+        *financials_data_lake_assets, 
+        *protocol_data_lake_assets, 
+        *protocol_hourly_data_lake_assets, 
+        *warehouse_assets, 
+        *dbt_assets,
+        ],
     jobs=[
           data_lake_unpartitioned_job,
           data_lake_partitioned_job,
           warehouse_datamart_job,
           daily_partitioned_job,
+          daily_midday_partitioned_job,
           chain_day_partitioned_job,
           data_lake_hourly_partitioned_job,
           datamart_hourly_job
@@ -416,6 +443,7 @@ defs = Definitions(
         data_lake_unpartitioned_schedule,
         data_lake_partitioned_schedule,
         daily_partitioned_schedule,
+        daily_midday_partitioned_schedule,
         liquidity_depth_schedule,
         chain_day_partitioned_schedule,
         data_lake_hourly_partitioned_schedule,

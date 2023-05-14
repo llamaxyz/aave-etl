@@ -63,6 +63,8 @@ DAILY_PARTITION_START_DATE=datetime(2022,2,26,0,0,0, tzinfo=timezone.utc)
 
 daily_partitions_def = DailyPartitionsDefinition(start_date=DAILY_PARTITION_START_DATE, end_offset=1, timezone="UTC")
 
+daily_non_offset_partitions_def = DailyPartitionsDefinition(start_date=DAILY_PARTITION_START_DATE, timezone="UTC")
+
 chain_day_multipartition = MultiPartitionsDefinition(
     {
         "date": DailyPartitionsDefinition(start_date='2023-04-06', end_offset=1, timezone="UTC"),
@@ -1326,6 +1328,98 @@ def coingecko_data_by_day(context):
 
     return return_val
 
+
+@asset(
+    partitions_def=daily_partitions_def,
+    compute_kind="python",
+    code_version="1",
+    io_manager_key = 'protocol_data_lake_io_manager',
+)
+def beacon_chain_staking_returns_by_day(
+        context
+)-> pd.DataFrame:
+    """
+    Table of the eth reference staking returns by day
+    
+    Obtained from the Eth STORE (Ether Staking Offered Rate) from 
+    https://beaconcha.in/ethstore
+
+    This job needs to fire after 1200 UTC to ensure the data is available
+
+    Args:
+        context: dagster context object
+
+    Returns:
+        A dataframe of the eth reference staking returns by day 
+
+    Raises:
+        ValueError: If the API doesn't return current data
+
+    """
+    date = context.partition_key
+
+    # test data
+    # date = '2023-05-13'
+
+    beacon_chain_start_date = datetime.strptime('2020-12-01', '%Y-%m-%d').date()
+    partition_date = datetime.strptime(date, '%Y-%m-%d').date()
+
+    beaconchain_day = (partition_date - beacon_chain_start_date).days - 1
+    ic(beaconchain_day)
+
+    api_url = f'https://beaconcha.in/api/v1/ethstore/{int(beaconchain_day)}'
+
+     # exponential backoff retries on the function call to deal with transient RPC errors
+    i = 0
+    delay = INITIAL_RETRY
+    while True:
+        try:
+            api_return = requests.get(api_url, timeout=300)
+            break
+        except Exception as e:
+            i += 1
+            if i > MAX_RETRIES:
+                raise ValueError(f"RPC error count {i}, last error {str(e)}.  Bailing out.")
+            rand_delay = randint(0, 250) / 1000
+            sleep(delay + rand_delay)
+            delay *= 2
+            print(f"Request Error {str(e)}, retry count {i}")
+    
+    store_data = api_return.json()['data']
+    
+    if not store_data:
+        raise ValueError(f"API data for {date} is empty")
+    
+    return_val = pd.DataFrame(store_data, index=[0])
+
+    return_val = return_val[
+        [
+            'day',
+            'day_start',
+            'day_end',
+            'apr',
+            'cl_apr',
+            'el_apr'
+        ]
+    ]
+    return_val.insert(0, 'partition_date', datetime.strptime(date, '%Y-%m-%d'))
+    return_val.rename(columns={'day': 'beaconchain_day'}, inplace=True)
+    return_val.day_start = pd.to_datetime(return_val.day_start)
+    return_val.day_end = pd.to_datetime(return_val.day_end)
+
+    return_val = standardise_types(return_val)
+
+    # ic(return_val)
+
+    context.add_output_metadata(
+        {
+            "num_records": len(return_val),
+            "preview": MetadataValue.md(return_val.head().to_markdown()),
+        }
+    )
+
+    return return_val
+    
 if __name__ == "__main__":
 
     # import time
@@ -1335,5 +1429,5 @@ if __name__ == "__main__":
     # elapsed = end - start
     # ic(elapsed)
     
-    ic(coingecko_data_by_day())
+    beacon_chain_staking_returns_by_day()
 
