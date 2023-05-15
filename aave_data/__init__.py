@@ -253,7 +253,6 @@ data_lake_unpartitioned_assets = [
 daily_partitioned_assets = [
     'protocol_data_lake/matic_lsd_token_supply_by_day',
     'protocol_data_lake/safety_module_rpc',
-    'protocol_data_lake/beacon_chain_staking_returns_by_day',
     ]
 
 daily_midday_partitioned_assets = [
@@ -384,7 +383,7 @@ daily_partitioned_schedule = build_schedule_from_partitioned_job(
 
 daily_midday_partitioned_schedule = build_schedule_from_partitioned_job(
     job=daily_midday_partitioned_job,
-    minute_of_hour=10,
+    minute_of_hour=20,
     hour_of_day=12,
     name="daily_midday_partitioned_schedule",
 )
