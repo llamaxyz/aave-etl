@@ -22,6 +22,8 @@ sources:
       - name: compound_v2_by_hour
       - name: compound_v3_by_hour
       - name: beacon_chain_staking_returns_by_day
+      - name: compound_v2_by_day
+      - name: compound_v3_by_day
   - name: warehouse
     tables:
       - name: atoken_measures_by_day
