@@ -332,10 +332,119 @@ def test_beacon_chain_staking_returns_by_day():
 
     assert_frame_equal(result.head(1), expected, check_exact=True)
 
+def test_compound_v2_by_day():
+    """
+    Tests the compound_v2_by_hour asset against a reference response
+
+    """
+    
+    pkey = '2023-05-15'
+
+    context = build_op_context(partition_key=pkey)
+
+    # result = protocol_state_by_hour_op(context)
+
+    blocks_by_day_output = pd.DataFrame(
+        [
+            {
+                'block_day': datetime(2023,5,15,0,0,0),
+                'block_height': 17261505,
+                'end_block': 17268587,
+                'chain': 'ethereum',
+            },
+            {
+                'block_day': datetime(2023,5,14,0,0,0),
+                'block_height': 17254453,
+                'end_block': 17261504,
+                'chain': 'ethereum',
+            }
+        ]
+    )
+    blocks_by_day_output = standardise_types(blocks_by_day_output)
+
+    expected = pd.DataFrame(
+        [
+            {
+                'block_day': datetime(2023,5,15,0,0,0),
+                'block_height': 17261505,
+                'chain': 'ethereum',
+                'compound_version': 'compound_v2',
+                'symbol': 'cDAI',
+                "address": "0x5d3a536e4d6dbd6114cc1ead35777bab948e3643",
+                "underlying_symbol": "DAI",
+                "underlying_address": "0x6b175474e89094c44da98b954eedeac495271d0f",
+                'supply_apy': 0.016814667471989786,
+                'borrow_apy': 0.035634551812653514,
+                'deposits': 286659454.689363,
+                'borrows': 160602734.047785,
+            }
+        ]
+    )
+    expected = standardise_types(expected)
+
+
+    result = compound_v2_by_day(context, blocks_by_day_output)
+
+    assert_frame_equal(result.head(1), expected, check_exact=True)
+
+def test_compound_v3_by_day():
+    """
+    Tests the compound_v3_by_hour asset against a reference response
+
+    """
+    
+    pkey = '2023-05-15'
+
+    context = build_op_context(partition_key=pkey)
+
+    # result = protocol_state_by_hour_op(context)
+
+    blocks_by_day_output = pd.DataFrame(
+        [
+            {
+                'block_day': datetime(2023,5,15,0,0,0),
+                'block_height': 17261505,
+                'end_block': 17268587,
+                'chain': 'ethereum',
+            },
+            {
+                'block_day': datetime(2023,5,14,0,0,0),
+                'block_height': 17254453,
+                'end_block': 17261504,
+                'chain': 'ethereum',
+            }
+        ]
+    )
+    blocks_by_day_output = standardise_types(blocks_by_day_output)
+
+    expected = pd.DataFrame(
+        [
+            {
+                'block_day': datetime(2023,5,15,0,0,0),
+                'block_height': 17261505,
+                'chain': 'ethereum',
+                'compound_version': 'compound_v3',
+                'symbol': 'cUSDC',
+                "address": "0xc3d688b66703497daa19211eedff47f25384cdc3",
+                "underlying_symbol": "USDC",
+                "underlying_address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                'supply_apy': 0.023241,
+                'borrow_apy': 0.040029,
+                'deposits': 266580252.771759,
+                'borrows': 190632878.286075,
+            }
+        ]
+    )
+    expected = standardise_types(expected)
+
+    result = compound_v3_by_day(context, blocks_by_day_output)
+    ic(result)
+    assert_frame_equal(result.head(1), expected, check_exact=True)
 
 if __name__ == "__main__":
     # test_protocol_data_by_day()
     # test_raw_incentives_by_day()
     # test_incentives_by_day()
     # test_emode_config_by_day()
-    test_beacon_chain_staking_returns_by_day()
+    # test_beacon_chain_staking_returns_by_day()
+    test_compound_v3_by_day()

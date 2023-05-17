@@ -253,6 +253,8 @@ data_lake_unpartitioned_assets = [
 daily_partitioned_assets = [
     'protocol_data_lake/matic_lsd_token_supply_by_day',
     'protocol_data_lake/safety_module_rpc',
+    'protocol_data_lake/compound_v2_by_day',
+    'protocol_data_lake/compound_v3_by_day'
     ]
 
 daily_midday_partitioned_assets = [
@@ -304,7 +306,10 @@ warehouse_datamart_job = define_asset_job(
 
 daily_partitioned_job = define_asset_job(
     name='daily_partitioned',
-    selection=AssetSelection.keys(*daily_partitioned_assets),
+    selection=(AssetSelection.keys(*daily_partitioned_assets) 
+                - AssetSelection.keys('protocol_data_lake/compound_v2_by_day')
+                - AssetSelection.keys('protocol_data_lake/compound_v3_by_day')
+    ),
     partitions_def=daily_partitions_def
 )
 
