@@ -59,7 +59,8 @@ from aave_data.assets.financials.data_lake import (
 
 INITIAL_RETRY = 0.01 #seconds
 MAX_RETRIES = 10
-DAILY_PARTITION_START_DATE=datetime(2022,2,26,0,0,0, tzinfo=timezone.utc)
+# DAILY_PARTITION_START_DATE=datetime(2022,2,26,0,0,0, tzinfo=timezone.utc)
+DAILY_PARTITION_START_DATE=datetime(2022,1,1,0,0,0, tzinfo=timezone.utc)
 
 daily_partitions_def = DailyPartitionsDefinition(start_date=DAILY_PARTITION_START_DATE, end_offset=1, timezone="UTC")
 
