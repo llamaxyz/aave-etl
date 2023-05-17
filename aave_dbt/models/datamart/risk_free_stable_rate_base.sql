@@ -34,6 +34,18 @@ select
 -- from protocol_data_lake.compound_v2_by_hour c
 from {{ source('protocol_data_lake', 'compound_v2_by_hour') }} c
   left join prices p on (date_trunc(c.block_hour, day) = p.block_day and c.underlying_address = p.reserve and c.chain = p.chain)
+union all
+select 
+  c.block_day as block_time
+  , c.compound_version as market
+  , c.underlying_symbol as symbol
+  , c.deposits * p.usd_price as deposits_usd
+  , c.borrows * p.usd_price as borrows_usd
+  , (c.deposits - c.borrows) * p.usd_price as tvl_usd
+  , c.supply_apy as deposit_apy
+-- from protocol_data_lake.compound_v2_by_day c
+from {{ source('protocol_data_lake', 'compound_v2_by_day') }} c
+  left join prices p on (c.block_day = p.block_day and c.underlying_address = p.reserve and c.chain = p.chain)
 union all 
 select 
   c.block_hour as block_time
@@ -46,6 +58,18 @@ select
 -- from protocol_data_lake.compound_v3_by_hour c
 from {{ source('protocol_data_lake', 'compound_v3_by_hour') }} c
   left join prices p on (date_trunc(c.block_hour, day) = p.block_day and c.underlying_address = p.reserve and c.chain = p.chain)
+union all 
+select 
+  c.block_day as block_time
+  , c.compound_version as market
+  , c.underlying_symbol as symbol
+  , c.deposits * p.usd_price as deposits_usd
+  , c.borrows * p.usd_price as borrows_usd
+  , (c.deposits - c.borrows) * p.usd_price as tvl_usd
+  , c.supply_apy as deposit_apy
+-- from protocol_data_lake.compound_v3_by_day c
+from {{ source('protocol_data_lake', 'compound_v3_by_day') }} c
+  left join prices p on (c.block_day = p.block_day and c.underlying_address = p.reserve and c.chain = p.chain)
 )
 
 select 
@@ -58,4 +82,6 @@ select
   , deposit_apy 
   , deposits_usd * deposit_apy as deposits_mul_apy
 from all_sources
+where deposits_usd > 0
 order by block_time, market, symbol
+
