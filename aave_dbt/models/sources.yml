@@ -19,6 +19,8 @@ sources:
       - name: coingecko_data_by_day
       - name: protocol_data_by_hour
       - name: emode_config_by_day
+      - name: compound_v2_by_hour
+      - name: compound_v3_by_hour
   - name: warehouse
     tables:
       - name: atoken_measures_by_day
