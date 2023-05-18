@@ -1575,6 +1575,8 @@ def compound_v3_by_day(
     block_height = int(blocks_by_day.loc[(blocks_by_day.chain == chain) & (blocks_by_day.block_day == prev_block_day)].end_block.values[0] + 1)
     context.log.info(f"block_height: {block_height}")
 
+    
+
     partition_datetime = datetime.strptime(date, '%Y-%m-%d')
 
     ctoken_data = pd.DataFrame()
@@ -1601,58 +1603,64 @@ def compound_v3_by_day(
         
         for ctoken in ctokens.keys():
             # ic(ctoken)
-            ctoken_address = ctokens[ctoken]['address']
-            # ic(ctoken_address)
-            ctoken_decimals = ctokens[ctoken]['ctoken_decimals']
-            underlying_decimals = ctokens[ctoken]['underlying_decimals']
+            # bail if we're before the contract 
+            if block_height < ctokens[ctoken]['first_block']:
+                ctoken_row = pd.DataFrame()
+            else:
             
-            # get utilisation rate - other calls are based on this:
-            util_call = Call(ctoken_address, ['getUtilization()(uint256)'],[['utilisation_rate', None]], _w3 = w3, block_id = block_height)
-            util_uint = util_call()['utilisation_rate']
+                ctoken_address = ctokens[ctoken]['address']
+                # ic(ctoken_address)
+                ctoken_decimals = ctokens[ctoken]['ctoken_decimals']
+                underlying_decimals = ctokens[ctoken]['underlying_decimals']
+                
+                # get utilisation rate - other calls are based on this:
+                util_call = Call(ctoken_address, ['getUtilization()(uint256)'],[['utilisation_rate', None]], _w3 = w3, block_id = block_height)
+                util_uint = util_call()['utilisation_rate']
 
-            # ic(util_rate)
+                # ic(util_rate)
 
-            # configure multicall call objects
-            ctoken_calls = [
-                Call(ctoken_address, ['getSupplyRate(uint256)(uint256)', util_uint],[['supply_apy', rate_to_apy]]),
-                Call(ctoken_address, ['getBorrowRate(uint256)(uint256)', util_uint],[['borrow_apy', rate_to_apy]]),
-                Call(ctoken_address, ['totalSupply()(uint256)'],[['total_supply', None]]),
-                Call(ctoken_address, ['totalBorrow()(uint256)'],[['total_borrows', None]]),
-            ]
+                # configure multicall call objects
+                ctoken_calls = [
+                    Call(ctoken_address, ['getSupplyRate(uint256)(uint256)', util_uint],[['supply_apy', rate_to_apy]]),
+                    Call(ctoken_address, ['getBorrowRate(uint256)(uint256)', util_uint],[['borrow_apy', rate_to_apy]]),
+                    Call(ctoken_address, ['totalSupply()(uint256)'],[['total_supply', None]]),
+                    Call(ctoken_address, ['totalBorrow()(uint256)'],[['total_borrows', None]]),
+                ]
 
-            # create the multicall object
-            ctoken_multicall = Multicall(ctoken_calls, _w3 = w3, block_id = block_height)
+                # create the multicall object
+                ctoken_multicall = Multicall(ctoken_calls, _w3 = w3, block_id = block_height)
 
-            # execute the call
-            ctoken_results = ctoken_multicall()
+                # execute the call
+                ctoken_results = ctoken_multicall()
 
-            ctoken_deposits = ctoken_results['total_supply'] / 10 ** ctoken_decimals 
-            ctoken_borrows = ctoken_results['total_borrows'] / 10 ** ctoken_decimals
-            data = [ctoken,
-                 ctoken_address,
-                 ctokens[ctoken]['underlying_symbol'],
-                 ctokens[ctoken]['underlying_address'],
-                 ctoken_results['supply_apy'],
-                 ctoken_results['borrow_apy'],
-                 ctoken_deposits,
-                 ctoken_borrows,
-                 ]
-            ctoken_row = pd.DataFrame(
-                data=[data],
-                 columns=['symbol','address','underlying_symbol','underlying_address','supply_apy','borrow_apy','deposits','borrows'],
-                 index=[0]
-            )
+                ctoken_deposits = ctoken_results['total_supply'] / 10 ** ctoken_decimals 
+                ctoken_borrows = ctoken_results['total_borrows'] / 10 ** ctoken_decimals
+                data = [ctoken,
+                    ctoken_address,
+                    ctokens[ctoken]['underlying_symbol'],
+                    ctokens[ctoken]['underlying_address'],
+                    ctoken_results['supply_apy'],
+                    ctoken_results['borrow_apy'],
+                    ctoken_deposits,
+                    ctoken_borrows,
+                    ]
+                ctoken_row = pd.DataFrame(
+                    data=[data],
+                    columns=['symbol','address','underlying_symbol','underlying_address','supply_apy','borrow_apy','deposits','borrows'],
+                    index=[0]
+                )
 
-            # ic(ctoken_row)
-            ctoken_data = pd.concat([ctoken_data, ctoken_row], axis=0)
+                # ic(ctoken_row)
+                ctoken_data = pd.concat([ctoken_data, ctoken_row], axis=0)
 
-        # add the other metadata
-        ctoken_data.insert(0, 'block_day', partition_datetime)
-        ctoken_data.insert(1, 'block_height', block_height)
-        ctoken_data.insert(2, 'chain', chain)
-        ctoken_data.insert(3, 'compound_version', 'compound_v3')
-        
-        ctoken_data = standardise_types(ctoken_data)
+        if not ctoken_data.empty:
+            # add the other metadata
+            ctoken_data.insert(0, 'block_day', partition_datetime)
+            ctoken_data.insert(1, 'block_height', block_height)
+            ctoken_data.insert(2, 'chain', chain)
+            ctoken_data.insert(3, 'compound_version', 'compound_v3')
+            
+            ctoken_data = standardise_types(ctoken_data)
 
 
     context.add_output_metadata(

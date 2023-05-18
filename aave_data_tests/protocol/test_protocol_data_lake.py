@@ -394,7 +394,6 @@ def test_compound_v3_by_day():
     """
     
     pkey = '2023-05-15'
-
     context = build_op_context(partition_key=pkey)
 
     # result = protocol_state_by_hour_op(context)
@@ -440,6 +439,29 @@ def test_compound_v3_by_day():
     result = compound_v3_by_day(context, blocks_by_day_output)
     ic(result)
     assert_frame_equal(result.head(1), expected, check_exact=True)
+
+    pkey = '2022-08-02'
+    context = build_op_context(partition_key=pkey)
+
+    blocks_by_day_output = pd.DataFrame(
+        [
+            {
+                'block_day': datetime(2022,8,1,0,0,0),
+                'block_height': 15300000,
+                'end_block': 15300001,
+                'chain': 'ethereum',
+            },
+            {
+                'block_day': datetime(2022,8,2,0,0,0),
+                'block_height': 15300002,
+                'end_block': 15300003,
+                'chain': 'ethereum',
+            }
+        ]
+    )
+    blocks_by_day_output = standardise_types(blocks_by_day_output)
+    result = compound_v3_by_day(context, blocks_by_day_output)
+    assert_frame_equal(result, pd.DataFrame(), check_exact=True)
 
 if __name__ == "__main__":
     # test_protocol_data_by_day()

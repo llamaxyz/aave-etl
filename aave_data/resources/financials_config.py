@@ -890,6 +890,7 @@ CONFIG_COMPOUND_v3 = {
             "underlying_address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
             "underlying_symbol": "USDC",
             "underlying_decimals": 6,
+            "first_block": 15331586
         },
     }
 }
