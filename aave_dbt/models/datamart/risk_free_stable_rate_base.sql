@@ -95,7 +95,7 @@ select
   , last_value(a.deposit_apy ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as deposit_apy
 from times t 
   -- left join datamart.market_state_by_time a
-  -- from {{ ref('market_state_by_time') }} a
+  from {{ ref('market_state_by_time') }} a
     on (t.block_time = a.block_time and a.market = 'ethereum_v3' and a.reserve_symbol = 'DAI')
 union all
 select 
