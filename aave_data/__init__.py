@@ -254,7 +254,8 @@ daily_partitioned_assets = [
     'protocol_data_lake/matic_lsd_token_supply_by_day',
     'protocol_data_lake/safety_module_rpc',
     'protocol_data_lake/compound_v2_by_day',
-    'protocol_data_lake/compound_v3_by_day'
+    'protocol_data_lake/compound_v3_by_day',
+    'protocol_data_lake/safety_module_bal_pool_contents',
     ]
 
 daily_midday_partitioned_assets = [

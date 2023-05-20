@@ -463,10 +463,73 @@ def test_compound_v3_by_day():
     result = compound_v3_by_day(context, blocks_by_day_output)
     assert_frame_equal(result, pd.DataFrame(), check_exact=True)
 
+def test_safety_module_bal_pool_contents():
+    """
+    Tests the compound_v3_by_hour asset against a reference response
+
+    """
+    
+    pkey = '2023-05-18'
+    context = build_op_context(partition_key=pkey)
+
+    # result = protocol_state_by_hour_op(context)
+
+    blocks_by_day_output = pd.DataFrame(
+        [
+            {
+                'block_day': datetime(2023,5,18,0,0,0),
+                'block_height': 17282745,
+                'end_block': 17268587,
+                'chain': 'ethereum',
+            },
+            {
+                'block_day': datetime(2023,5,17,0,0,0),
+                'block_height': 17254453,
+                'end_block': 17282744,
+                'chain': 'ethereum',
+            }
+        ]
+    )
+    blocks_by_day_output = standardise_types(blocks_by_day_output)
+
+    expected = pd.DataFrame(
+        [
+            {
+                'block_day': datetime(2023,5,18,0,0,0),
+                'block_height': 17282745,
+                'chain': 'ethereum',
+                'safety_module_token': 'stkABPT',
+                'bal_pool_address': '0xc697051d1c6296c24ae3bcef39aca743861d9a81',
+                "token_address": "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
+                "symbol": "AAVE",
+                "weight": 0.8,
+                'balance': 1316024.9567695076,
+            },
+            {
+                'block_day': datetime(2023,5,18,0,0,0),
+                'block_height': 17282745,
+                'chain': 'ethereum',
+                'safety_module_token': 'stkABPT',
+                'bal_pool_address': '0xc697051d1c6296c24ae3bcef39aca743861d9a81',
+                "token_address": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                "symbol": "WETH",
+                "weight": 0.2,
+                'balance': 11658.670661843686,
+            }
+        ]
+    )
+    expected = standardise_types(expected)
+
+    result = safety_module_bal_pool_contents(context, blocks_by_day_output)
+    ic(result)
+    assert_frame_equal(result, expected, check_exact=True)
+
+    
+
 if __name__ == "__main__":
     # test_protocol_data_by_day()
     # test_raw_incentives_by_day()
     # test_incentives_by_day()
     # test_emode_config_by_day()
     # test_beacon_chain_staking_returns_by_day()
-    test_compound_v3_by_day()
+    test_safety_module_bal_pool_contents()

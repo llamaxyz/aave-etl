@@ -1672,6 +1672,132 @@ def compound_v3_by_day(
 
     return ctoken_data
 
+@asset(
+    partitions_def=daily_partitions_def,
+    compute_kind="python",
+    code_version="1",
+    io_manager_key = 'protocol_data_lake_io_manager',
+    ins={
+        "blocks_by_day": AssetIn(key_prefix="warehouse"),
+    }
+)
+def safety_module_bal_pool_contents(
+    context,
+    blocks_by_day: pd.DataFrame,
+)-> pd.DataFrame:
+    """
+    Table Safety Module Balancer Pool Contents
+
+    Args:
+        context: dagster context object
+
+    Returns:
+        A dataframe of safety module balancer pool contents
+    """
+
+    date = context.partition_key
+    block_day = datetime.strptime(date, '%Y-%m-%d').replace(tzinfo=timezone.utc)
+    prev_block_day = block_day - timedelta(days=1)
+    context.log.info(f"date: {date}")
+    chain = "ethereum"
+    context.log.info(f"chain: {chain}")
+    block_height = int(blocks_by_day.loc[(blocks_by_day.chain == chain) & (blocks_by_day.block_day == prev_block_day)].end_block.values[0] + 1)
+    context.log.info(f"block_height: {block_height}")
+
+    # # dev data
+    # date = '2023-05-18'
+    # block_day = datetime.strptime(date, '%Y-%m-%d').replace(tzinfo=timezone.utc)
+    # # prev_block_day = block_day - timedelta(days=1)
+    # block_height = 17282745
+    
+    # set up web3 connection
+    w3 = Web3(Web3.HTTPProvider(CONFIG_CHAINS[chain]['web3_rpc_url']))
+
+    sm_contents = pd.DataFrame()
+    for sm_token in CONFIG_SM_TOKENS:
+        if CONFIG_SM_TOKENS[sm_token]['bal_pool_address'] is not None:
+            bal_pool_address = CONFIG_SM_TOKENS[sm_token]['bal_pool_address']
+            
+            # get the pool tokens from the pool
+            tokens_call = Call(bal_pool_address, ['getCurrentTokens()(address[])'],[['tokens', None]], _w3 = w3, block_id = block_height)
+            pool_tokens = tokens_call()['tokens']
+
+            for token_address in pool_tokens:
+                # Get the decimals, weights and balances from the pool via multicall
+                calls = [
+                    Call(token_address, ['decimals()(uint8)'],[['decimals', None]]),
+                    Call(token_address, ['symbol()(string)'],[['symbol', None]]),
+                    Call(bal_pool_address, ['getNormalizedWeight(address)(uint256)', token_address], [['weight', None]]),
+                    Call(bal_pool_address, ['getBalance(address)(uint256)', token_address], [['balance', None]])
+                ]
+                
+                # create the multicall object
+                multicall = Multicall(calls, _w3 = w3, block_id = block_height)
+
+                # execute the call
+                results = multicall()
+
+                # convert to dataframe
+                token_data = pd.DataFrame(results, index=[0])
+                token_data.insert(0, 'safety_module_token', sm_token)
+                token_data.insert(1, 'bal_pool_address', bal_pool_address)
+                token_data.insert(2, 'token_address', token_address)
+                token_data.weight = token_data.weight / 10 ** 18
+                token_data.balance = token_data.balance / 10 ** token_data.decimals
+                token_data.balance = token_data.balance.astype(pd.Float64Dtype())
+                token_data.drop(columns=['decimals'], inplace=True)
+
+                sm_contents = pd.concat([sm_contents, token_data], axis=0).reset_index(drop=True)
+        
+    
+    if not sm_contents.empty:
+        sm_contents.insert(0, 'block_day', block_day)
+        sm_contents.insert(1, 'block_height', block_height)
+        sm_contents.insert(2, 'chain', chain)
+    
+    sm_contents = standardise_types(sm_contents)
+    
+    context.add_output_metadata(
+        {
+            "num_records": len(sm_contents),
+            "preview": MetadataValue.md(sm_contents.head().to_markdown()),
+        }
+    )
+
+    return sm_contents
+
+    # # configure multicall call objects
+    # calls = [
+    #     Call(balancer_pool_address, ['getBalance(address)(uint256)', CONFIG_SAFETY_MODULE_TOKEN_ADDRESS],[['safety_module_balance', None]]),
+    #     Call(balancer_pool_address, ['getBalance(address)(uint256)', CONFIG_BALANCER_POOL_TOKEN_ADDRESS],[['balancer_pool_balance', None]]),
+    #     Call(balancer_pool_address, ['getTotalDenormalizedWeight()(uint256)'],[['total_denormalized_weight', None]]),
+    #     Call(balancer_pool_address, ['getNormalizedWeight(address)(uint256)', CONFIG_SAFETY_MODULE_TOKEN_ADDRESS],[['safety_module_denormalized_weight', None]]),
+    #     Call(balancer_pool_address, ['getNormalizedWeight(address)(uint256)', CONFIG_BALANCER_POOL_TOKEN_ADDRESS],[['balancer_pool_denormalized_weight', None]]),
+    # ]
+
+    # # create the multicall object
+    # multicall = Multicall(calls, _w3 = w3, block_id = block_height)
+
+    # # execute the call
+    # results = multicall()
+
+    # # ic(results)
+
+    # # convert to dataframe
+    # data = [balancer_pool_address,
+    #     results['safety_module_balance'],
+    #     results['balancer_pool_balance'],
+    #     results['total_denormalized_weight'],
+    #     results['safety_module_denormalized_weight'],
+    #     results['balancer_pool_denormalized_weight'],
+    #     ]
+    # bal_pool_contents = pd.DataFrame(
+    #     data=[data],
+    #     columns=['balancer_pool_address','safety_module_balance','balancer_pool_balance','total_denormalized_weight','safety_module_denormalized_weight
+                 
+
+
+
 
 if __name__ == "__main__":
 
@@ -1682,4 +1808,4 @@ if __name__ == "__main__":
     # elapsed = end - start
     # ic(elapsed)
     
-    beacon_chain_staking_returns_by_day()
+    safety_module_bal_pool_contents()
