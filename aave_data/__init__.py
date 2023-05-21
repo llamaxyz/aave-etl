@@ -291,19 +291,21 @@ data_lake_partitioned_job = define_asset_job(
             - AssetSelection.keys(*liquidity_depth_assets)
             - AssetSelection.keys(*chain_day_partitioned_assets)
     ),
-    partitions_def=market_day_multipartition
+    partitions_def=market_day_multipartition,
+    tags={"dagster/priority": "3"}
 )
 
 
 data_lake_unpartitioned_job = define_asset_job(
     name='data_lake_unpartitioned',
     selection=AssetSelection.keys(*data_lake_unpartitioned_assets),
-    # partitions_def=market_day_multipartition
+    tags={"dagster/priority": "3"}
 )
 
 warehouse_datamart_job = define_asset_job(
     name='warehouse_datamart',
     selection=AssetSelection.groups('warehouse', 'datamart') - AssetSelection.keys(*liquidity_depth_assets),
+    tags={"dagster/priority": "3"}
 )
 
 daily_partitioned_job = define_asset_job(
@@ -312,32 +314,37 @@ daily_partitioned_job = define_asset_job(
                 - AssetSelection.keys('protocol_data_lake/compound_v2_by_day')
                 - AssetSelection.keys('protocol_data_lake/compound_v3_by_day')
     ),
-    partitions_def=daily_partitions_def
+    partitions_def=daily_partitions_def,
+    tags={"dagster/priority": "3"}
 )
 
 daily_midday_partitioned_job = define_asset_job(
     name='daily_midday_partitioned',
     selection=AssetSelection.keys(*daily_midday_partitioned_assets),
-    partitions_def=daily_partitions_def
+    partitions_def=daily_partitions_def,
+    tags={"dagster/priority": "3"}
 )
 
 chain_day_partitioned_job = define_asset_job(
     name='chain_day_partitioned',
     selection=AssetSelection.keys(*chain_day_partitioned_assets),
-    partitions_def=chain_day_multipartition
+    partitions_def=chain_day_multipartition,
+    tags={"dagster/priority": "3"}
 )
 
 # Updates block_numbers_by_day and thus triggers all downstream jobs via the reconciliation sensor
 financials_root_job = define_asset_job(
     name='financials_root_job',
     selection=AssetSelection.keys('financials_data_lake/block_numbers_by_day'),
-    partitions_def=market_day_multipartition
+    partitions_def=market_day_multipartition,
+    tags={"dagster/priority": "3"}
 )
 
 # these assets use a different schedule and aren't partitioned
 liquidity_depth_job = define_asset_job(
     name='liquidity_depth_job',
     selection=AssetSelection.keys(*liquidity_depth_assets, 'liquidity_depth_lsd'),
+    tags={"dagster/priority": "3"}
 )
 
 data_lake_hourly_partitioned_job = define_asset_job(
@@ -345,7 +352,8 @@ data_lake_hourly_partitioned_job = define_asset_job(
     selection= (
             AssetSelection.groups('protocol_hourly_data_lake')
     ),
-    partitions_def=market_hour_multipartition
+    partitions_def=market_hour_multipartition,
+    tags={"dagster/priority": "3"}
 )
 
 
@@ -354,6 +362,7 @@ datamart_hourly_job = define_asset_job(
     selection= (
             AssetSelection.keys(*datamart_hourly_assets)
     ),
+    tags={"dagster/priority": "3"}
 )
 
 ############################################
