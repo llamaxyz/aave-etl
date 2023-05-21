@@ -35,17 +35,7 @@ import asyncio
 
 from aave_data.resources.financials_config import * #pylint: disable=wildcard-import, unused-wildcard-import
 
-from aave_data.resources.helpers import (
-    get_raw_reserve_data,
-    raw_reserve_to_dataframe,
-    standardise_types,
-    get_quote_from_1inch,
-    get_quote_from_1inch_async,
-    get_aave_oracle_price,
-    get_balancer_bpt_data,
-    get_quote_from_paraswap,
-    get_quote_from_paraswap_async,
-)
+from aave_data.resources.helpers import * #pylint: disable=wildcard-import, unused-wildcard-import
 
 
 
@@ -1766,36 +1756,76 @@ def safety_module_bal_pool_contents(
 
     return sm_contents
 
-    # # configure multicall call objects
-    # calls = [
-    #     Call(balancer_pool_address, ['getBalance(address)(uint256)', CONFIG_SAFETY_MODULE_TOKEN_ADDRESS],[['safety_module_balance', None]]),
-    #     Call(balancer_pool_address, ['getBalance(address)(uint256)', CONFIG_BALANCER_POOL_TOKEN_ADDRESS],[['balancer_pool_balance', None]]),
-    #     Call(balancer_pool_address, ['getTotalDenormalizedWeight()(uint256)'],[['total_denormalized_weight', None]]),
-    #     Call(balancer_pool_address, ['getNormalizedWeight(address)(uint256)', CONFIG_SAFETY_MODULE_TOKEN_ADDRESS],[['safety_module_denormalized_weight', None]]),
-    #     Call(balancer_pool_address, ['getNormalizedWeight(address)(uint256)', CONFIG_BALANCER_POOL_TOKEN_ADDRESS],[['balancer_pool_denormalized_weight', None]]),
-    # ]
+@asset(
+    partitions_def=daily_partitions_def,
+    compute_kind="python",
+    code_version="1",
+    io_manager_key = 'protocol_data_lake_io_manager',
+    ins={
+        "blocks_by_day": AssetIn(key_prefix="warehouse"),
+    }
+)
+def safety_module_token_hodlers_by_day(
+    context,
+    blocks_by_day: pd.DataFrame,
+)-> pd.DataFrame:
+    """
+    Table of safety module token holders by day
+    Uses covalent token holders API
+    
+    Args:
+        context: dagster context object
+        blocks_by_day: dataframe of block heights by day
+    
+    Returns:
+        A dataframe of safety module token holders and qtys by day
+    
+    """
 
-    # # create the multicall object
-    # multicall = Multicall(calls, _w3 = w3, block_id = block_height)
+    date = context.partition_key
+    block_day = datetime.strptime(date, '%Y-%m-%d').replace(tzinfo=timezone.utc)
+    prev_block_day = block_day - timedelta(days=1)
+    context.log.info(f"date: {date}")
+    chain = "ethereum"
+    chain_id = CONFIG_CHAINS[chain]['chain_id']
+    context.log.info(f"chain: {chain}")
+    block_height = int(blocks_by_day.loc[(blocks_by_day.chain == chain) & (blocks_by_day.block_day == prev_block_day)].end_block.values[0] + 1)
+    context.log.info(f"block_height: {block_height}")
 
-    # # execute the call
-    # results = multicall()
+    # # dev data
+    # date = '2023-05-18'
+    # block_day = datetime.strptime(date, '%Y-%m-%d').replace(tzinfo=timezone.utc)
+    # # prev_block_day = block_day - timedelta(days=1)
+    # block_height = 17282745
 
-    # # ic(results)
+    sm_token_holders = pd.DataFrame()
+    for sm_token in CONFIG_SM_TOKENS:
+        
+        context.log.info(f"getting hodlers for {sm_token}")
+        holders = get_token_holders_from_covalent(chain_id, block_height, CONFIG_SM_TOKENS[sm_token]['stk_token_address'])
+        holders = holders.loc[holders.balance > 0].reset_index(drop=True)
+        
+        holders.insert(0, 'block_day', block_day)
+        holders.insert(1, 'chain', chain)
+        holders.insert(2, 'safety_module_token', sm_token)
+        holders.insert(3, 'stk_token_address', CONFIG_SM_TOKENS[sm_token]['stk_token_address'])
 
-    # # convert to dataframe
-    # data = [balancer_pool_address,
-    #     results['safety_module_balance'],
-    #     results['balancer_pool_balance'],
-    #     results['total_denormalized_weight'],
-    #     results['safety_module_denormalized_weight'],
-    #     results['balancer_pool_denormalized_weight'],
-    #     ]
-    # bal_pool_contents = pd.DataFrame(
-    #     data=[data],
-    #     columns=['balancer_pool_address','safety_module_balance','balancer_pool_balance','total_denormalized_weight','safety_module_denormalized_weight
-                 
+        holders.drop(columns=['contract_decimals', 'contract_name', 'contract_ticker_symbol', 'contract_address', 'logo_url','supports_erc'], inplace=True)
+        holders.rename(columns={'address': 'holder_address'}, inplace=True)
 
+        sm_token_holders = pd.concat([sm_token_holders, holders], axis=0).reset_index(drop=True)
+    
+    sm_token_holders = standardise_types(sm_token_holders)
+    # ic(sm_token_holders)
+
+    context.add_output_metadata(
+        {
+            "num_records": len(sm_token_holders),
+            "preview": MetadataValue.md(sm_token_holders.head().to_markdown()),
+        }
+    )
+
+    return sm_token_holders
 
 
 
@@ -1808,4 +1838,4 @@ if __name__ == "__main__":
     # elapsed = end - start
     # ic(elapsed)
     
-    safety_module_bal_pool_contents()
+    safety_module_token_holders_by_day()
