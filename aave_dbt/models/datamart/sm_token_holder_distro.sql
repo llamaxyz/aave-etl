@@ -2,7 +2,8 @@
 
 with holders as (
 select 
-  safety_module_token
+  block_day
+  , safety_module_token
   , holder_address
   , case 
     when balance > 100000 then 'holders >100k'
@@ -19,11 +20,12 @@ select
 from {{ source('protocol_data_lake','safety_module_token_hodlers_by_day') }}
 where 1=1
   and safety_module_token = 'stkAAVE'
---   and block_day = (select max(block_day) from protocol_data_lake.safety_module_token_hodlers_by_day)
+  -- and block_day = (select max(block_day) from protocol_data_lake.safety_module_token_hodlers_by_day)
   and block_day = (select max(block_day) from {{ source('protocol_data_lake','safety_module_token_hodlers_by_day') }})
 union all
 select 
-  safety_module_token
+  block_day
+  , safety_module_token
   , holder_address
   , case 
     when balance > 100000000 then 'holders >100m'
@@ -43,7 +45,7 @@ select
 from {{ source('protocol_data_lake','safety_module_token_hodlers_by_day') }}
 where 1=1
   and safety_module_token = 'stkABPT'
---   and block_day = (select max(block_day) from protocol_data_lake.safety_module_token_hodlers_by_day)
+  -- and block_day = (select max(block_day) from protocol_data_lake.safety_module_token_hodlers_by_day)
   and block_day = (select max(block_day) from {{ source('protocol_data_lake','safety_module_token_hodlers_by_day') }})
 )
 
@@ -65,13 +67,14 @@ select * from unnest([
 
 , agg as (
 select 
-  safety_module_token
+  block_day
+  , safety_module_token
   , holder_bucket
   , sum(balance) as bucket_balance
   , sum(balance) / avg(total_supply) as balance_percentage
   , count(holder_address) as holder_count
 from holders
-group by safety_module_token, holder_bucket
+group by block_day, safety_module_token, holder_bucket
 )
 
 , holder_totals as (
