@@ -389,8 +389,8 @@ daily_partitioned_schedule = build_schedule_from_partitioned_job(
 
 daily_midday_partitioned_schedule = build_schedule_from_partitioned_job(
     job=daily_midday_partitioned_job,
-    minute_of_hour=45,
-    hour_of_day=12,
+    minute_of_hour=0,
+    hour_of_day=1,
     name="daily_midday_partitioned_schedule",
 )
 
