@@ -25,6 +25,7 @@ sources:
       - name: compound_v2_by_day
       - name: compound_v3_by_day
       - name: safety_module_bal_pool_contents
+      - name: safety_module_token_hodlers_by_day
   - name: warehouse
     tables:
       - name: atoken_measures_by_day
