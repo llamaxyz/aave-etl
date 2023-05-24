@@ -573,10 +573,59 @@ def test_safety_module_token_hodlers_by_day():
     ic(result)
     assert_frame_equal(result.head(1), expected, check_exact=True)
 
+
+def test_erc20_balances_by_day():
+    """
+    Tests the erc20_balances_by_day asset against a reference response
+
+    """
+    
+    pkey = '2023-05-18'
+    context = build_op_context(partition_key=pkey)
+
+    # result = protocol_state_by_hour_op(context)
+
+    blocks_by_day_output = pd.DataFrame(
+        [
+            {
+                'block_day': datetime(2023,5,18,0,0,0),
+                'block_height': 17282745,
+                'end_block': 17268587,
+                'chain': 'ethereum',
+            },
+            {
+                'block_day': datetime(2023,5,17,0,0,0),
+                'block_height': 17254453,
+                'end_block': 17282744,
+                'chain': 'ethereum',
+            }
+        ]
+    )
+    blocks_by_day_output = standardise_types(blocks_by_day_output)
+
+    expected = pd.DataFrame(
+        [
+            {
+                'block_day': datetime(2023,5,18,0,0,0),
+                'block_height': 17282745,
+                'chain': 'ethereum',
+                'wallet_address': '0x89c51828427f70d77875c6747759fb17ba10ceb0',
+                "token": "AAVE",
+                'token_address': '0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9',
+                'balance': 11921.559244
+            },
+        ]
+    )
+    expected = standardise_types(expected)
+
+    result = erc20_balances_by_day(context, blocks_by_day_output)
+    ic(result)
+    assert_frame_equal(result.head(1), expected, check_exact=True)
+
 if __name__ == "__main__":
     # test_protocol_data_by_day()
     # test_raw_incentives_by_day()
     # test_incentives_by_day()
     # test_emode_config_by_day()
     # test_beacon_chain_staking_returns_by_day()
-    test_safety_module_token_hodlers_by_day()
+    test_erc20_balances_by_day()

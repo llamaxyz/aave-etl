@@ -895,6 +895,25 @@ CONFIG_COMPOUND_v3 = {
     }
 }
 
+CONFIG_TOKEN_BALANCES = {
+    'ethereum': {
+        '0x89c51828427f70d77875c6747759fb17ba10ceb0': {
+            'AAVE': {
+                'address': '0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9',
+                'decimals': 18,
+            },
+            'DAI': {
+                'address': '0x6b175474e89094c44da98b954eedeac495271d0f',
+                'decimals': 18,
+            },
+            'USDC': {
+                'address': '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
+                'decimals': 6,
+            },
+        },
+    },
+}
+
 
 if __name__ == "__main__":
     

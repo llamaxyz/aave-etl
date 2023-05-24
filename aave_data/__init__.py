@@ -257,6 +257,7 @@ daily_partitioned_assets = [
     'protocol_data_lake/compound_v3_by_day',
     'protocol_data_lake/safety_module_bal_pool_contents',
     'protocol_data_lake/safety_module_token_hodlers_by_day',
+    'protocol_data_lake/erc20_balances_by_day',
     ]
 
 daily_midday_partitioned_assets = [

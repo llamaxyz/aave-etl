@@ -1827,8 +1827,75 @@ def safety_module_token_hodlers_by_day(
 
     return sm_token_holders
 
+@asset(
+    partitions_def=daily_partitions_def,
+    compute_kind="python",
+    code_version="1",
+    io_manager_key = 'protocol_data_lake_io_manager',
+    ins={
+        "blocks_by_day": AssetIn(key_prefix="warehouse"),
+    }
+)
+def erc20_balances_by_day(
+        context,
+        blocks_by_day,
+)-> pd.DataFrame:
+    """
+    Table of erc20 token balances by day for addresses in CONFIG_TOKEN_BALANCES
 
+    Args:
+        context: dagster context object
+        blocks_by_day: dataframe of block heights by day
 
+    Returns:
+        A dataframe of erc20 token balances by day
+    """
+
+    date = context.partition_key
+    block_day = datetime.strptime(date, '%Y-%m-%d').replace(tzinfo=timezone.utc)
+    prev_block_day = block_day - timedelta(days=1)
+    context.log.info(f"date: {date}")
+    
+
+    # # dev data
+    # date = '2023-05-18'
+    # block_day = datetime.strptime(date, '%Y-%m-%d').replace(tzinfo=timezone.utc)
+    # # prev_block_day = block_day - timedelta(days=1)
+    # block_height = 17282745
+
+    balances = pd.DataFrame()
+    for chain in CONFIG_TOKEN_BALANCES:
+        block_height = int(blocks_by_day.loc[(blocks_by_day.chain == chain) & (blocks_by_day.block_day == prev_block_day)].end_block.values[0] + 1)
+        context.log.info(f"block_height: {block_height}")
+
+        for wallet_address in CONFIG_TOKEN_BALANCES[chain]:
+            context.log.info(f"getting balances for {wallet_address}")
+            for token in CONFIG_TOKEN_BALANCES[chain][wallet_address]:
+                context.log.info(f"token {token}")
+                balance = get_erc20_balance_of(
+                    wallet_address,
+                    CONFIG_TOKEN_BALANCES[chain][wallet_address][token]['address'],
+                    CONFIG_TOKEN_BALANCES[chain][wallet_address][token]['decimals'],
+                    chain,
+                    block_height,
+                )
+                balance_row = pd.DataFrame([block_day, block_height, chain, wallet_address, token, CONFIG_TOKEN_BALANCES[chain][wallet_address][token]['address'], balance]).T
+                balance_row.columns = ['block_day', 'block_height', 'chain', 'wallet_address', 'token', 'token_address', 'balance']
+                balances = pd.concat([balances, balance_row], axis=0).reset_index(drop=True)
+
+    balances.block_height = balances.block_height.astype(int)
+    balances.balance = balances.balance.astype(float)
+    balances = standardise_types(balances)
+
+    context.add_output_metadata(
+        {
+            "num_records": len(balances),
+            "preview": MetadataValue.md(balances.head().to_markdown()),
+        }
+    )
+
+    return balances
+    
 if __name__ == "__main__":
 
     # import time
@@ -1838,4 +1905,4 @@ if __name__ == "__main__":
     # elapsed = end - start
     # ic(elapsed)
     
-    safety_module_token_holders_by_day()
+    erc20_balances_by_day()
