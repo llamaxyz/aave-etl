@@ -910,6 +910,10 @@ CONFIG_TOKEN_BALANCES = {
                 'address': '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
                 'decimals': 6,
             },
+            'aUSDC': {
+                'address': '0xbcca60bb61934080951369a648fb03df4f96263c',
+                'decimals': 6,
+            },
         },
     },
 }
