@@ -914,6 +914,18 @@ CONFIG_TOKEN_BALANCES = {
                 'address': '0xbcca60bb61934080951369a648fb03df4f96263c',
                 'decimals': 6,
             },
+            'aDAI': {
+                'address': '0x028171bca77440897b824ca71d1c56cac55b68a3',
+                'decimals': 18,
+            },
+            'USDT': {
+                'address': '0xdac17f958d2ee523a2206206994597c13d831ec7',
+                'decimals': 6,
+            },
+            'aUSDT': {
+                'address': '0x3ed3b47dd13ec9a98b44e6204a523e766b225811',
+                'decimals': 6,
+            },
         },
     },
 }
