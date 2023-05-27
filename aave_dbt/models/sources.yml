@@ -12,6 +12,7 @@ sources:
       - name: streaming_payments_state
       - name: non_atoken_transfers_by_day
       - name: eth_balances_by_day
+      - name: collector_atoken_balances_by_day
   - name: protocol_data_lake
     tables:
       - name: matic_lsd_token_supply_by_day
