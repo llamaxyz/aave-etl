@@ -244,6 +244,8 @@ def aave_oracle_prices_by_day(context, market_tokens_by_day) -> pd.DataFrame:  #
         if market == 'aave_amm' and (block_height in range(14993520, 15000397)):
             block_height = 15000397
 
+        def from_oracle_decimals(value):
+            return value / 10 ** 8
 
         # Get the eth price from the chainlink oracle if the Aave oracle price is denominated in eth
         if CONFIG_MARKETS[market]['oracle_base_currency'] == 'wei':
@@ -251,9 +253,7 @@ def aave_oracle_prices_by_day(context, market_tokens_by_day) -> pd.DataFrame:  #
             eth_address = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
             usd_address = '0x0000000000000000000000000000000000000348'
             chainlink_feed_registry = '0x47Fb2585D2C56Fe188D0E6ec628a38b74fCeeeDf'
-            feed_registry_abi_url = f"https://api.etherscan.io/api?module=contract&action=getabi&apikey={ETHERSCAN_API_KEY}&address={chainlink_feed_registry}"
-            feed_registry_abi = json.loads(requests.get(feed_registry_abi_url, timeout=300).json()['result'])
-            feed_registry = w3.eth.contract(address=chainlink_feed_registry, abi=feed_registry_abi)
+
             # get the block number from the eth_v2 upstream asset.
             pkey = MultiPartitionKey(
                 {
@@ -266,14 +266,18 @@ def aave_oracle_prices_by_day(context, market_tokens_by_day) -> pd.DataFrame:  #
             # block_numbers_by_day holds the block heights for the previous day (start and end)
             # partition_date block_height is 1 block past the end block for the previous day (block_numbers_by_day.end_block + 1)
             eth_block_height = int(eth_block_numbers_by_day.end_block.values[0]+1)
-            eth_usd_price = float(feed_registry.functions.latestAnswer(eth_address, usd_address).call(block_identifier = eth_block_height) / 10**8)
+            # get the eth price from the chainlink oracle
+            eth_price_call = Call(
+                chainlink_feed_registry,
+                ['latestAnswer(address,address)(int256)', eth_address, usd_address],
+                [['answer', from_oracle_decimals]],
+                _w3 = w3,
+                block_id = eth_block_height
+            )
+            eth_price_return = eth_price_call()
+            eth_usd_price = float(eth_price_return['answer'])
         else:
             eth_usd_price = float(0)
-
-        # get the abi for the oracle contract from etherscan/polygonscan
-        aave_version = CONFIG_MARKETS[market]['version']
-        oracle_abi_url = CONFIG_ABI[aave_version]['abi_url_base'] + CONFIG_ABI[aave_version]['oracle_implementation']
-        oracle_abi = json.loads(requests.get(oracle_abi_url, timeout=300).json()['result'])
 
         # collect the reserve tokens into a list for the web3 contract call
         reserves = list(market_tokens_by_day['reserve'].values)
@@ -282,13 +286,19 @@ def aave_oracle_prices_by_day(context, market_tokens_by_day) -> pd.DataFrame:  #
 
         #initialise web3 and the oracle contract
         w3 = Web3(Web3.HTTPProvider(CONFIG_CHAINS[chain]['web3_rpc_url']))
-        oracle_address = Web3.to_checksum_address(CONFIG_MARKETS[market]['oracle'])
-        oracle = w3.eth.contract(address=oracle_address, abi=oracle_abi)
+        oracle_address = CONFIG_MARKETS[market]['oracle']
 
         # get the price multiplier for the oracle price
         if CONFIG_MARKETS[market]['oracle_base_currency'] == 'usd':
             try:
-                base_currency_unit = oracle.functions.BASE_CURRENCY_UNIT().call(block_identifier = block_height)
+                base_currency_unit = Call(
+                    oracle_address,
+                    ['BASE_CURRENCY_UNIT()(uint256)'],
+                    [['answer', None]],
+                    _w3 = w3,
+                    block_id = block_height
+                )()['answer']
+                # ic(base_currency_unit)
             except AttributeError:
                 # some markets don't have this function - it fails on call (rwa)
                 base_currency_unit = 100000000
@@ -298,14 +308,20 @@ def aave_oracle_prices_by_day(context, market_tokens_by_day) -> pd.DataFrame:  #
         else:
             price_multiplier = 1
 
-        # ic(price_multiplier)
+        price_call = Call(
+                        oracle_address,
+                        ['getAssetsPrices(address[])(uint256[])', reserves],
+                        [['answer', None]],
+                        _w3 = w3,
+                        block_id = block_height
+                    )
         
         # use exponential backoff for this call - large return values.  sometimes times out on RPC as ValueError
         i = 0
         delay_time = INITIAL_RETRY
         while True:
             try:
-                response = oracle.functions.getAssetsPrices(reserves).call(block_identifier = block_height)
+                price_call_response = price_call()
                 break
             except ValueError as e:
                 if i > MAX_RETRIES:
@@ -315,12 +331,11 @@ def aave_oracle_prices_by_day(context, market_tokens_by_day) -> pd.DataFrame:  #
                 i += 1
                 delay_time *= 2
                 
-
-        # ic(response)
+        prices = price_call_response['answer']
 
         # create a dataframe with the price
         return_val = market_tokens_by_day[['reserve','symbol','market','block_height','block_day']].copy()
-        return_val['usd_price'] = pd.Series(response, name='usd_price').astype('Float64') * price_multiplier # type: ignore
+        return_val['usd_price'] = pd.Series(prices, name='usd_price').astype('Float64') * price_multiplier # type: ignore
 
         # for ethereum_v1, ETH doesn't use the WETH address.  Overwrite the price here to fix
         if market == 'ethereum_v1':

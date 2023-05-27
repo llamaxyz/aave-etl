@@ -519,20 +519,20 @@ CONFIG_MARKETS = {
     },
 }
 
-CONFIG_ABI = {
-    1: {
-        "abi_url_base": f"https://api.etherscan.io/api?module=contract&action=getabi&apikey={ETHERSCAN_API_KEY}&address=",
-        "oracle_implementation": "0x76b47460d7f7c5222cfb6b6a75615ab10895dde4"
-    },
-    2: {
-        "abi_url_base": f"https://api.etherscan.io/api?module=contract&action=getabi&apikey={ETHERSCAN_API_KEY}&address=",
-        "oracle_implementation": "0xA50ba011c48153De246E5192C8f9258A2ba79Ca9"
-    },
-    3: {
-        "abi_url_base": f"https://api.polygonscan.com/api?module=contract&action=getabi&apikey={POLYGONSCAN_API_KEY}&address=",
-        "oracle_implementation": "0xb023e699f5a33916ea823a16485e259257ca8bd1"
-    },
-}
+# CONFIG_ABI = {
+#     1: {
+#         "abi_url_base": f"https://api.etherscan.io/api?module=contract&action=getabi&apikey={ETHERSCAN_API_KEY}&address=",
+#         "oracle_implementation": "0x76b47460d7f7c5222cfb6b6a75615ab10895dde4"
+#     },
+#     2: {
+#         "abi_url_base": f"https://api.etherscan.io/api?module=contract&action=getabi&apikey={ETHERSCAN_API_KEY}&address=",
+#         "oracle_implementation": "0xA50ba011c48153De246E5192C8f9258A2ba79Ca9"
+#     },
+#     3: {
+#         "abi_url_base": f"https://api.polygonscan.com/api?module=contract&action=getabi&apikey={POLYGONSCAN_API_KEY}&address=",
+#         "oracle_implementation": "0xb023e699f5a33916ea823a16485e259257ca8bd1"
+#     },
+# }
 
 CONFIG_TOKENS = {
     "ethereum_v2": {

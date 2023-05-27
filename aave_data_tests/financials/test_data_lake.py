@@ -1301,7 +1301,7 @@ if __name__ == "__main__":
     # test_display_names()
     # test_streaming_payments_state()
     # test_eth_balances_by_day()
-    test_market_tokens_by_day
+    test_aave_oracle_prices_by_day()
     # pass
 
 
