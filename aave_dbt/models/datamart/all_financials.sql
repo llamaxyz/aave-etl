@@ -155,6 +155,7 @@ from token_measures_reserves t
 -- apply the fix for double transfer on liqs on V3 - PR682
 -- V3 mainnet has aave-v3-core==3.0.1 deployed from inception which contains PR682
 -- only apply to the buggy v3 markets prior to the fix implementation
+-- live for arb, opt, polygon, metis, avax on 2023-05-06
 select 
   collector 
   , chain
@@ -190,6 +191,7 @@ from balances_prices
 where 1=1
   and end_balance is not null
   and market in ('arbitrum_v3','avax_v3','fantom_v3','harmony_v3','optimism_v3','polygon_v3')
+  and block_day <= '2023-05-06'
 union all 
 select 
   collector 
@@ -223,6 +225,78 @@ from balances_prices
 where 1=1
   and end_balance is not null
   and market not in ('arbitrum_v3','avax_v3','fantom_v3','harmony_v3','optimism_v3','polygon_v3')
+  and block_day <= '2023-05-06'
+union all 
+select 
+  collector 
+  , chain
+  , market
+  , token 
+  , symbol 
+  , underlying_reserve 
+  , underlying_reserve_symbol 
+  , block_day
+  , start_balance 
+  , end_balance 
+  , scaled_balance
+  , start_accrued_fees 
+  , end_accrued_fees
+  , tokens_in_external
+  , tokens_in_internal
+  , tokens_out_external
+  , tokens_out_internal
+  , minted_to_treasury_amount
+  , minted_amount
+  , start_usd_price
+  , end_usd_price 
+  , sm_stkAAVE_claims
+  , sm_stkABPT_claims
+  , lm_aave_v2_claims
+  , start_paraswap_fees_claimable
+  , end_paraswap_fees_claimable
+  , case
+      when scaled_balance = 0 then (tokens_in_external+tokens_in_internal-minted_amount)/(1+1)
+      else (tokens_in_external+tokens_in_internal-minted_amount)/(1+start_balance/scaled_balance) 
+    end as liq_adjust
+from balances_prices
+where 1=1
+  and end_balance is not null
+  and market in ('fantom_v3','harmony_v3')
+  and block_day > '2023-05-06'
+union all 
+select 
+  collector 
+  , chain
+  , market
+  , token 
+  , symbol 
+  , underlying_reserve 
+  , underlying_reserve_symbol 
+  , block_day
+  , start_balance 
+  , end_balance 
+  , scaled_balance
+  , start_accrued_fees 
+  , end_accrued_fees
+  , tokens_in_external
+  , tokens_in_internal
+  , tokens_out_external
+  , tokens_out_internal
+  , minted_to_treasury_amount
+  , minted_amount
+  , start_usd_price
+  , end_usd_price 
+  , sm_stkAAVE_claims
+  , sm_stkABPT_claims
+  , lm_aave_v2_claims
+  , start_paraswap_fees_claimable
+  , end_paraswap_fees_claimable
+  , 0 as liq_adjust
+from balances_prices
+where 1=1
+  and end_balance is not null
+  and market not in ('fantom_v3','harmony_v3')
+  and block_day > '2023-05-06'
 )
 
 
