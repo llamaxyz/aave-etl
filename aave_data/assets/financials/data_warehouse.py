@@ -189,9 +189,17 @@ def atoken_measures_by_day(
 
 
         if not v3_minted_to_treasury_by_day.empty:
-            v3_minted_to_treasury_by_day = v3_minted_to_treasury_by_day[['market','atoken','atoken_symbol','block_height','block_day','minted_to_treasury_amount','minted_amount']].copy()
-            v3_minted_to_treasury_by_day.rename(columns={'atoken':'token','atoken_symbol':'symbol'}, inplace=True)
-            return_val = return_val.merge(v3_minted_to_treasury_by_day, how='left')
+            v3_minted_to_treasury_by_day = v3_minted_to_treasury_by_day[['market','atoken','block_day','minted_to_treasury_amount','minted_amount']].copy()
+            v3_minted_to_treasury_by_day.rename(columns={'atoken':'token'}, inplace=True)
+            # return_val.to_csv('return_val.csv')
+            # v3_minted_to_treasury_by_day.to_csv('v3_minted_to_treasury_by_day.csv')
+
+            return_val = return_val.merge(
+                v3_minted_to_treasury_by_day, 
+                how='left',
+                left_on=['market','token','block_day'],
+                right_on=['market','token','block_day']
+                )
         else:
             return_val['minted_to_treasury_amount'] = float(0)
             return_val['minted_amount'] = float(0)
