@@ -995,7 +995,7 @@ def v3_minted_to_treasury_by_day(context, block_numbers_by_day, market_tokens_by
             minted_to_treasury.minted_to_treasury_amount = minted_to_treasury.minted_to_treasury_amount / pow(10, minted_to_treasury.decimals)
 
             # build the output dataframe
-            minted_to_treasury['block_day'] = pd.to_datetime(partition_datetime, utc=True)
+            minted_to_treasury['block_day'] = pd.to_datetime(partition_datetime - timedelta(days=1), utc=True)
             minted_to_treasury['market'] = market
             minted_to_treasury['block_height'] = minted_to_treasury.block_height_y.astype('int64')
             minted_to_treasury.minted_to_treasury_amount = minted_to_treasury.minted_to_treasury_amount.astype('float64')
