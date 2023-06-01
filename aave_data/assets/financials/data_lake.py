@@ -28,7 +28,7 @@ from icecream import ic
 # from subgrounds.subgrounds import Subgrounds
 from eth_abi.abi import decode
 from eth_utils.conversions import to_bytes
-from shroomdk import ShroomDK
+from flipside import Flipside
 from time import sleep, time
 from random import randint
 from multicall import Call, Multicall
@@ -1361,10 +1361,10 @@ def user_lm_rewards_claimed(context, block_numbers_by_day):
             """
 
         # initialise the query
-        sdk = ShroomDK(FLIPSIDE_API_KEY)
+        sdk = Flipside(FLIPSIDE_API_KEY)
         # time the FLipside query
         start_time = time()
-        query_result = sdk.query(sql)
+        query_result = sdk.query(sql, max_age_minutes=0)
         elapsed_time = time() - start_time
         query_id = query_result.query_id
         context.log.info(f"Flipside query time: {elapsed_time:.6f}s")
@@ -1683,7 +1683,7 @@ def streaming_payments_state(context, block_numbers_by_day):
         """
 
     # initialise the query
-    sdk = ShroomDK(FLIPSIDE_API_KEY)
+    sdk = Flipside(FLIPSIDE_API_KEY)
     # time the FLipside query
     start_time = time()
     query_result = sdk.query(sql, timeout_minutes=10)

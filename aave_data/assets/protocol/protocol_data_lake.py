@@ -27,7 +27,6 @@ from icecream import ic
 from eth_abi.abi import decode
 from eth_abi.exceptions import InsufficientDataBytes
 from eth_utils.conversions import to_bytes
-from shroomdk import ShroomDK
 from time import sleep
 from random import randint
 from multicall import Call, Multicall
