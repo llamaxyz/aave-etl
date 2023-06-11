@@ -216,7 +216,7 @@ select
   -- , r.stable_reference_rate
   -- , 1 + sum(r.stable_reference_rate / 365 * days_in_time_group)  over (order by a.time_group rows between unbounded preceding and current row) as stable_return_index
   -- , r.eth_reference_rate
-  , 1 + sum(r.eth_reference_rate / 365 * days_in_time_group)  over (order by a.time_group rows between unbounded preceding and current row) as eth_return_index
+  , 1 + sum(r.eth_reference_rate / 365 * days_in_time_group)  over (order by a.time_group rows between unbounded preceding and current row) as eth_reference_index
 from by_time_group a 
   left join ref_rates r on (a.time_group = r.time_group)
 order by a.time_group
