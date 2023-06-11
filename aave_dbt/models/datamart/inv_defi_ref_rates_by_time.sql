@@ -3,8 +3,8 @@
 with stables as (
 select 
   block_time
-  , sum(deposits_mul_apy) / sum(deposits_usd) as risk_free_stable_rate
--- from datamart.risk_free_stable_rate_base
+  , sum(deposits_mul_apy) / sum(deposits_usd) as stable_reference_rate
+-- from datamart.inv_defi_ref_stable_rate_base
 from {{ ref('inv_defi_ref_stable_rate_base') }}
 group by block_time
 )
@@ -12,7 +12,7 @@ group by block_time
 , eth as (
 select 
   partition_date as block_time
-  , apr as risk_free_eth_rate
+  , apr as eth_reference_rate
 -- from protocol_data_lake.beacon_chain_staking_returns_by_day
 from {{ source('protocol_data_lake', 'beacon_chain_staking_returns_by_day') }}
 )

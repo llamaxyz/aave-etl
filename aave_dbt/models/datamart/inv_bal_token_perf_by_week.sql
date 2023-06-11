@@ -171,8 +171,8 @@ select
   block_time
   , date_trunc(block_time, day) as block_day
   , date_trunc(block_time, week) as time_group
-  , risk_free_stable_rate as stable_reference_rate
-  , risk_free_eth_rate as eth_reference_rate
+  , stable_reference_rate
+  , eth_reference_rate
 -- from datamart.inv_defi_ref_rates_by_time
 from {{ ref('inv_defi_ref_rates_by_time') }}
 )
