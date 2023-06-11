@@ -19,8 +19,8 @@ from {{ source('protocol_data_lake', 'beacon_chain_staking_returns_by_day') }}
 
 select 
   s.block_time
-  , s.risk_free_stable_rate
-  , last_value(e.risk_free_eth_rate ignore nulls) over (order by s.block_time range between unbounded preceding and current row) as risk_free_eth_rate
+  , s.stable_reference_rate
+  , last_value(e.eth_reference_rate ignore nulls) over (order by s.block_time range between unbounded preceding and current row) as eth_reference_rate
 from stables s 
   left join eth e on (date_trunc(s.block_time, day) = e.block_time)
 order by block_time
