@@ -147,3 +147,7 @@ dagster.yaml
 aave_data/resources/multicall_poc.py
 
 backup_tmp/
+
+# temp output data
+*.csv
+*.pkl
