@@ -1894,6 +1894,151 @@ def erc20_balances_by_day(
     )
 
     return balances
+
+
+@asset(
+    compute_kind="python",
+    code_version="1",
+    io_manager_key = 'protocol_data_lake_append_io_manager',
+)
+def aave_token_liquidity_depth(context):
+    """
+    Uses the Paraswap to get the liquidity depth of the AAVE/USDC pair on the Ethereum mainnet
+    
+    Used for the Safety Module Shortfall Event analysis
+
+    This asset is not partitioned and appends to the existing table when run.
+    This asset is not idempotent as the aggregator data is ephemeral
+
+    Uses a non-idempoent IO manager to write to the warehouse
+    
+    Args:
+        context: dagster context object
+    
+    Returns:
+        A dataframe of the liquidity depth of the tokens at the time the function is called
+    """
+    CONCURRENT_REQUESTS = 20
+    
+    # construct the ouput dataframe
+    row = {
+        "chain": "ethereum",
+        "market": "ethereum_v3",
+        "to_asset": "USDC",
+        "to_asset_address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "to_asset_decimals": 6,
+        "from_asset": "AAVE",
+        "from_asset_address": "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
+        "from_asset_decimals": 18
+    }
+    output = pd.DataFrame(row, index=[0])
+
+    # get the from asset chain & assets & grab the oracle price
+    from_assets = output[["from_asset", "from_asset_address", "from_asset_decimals", "chain", "market"]].drop_duplicates().reset_index(drop=True)
+    from_assets['from_asset_price'] = from_assets.apply(lambda x: get_aave_oracle_price(x.market, x.from_asset_address), axis=1)
+
+    # get the to asset chain & assets & grab the oracle price
+    to_assets = output[["to_asset", "to_asset_address", "to_asset_decimals", "chain", "market"]].drop_duplicates().reset_index(drop=True)
+    to_assets['to_asset_price'] = to_assets.apply(lambda x: get_aave_oracle_price(x.market, x.to_asset_address), axis=1)
+
+    # join back into the output
+    output = output.merge(from_assets, on=["from_asset", "from_asset_address", "from_asset_decimals", "chain", "market"], how="left")
+    output = output.merge(to_assets, on=["to_asset", "to_asset_address", "to_asset_decimals", "chain", "market"], how="left")
+
+    # get the chain_ids for use inth 1inch API
+    chain_ids = {chain: CONFIG_CHAINS[chain]["chain_id"] for chain in output.chain.unique()}
+    output["chain_id"] = output.chain.map(chain_ids)
+
+
+    # build the list of from amounts to sweep
+    sweep_range = [
+        *[10**i for i in range(2, 5)],
+        *[10**5*i for i in range(1,10)],
+        *[10**6*i for i in range(1,10)],
+        *[10**7*i for i in range(1,10)],
+        *[10**8*i for i in range(1,6)],
+    ]
+        
+
+    output['from_amount_usd'] = output.apply(lambda x: sweep_range, axis=1)
+    output = output.explode("from_amount_usd").reset_index(drop=True)
+    output["from_amount_usd"] = output.from_amount_usd.astype(float)
+
+    # convert to native asset amounts
+    output["from_amount_native"] = output.from_amount_usd / output.from_asset_price
+
+
+    ################################################################
+    # 1inch API calls using synchronous requests
+    ################################################################
+    # import time
+    # start = time.time()
+    # # run the first sweep sync
+    # output["to_amount_native"] = output.apply(
+    #     lambda x: get_quote_from_1inch(
+    #             x.chain_id,
+    #             x.from_asset_address,
+    #             x.from_asset_decimals,
+    #             x.to_asset_address,
+    #             x.to_asset_decimals,
+    #             x.from_amount_native
+    #     ), axis=1)
+    # end = time.time()
+    # elapsed = end - start
+    # ic(elapsed)
+    ################################################################
+    
+    ################################################################
+    # 1inch API calls using async requests
+    ################################################################
+    # run the first sweep async
+    async def sweep():
+        semaphore = asyncio.Semaphore(CONCURRENT_REQUESTS)
+        tasks = output.apply(
+            lambda x: get_quote_from_paraswap_async(
+                    x.chain_id,
+                    x.from_asset_address,
+                    x.from_asset_decimals,
+                    x.to_asset_address,
+                    x.to_asset_decimals,
+                    x.from_amount_native,
+                    semaphore
+            ), axis=1)
+        results = await asyncio.gather(*tasks)
+        return results
+    
+    # import time
+    # start = time.time()
+    output["to_amount_native"] = asyncio.run(sweep())
+    # end = time.time()
+    # elapsed = end - start
+    # ic(elapsed)
+    ################################################################
+    
+    output['to_amount_usd'] = output.to_amount_native * output.to_asset_price
+    output['price_impact'] = 1 - (output.to_amount_usd / output.from_amount_usd)
+
+
+    # tidy up
+    output['fetch_time'] = datetime.now(timezone.utc)
+    for col in ['from_amount_usd','from_amount_native','to_amount_native','to_amount_usd','price_impact','from_asset_price','to_asset_price']:
+        output[col] = output[col].astype('Float64')
+    for col in ['to_asset_decimals','from_asset_decimals','chain_id']:
+        output[col] = output[col].astype('Int64')
+
+    output = standardise_types(output)
+
+    output.to_pickle("output.pkl")
+
+    # ic(output)
+
+    context.add_output_metadata(
+        {
+            "num_records": len(output),
+        }
+    )
+
+    return output
     
 if __name__ == "__main__":
 
@@ -1904,4 +2049,6 @@ if __name__ == "__main__":
     # elapsed = end - start
     # ic(elapsed)
     
-    erc20_balances_by_day()
+    # erc20_balances_by_day()
+    out = aave_token_liquidity_depth()
+

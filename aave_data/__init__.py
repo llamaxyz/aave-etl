@@ -248,6 +248,7 @@ data_lake_unpartitioned_assets = [
     'financials_data_lake/streams_metadata',
     'financials_data_lake/streaming_payments_state',
     'protocol_data_lake/coingecko_data_by_day',
+    'protocol_data_lake/aave_token_liquidity_depth',
     ]
 
 daily_partitioned_assets = [
