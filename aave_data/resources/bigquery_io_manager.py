@@ -303,7 +303,10 @@ class BigQueryIOManager(IOManager):
         time_window: Optional[Tuple[datetime, datetime]] = None,
         partition_key: Optional[str] = None,
     ):
-        # col_str = ", ".join(columns) if columns else "*"
+        # datamart tables don't have dagster metadata
+        if "datamart" in dataset:
+            return f"SELECT * FROM {dataset}.{table} WHERE 1=1"
+        
         excluded_cols = "_dagster_partition_type, _dagster_partition_key, _dagster_partition_time, _dagster_load_timestamp"
         if partition_type == "time_window":
             return f"SELECT * EXCEPT ({excluded_cols}) FROM {dataset}.{table} {self._time_window_where_clause(time_window)}"
@@ -312,14 +315,6 @@ class BigQueryIOManager(IOManager):
         else:
             return f"SELECT * EXCEPT ({excluded_cols}) FROM {dataset}.{table} WHERE 1=1"
 
-        if time_window:
-            return (
-                # f"""SELECT {col_str} FROM {self._config["database"]}.{dataset}.{table}\n"""
-                f"""SELECT {col_str} FROM {dataset}.{table}\n"""
-                + self._time_window_where_clause(time_window)
-            )
-        else:
-            return f"""SELECT {col_str} FROM {dataset}.{table}"""
 
     def _time_window_where_clause(self, time_window: Tuple[datetime, datetime]) -> str:
         start_dt, end_dt = time_window
