@@ -45,6 +45,7 @@ setup(
         "flipside==2.0.7", #  API for accessing shroom Flipside Crypto data tables via SQL
         # "web3==6.0.0", # installed in dagster_cloud_post_install.sh due to version clash with multicall
         # "multicall==0.7.1" # installed in dagster_cloud_post_install.sh due to version clash with web3
+        "scipy"
     ],
     extras_require={"dev": ["dagit", "pytest"]},
 )
