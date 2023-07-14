@@ -564,6 +564,18 @@ CONFIG_TOKENS = {
                 "CRV": {
                     "address": "0xD533a949740bb3306d119CC777fa900bA034cd52",
                     "decimals": 18,
+                },
+                "B-80BAL-20WETH": {
+                    "address": "0x5c6ee304399dbdb9c8ef030ab642b10820db8f56",
+                    "decimals": 18,
+                },
+                "rETH": {
+                    "address": "0xae78736cd615f374d3085123a210448e74fc6393",
+                    "decimals": 18,
+                },
+                "wstETH": {
+                    "address": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+                    "decimals": 18,
                 }
             }
         },
@@ -851,6 +863,14 @@ COINGECKO_TOKENS = {
         "chain": "arbitrum",
         "decimals": 18,
         "start_date": "2023-01-20",
+    },
+    "B-80BAL-20WETH": {
+        "cg_id": "balancer-80-bal-20-weth",
+        "symbol": "B-80BAL-20WETH",
+        "address": "0x5c6ee304399dbdb9c8ef030ab642b10820db8f56",
+        "chain": "ethereum",
+        "decimals": 18,
+        "start_date": "2023-04-01",
     },
 }
 
