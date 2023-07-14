@@ -872,6 +872,22 @@ COINGECKO_TOKENS = {
         "decimals": 18,
         "start_date": "2023-04-01",
     },
+    "rETH": {
+        "cg_id": "rocket-pool-eth",
+        "symbol": "rETH",
+        "address": "0xae78736cd615f374d3085123a210448e74fc6393",
+        "chain": "ethereum",
+        "decimals": 18,
+        "start_date": "2023-04-01",
+    },
+    "wstETH": {
+        "cg_id": "lido-staked-ether",
+        "symbol": "wstETH",
+        "address": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+        "chain": "ethereum",
+        "decimals": 18,
+        "start_date": "2023-04-01",
+    }
 }
 
 CONFIG_COMPOUND_v2 = {
