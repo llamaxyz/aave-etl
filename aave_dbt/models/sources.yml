@@ -29,6 +29,7 @@ sources:
       - name: safety_module_token_hodlers_by_day
       - name: erc20_balances_by_day
       - name: protocol_data_by_day
+      - name: aave_token_liquidity_depth
   - name: warehouse
     tables:
       - name: atoken_measures_by_day
