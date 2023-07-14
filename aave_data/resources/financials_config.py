@@ -881,7 +881,7 @@ COINGECKO_TOKENS = {
         "start_date": "2023-04-01",
     },
     "wstETH": {
-        "cg_id": "lido-staked-ether",
+        "cg_id": "staked-ether",
         "symbol": "wstETH",
         "address": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
         "chain": "ethereum",
