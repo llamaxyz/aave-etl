@@ -279,6 +279,7 @@ datamart_hourly_assets = [
     'market_state_by_hour',
     'market_config_by_time',
     'market_state_by_time',
+    'reserve_factor_income_by_hour',
 ]
 
 
