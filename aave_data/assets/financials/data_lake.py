@@ -1710,6 +1710,10 @@ def streaming_payments_state(context, block_numbers_by_day):
     streams['unvested'] = streams.deposit - streams.vested
     streams['unclaimed'] = streams.vested - streams.claims
 
+    # fix types
+    float_cols = ['stream_rate','claims_raw','deposit','claims','current_time','vested_proportion','vested','unvested','unclaimed']
+    for col in float_cols:
+        streams[col] = streams[col].astype(float)
 
     streams = streams.drop(columns=['deposit_raw', 'claims_raw', 'vested_proportion', 'current_time'])
     # streams = streams.drop(columns=['deposit_raw', 'claims_raw'])
