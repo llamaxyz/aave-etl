@@ -1295,6 +1295,7 @@ def user_lm_rewards_claimed(context, block_numbers_by_day):
     date, market = context.partition_key.split("|")
     # chain = CONFIG_MARKETS[market]['chain']
     partition_datetime = datetime.strptime(date, '%Y-%m-%d')
+    block_day = partition_datetime - timedelta(days=1)
 
     context.log.info(f"market: {market}")
     context.log.info(f"date: {date}")
@@ -1307,7 +1308,7 @@ def user_lm_rewards_claimed(context, block_numbers_by_day):
         sql = f"""
             with claims as (
             select 
-            '{partition_datetime}' as block_day
+            '{block_day}' as block_day
             , contract_address as vault_address
             , case 
                 when contract_address = '0xd784927ff2f95ba542bfc824c8a8a98f3495f6b5' then 'incentives_controller'
