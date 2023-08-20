@@ -27,25 +27,22 @@ setup(
     name="aave_data",
     packages=find_packages(exclude=["quickstart_gcp_tests","aave_data_tests"]),
     install_requires=[
-        "dagster==1.3.1",
-        "dagster-gcp==0.19.1",
-        "dagster-cloud==1.3.1",
-        "dagster-dbt==0.19.1",
-        "dbt-core==1.4.6", #pin due to probs with 1.5.0
-        "dbt-bigquery",
-        "boto3",  # used by Dagster Cloud Serverless
-        "pandas",
-        "pandas_gbq",
-        "google-auth",
-        "icecream", #dev debug tool
-        "requests",
-        "httpx", # async http requests
-        "subgrounds",  # API for accessing subgraphs easily
-        # "shroomdk==2.0.3",  # API for accessing shroom Flipside Crypto data tables via SQL
-        "flipside==2.0.7", #  API for accessing shroom Flipside Crypto data tables via SQL
-        # "web3==6.0.0", # installed in dagster_cloud_post_install.sh due to version clash with multicall
-        # "multicall==0.7.1" # installed in dagster_cloud_post_install.sh due to version clash with web3
-        "scipy"
+        "dagster==1.4.6",
+        "dagster-cloud==1.4.6",
+        "dagster-gcp==0.20.6",
+        "dagster-dbt==0.20.6",
+        "dbt-core==1.5.1",
+        "dbt-bigquery==1.5.1",
+        "boto3",
+        "pandas==1.5.3",
+        "pandas_gbq==0.19.2",
+        "google-auth==2.19.0",
+        "icecream==2.1.3",
+        "requests==2.29.0",
+        "httpx==0.24.1",
+        "subgrounds==1.6.0",
+        "flipside==2.0.8",
+        "scipy==1.11.1",
     ],
     extras_require={"dev": ["dagit", "pytest"]},
 )
