@@ -306,7 +306,7 @@ data_lake_unpartitioned_job = define_asset_job(
 
 warehouse_datamart_job = define_asset_job(
     name='warehouse_datamart',
-    selection=AssetSelection.groups('warehouse', 'datamart') - AssetSelection.keys(*liquidity_depth_assets),
+    selection=AssetSelection.assets(*warehouse_assets, *dbt_assets) - AssetSelection.keys(*liquidity_depth_assets),
     tags={"dagster/priority": "3"}
 )
 
