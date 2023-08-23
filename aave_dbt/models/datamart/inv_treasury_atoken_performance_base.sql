@@ -110,9 +110,9 @@ select
   , earnings_eth
   , (balance_native + earnings_native) * (end_usd_price - usd_price) as price_change_usd
   , (balance_native + earnings_native) * (end_usd_price / end_eth_usd - usd_price / eth_usd) as price_change_eth
-  , end_balance_native - earnings_native - balance_native as deposit_native
-  , (end_balance_native - earnings_native - balance_native) * usd_price as deposit_usd
-  , (end_balance_native - earnings_native - balance_native) * usd_price / eth_usd as deposit_eth
+  , end_balance_native - earnings_native - balance_native as receipts_native
+  , (end_balance_native - earnings_native - balance_native) * usd_price as receipts_usd
+  , (end_balance_native - earnings_native - balance_native) * usd_price / eth_usd as receipts_eth
 from calcs 
 where 1=1
   and balance_native > 0
