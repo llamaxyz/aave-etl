@@ -24,6 +24,8 @@ select
   t.block_time
   , last_value('aave_' || right(a.market, 2) ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as market
   , last_value(a.reserve_symbol ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as symbol
+  , last_value(a.atoken_supply ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as deposits_native
+  , last_value(a.usd_price ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as price_usd
   , last_value(a.deposits_usd ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as deposits_usd
   , last_value(a.stable_debt_usd + a.variable_debt_usd ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as borrows_usd
   , last_value(a.deposits_usd - (a.stable_debt_usd + a.variable_debt_usd) ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as tvl_usd
@@ -37,6 +39,8 @@ select
   t.block_time
   , last_value('aave_' || right(a.market, 2) ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as market
   , last_value(a.reserve_symbol ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as symbol
+  , last_value(a.atoken_supply ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as deposits_native
+  , last_value(a.usd_price ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as price_usd
   , last_value(a.deposits_usd ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as deposits_usd
   , last_value(a.stable_debt_usd + a.variable_debt_usd ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as borrows_usd
   , last_value(a.deposits_usd - (a.stable_debt_usd + a.variable_debt_usd) ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as tvl_usd
@@ -50,6 +54,8 @@ select
   t.block_time
   , last_value('aave_' || right(a.market, 2) ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as market
   , last_value(a.reserve_symbol ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as symbol
+  , last_value(a.atoken_supply ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as deposits_native
+  , last_value(a.usd_price ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as price_usd
   , last_value(a.deposits_usd ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as deposits_usd
   , last_value(a.stable_debt_usd + a.variable_debt_usd ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as borrows_usd
   , last_value(a.deposits_usd - (a.stable_debt_usd + a.variable_debt_usd) ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as tvl_usd
@@ -63,6 +69,8 @@ select
   t.block_time
   , last_value('aave_' || right(a.market, 2) ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as market
   , last_value(a.reserve_symbol ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as symbol
+  , last_value(a.atoken_supply ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as deposits_native
+  , last_value(a.usd_price ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as price_usd
   , last_value(a.deposits_usd ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as deposits_usd
   , last_value(a.stable_debt_usd + a.variable_debt_usd ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as borrows_usd
   , last_value(a.deposits_usd - (a.stable_debt_usd + a.variable_debt_usd) ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as tvl_usd
@@ -76,6 +84,8 @@ select
   t.block_time
   , last_value('aave_' || right(a.market, 2) ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as market
   , last_value(a.reserve_symbol ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as symbol
+  , last_value(a.atoken_supply ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as deposits_native
+  , last_value(a.usd_price ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as price_usd
   , last_value(a.deposits_usd ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as deposits_usd
   , last_value(a.stable_debt_usd + a.variable_debt_usd ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as borrows_usd
   , last_value(a.deposits_usd - (a.stable_debt_usd + a.variable_debt_usd) ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as tvl_usd
@@ -89,6 +99,8 @@ select
   t.block_time
   , last_value('aave_' || right(a.market, 2) ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as market
   , last_value(a.reserve_symbol ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as symbol
+  , last_value(a.atoken_supply ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as deposits_native
+  , last_value(a.usd_price ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as price_usd
   , last_value(a.deposits_usd ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as deposits_usd
   , last_value(a.stable_debt_usd + a.variable_debt_usd ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as borrows_usd
   , last_value(a.deposits_usd - (a.stable_debt_usd + a.variable_debt_usd) ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as tvl_usd
@@ -102,6 +114,8 @@ select
   t.block_time
   , last_value(a.compound_version ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as market
   , last_value(a.underlying_symbol ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as symbol
+  , last_value(a.deposits ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as deposits_native
+  , last_value(p.usd_price ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as price_usd
   , last_value(a.deposits * p.usd_price ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as deposits_usd
   , last_value(a.borrows * p.usd_price ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as borrows_usd
   , last_value((a.deposits + a.borrows) * p.usd_price ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as tvl_usd
@@ -116,6 +130,8 @@ select
   t.block_time
   , last_value(a.compound_version ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as market
   , last_value(a.underlying_symbol ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as symbol
+  , last_value(a.deposits ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as deposits_native
+  , last_value(p.usd_price ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as price_usd
   , last_value(a.deposits * p.usd_price ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as deposits_usd
   , last_value(a.borrows * p.usd_price ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as borrows_usd
   , last_value((a.deposits + a.borrows) * p.usd_price ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as tvl_usd
@@ -130,6 +146,8 @@ select
   t.block_time
   , last_value(a.compound_version ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as market
   , last_value(a.underlying_symbol ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as symbol
+  , last_value(a.deposits ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as deposits_native
+  , last_value(p.usd_price ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as price_usd
   , last_value(a.deposits * p.usd_price ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as deposits_usd
   , last_value(a.borrows * p.usd_price ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as borrows_usd
   , last_value((a.deposits + a.borrows) * p.usd_price ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as tvl_usd
@@ -144,6 +162,8 @@ select
   t.block_time
   , last_value(a.compound_version ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as market
   , last_value(a.underlying_symbol ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as symbol
+  , last_value(a.deposits ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as deposits_native
+  , last_value(p.usd_price ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as price_usd
   , last_value(a.deposits * p.usd_price ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as deposits_usd
   , last_value(a.borrows * p.usd_price ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as borrows_usd
   , last_value((a.deposits + a.borrows) * p.usd_price ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as tvl_usd
@@ -154,15 +174,38 @@ from times t
     on (t.block_time = a.block_day)
   left join prices p on (date_trunc(a.block_day, day) = p.block_day and a.underlying_address = p.reserve and a.chain = p.chain)
 )
+, time_calc as (
 select 
-  block_time 
+  block_time
+  -- first elements in the DB are daily, hence the hack to default to 24hours
+  , coalesce(date_diff(block_time, (lag(block_time) over (partition by market, symbol order by block_time)), hour), 24) / 8760 as years_diff
   , market 
   , symbol 
+  , deposits_native
+  , price_usd
+  , lead(price_usd) over (partition by market, symbol order by block_time) as end_price_usd
   , deposits_usd 
   , borrows_usd 
   , tvl_usd 
   , deposit_apy 
-  , deposits_usd * deposit_apy as deposits_mul_apy
 from all_markets
 where deposits_usd > 0
+)
+
+select 
+  block_time
+  , years_diff
+  , market
+  , symbol
+  , deposits_native
+  , price_usd
+  , end_price_usd
+  , deposits_usd
+  , deposit_apy
+  , deposits_native * deposit_apy * years_diff as earnings_native
+  , deposits_native * deposit_apy * years_diff * price_usd as earnings_usd
+  , deposits_native * (1 + deposit_apy * years_diff) * (end_price_usd - price_usd) as price_change_usd 
+from time_calc
+where true 
+  and years_diff != 0
 order by block_time, market, symbol
