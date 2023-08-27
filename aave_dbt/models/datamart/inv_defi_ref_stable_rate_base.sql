@@ -1,211 +1,102 @@
 {{ config(materialized='table') }}
 
 with prices as (
-select 
+select
   block_day
-  , chain
-  , reserve
-  , usd_price
--- from warehouse.token_prices_by_day
-from {{ source('warehouse', 'token_prices_by_day') }}
+  , symbol
+  , price_usd as usd_price
+-- from protocol_data_lake.coingecko_data_by_day 
+from {{ source('protocol_data_lake', 'coingecko_data_by_day') }}
+where true
+  and chain = 'ethereum' 
+  and symbol in ('USDT','USDC','DAI')
+)
+, compound as (
+select
+  block_day as block_time
+  , compound_version as market
+  , underlying_symbol as symbol
+  , deposits as deposits_native
+  , supply_apy as deposit_apy
+-- from protocol_data_lake.compound_v2_by_day
+from {{ source('protocol_data_lake', 'compound_v2_by_day') }}
+union all 
+select
+  block_day as block_time
+  , compound_version as market
+  , underlying_symbol as symbol
+  , deposits as deposits_native
+  , supply_apy as deposit_apy
+-- from protocol_data_lake.compound_v3_by_day
+from {{ source('protocol_data_lake', 'compound_v3_by_day') }}
+union all 
+select
+  block_hour as block_time
+  , compound_version as market
+  , underlying_symbol as symbol
+  , deposits as deposits_native
+  , supply_apy as deposit_apy
+-- from protocol_data_lake.compound_v2_by_hour
+from {{ source('protocol_data_lake', 'compound_v2_by_hour') }}
+union all 
+select
+  block_hour as block_time
+  , compound_version as market
+  , underlying_symbol as symbol
+  , deposits as deposits_native
+  , supply_apy as deposit_apy
+-- from protocol_data_lake.compound_v3_by_hour
+from {{ source('protocol_data_lake', 'compound_v3_by_hour') }}
 )
 
-, times as (
-select distinct
-  block_time
--- from datamart.market_state_by_time
-from {{ ref('market_state_by_time') }}
-where market in ('ethereum_v2','ethereum_v3')
-order by block_time
-)
-
-, all_markets as (
-select 
-  t.block_time
-  , last_value('aave_' || right(a.market, 2) ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as market
-  , last_value(a.reserve_symbol ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as symbol
-  , last_value(a.atoken_supply ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as deposits_native
-  , last_value(a.usd_price ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as price_usd
-  , last_value(a.deposits_usd ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as deposits_usd
-  , last_value(a.stable_debt_usd + a.variable_debt_usd ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as borrows_usd
-  , last_value(a.deposits_usd - (a.stable_debt_usd + a.variable_debt_usd) ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as tvl_usd
-  , last_value(a.deposit_apy ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as deposit_apy
-from times t 
-  -- left join datamart.market_state_by_time a
-  left join {{ ref('market_state_by_time') }} a
-    on (t.block_time = a.block_time and a.market = 'ethereum_v2' and a.reserve_symbol = 'USDT')
-union all
-select 
-  t.block_time
-  , last_value('aave_' || right(a.market, 2) ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as market
-  , last_value(a.reserve_symbol ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as symbol
-  , last_value(a.atoken_supply ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as deposits_native
-  , last_value(a.usd_price ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as price_usd
-  , last_value(a.deposits_usd ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as deposits_usd
-  , last_value(a.stable_debt_usd + a.variable_debt_usd ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as borrows_usd
-  , last_value(a.deposits_usd - (a.stable_debt_usd + a.variable_debt_usd) ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as tvl_usd
-  , last_value(a.deposit_apy ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as deposit_apy
-from times t 
-  -- left join datamart.market_state_by_time a
-  left join {{ ref('market_state_by_time') }} a
-    on (t.block_time = a.block_time and a.market = 'ethereum_v2' and a.reserve_symbol = 'USDC')
-union all
-select 
-  t.block_time
-  , last_value('aave_' || right(a.market, 2) ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as market
-  , last_value(a.reserve_symbol ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as symbol
-  , last_value(a.atoken_supply ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as deposits_native
-  , last_value(a.usd_price ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as price_usd
-  , last_value(a.deposits_usd ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as deposits_usd
-  , last_value(a.stable_debt_usd + a.variable_debt_usd ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as borrows_usd
-  , last_value(a.deposits_usd - (a.stable_debt_usd + a.variable_debt_usd) ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as tvl_usd
-  , last_value(a.deposit_apy ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as deposit_apy
-from times t 
-  -- left join datamart.market_state_by_time a
-  left join {{ ref('market_state_by_time') }} a
-    on (t.block_time = a.block_time and a.market = 'ethereum_v2' and a.reserve_symbol = 'DAI')
+, combined_daily as (
+select
+  date_trunc(block_time, day) as block_day
+  , 'aave_' || right(market, 2) as market
+  , reserve_symbol as symbol
+  , avg(atoken_supply) as deposits_native
+  , avg(deposit_apy) as deposit_apy
+-- from datamart.market_state_by_time 
+from {{ ref('market_state_by_time' }}
+where market in ('ethereum_v2', 'ethereum_v3') and reserve_symbol in ('USDT','USDC','DAI')
+group by date_trunc(block_time, day), market, reserve_symbol
 union all 
-select 
-  t.block_time
-  , last_value('aave_' || right(a.market, 2) ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as market
-  , last_value(a.reserve_symbol ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as symbol
-  , last_value(a.atoken_supply ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as deposits_native
-  , last_value(a.usd_price ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as price_usd
-  , last_value(a.deposits_usd ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as deposits_usd
-  , last_value(a.stable_debt_usd + a.variable_debt_usd ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as borrows_usd
-  , last_value(a.deposits_usd - (a.stable_debt_usd + a.variable_debt_usd) ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as tvl_usd
-  , last_value(a.deposit_apy ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as deposit_apy
-from times t 
-  -- left join datamart.market_state_by_time a
-  left join {{ ref('market_state_by_time') }} a
-    on (t.block_time = a.block_time and a.market = 'ethereum_v3' and a.reserve_symbol = 'USDT')
-union all
-select 
-  t.block_time
-  , last_value('aave_' || right(a.market, 2) ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as market
-  , last_value(a.reserve_symbol ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as symbol
-  , last_value(a.atoken_supply ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as deposits_native
-  , last_value(a.usd_price ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as price_usd
-  , last_value(a.deposits_usd ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as deposits_usd
-  , last_value(a.stable_debt_usd + a.variable_debt_usd ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as borrows_usd
-  , last_value(a.deposits_usd - (a.stable_debt_usd + a.variable_debt_usd) ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as tvl_usd
-  , last_value(a.deposit_apy ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as deposit_apy
-from times t 
-  -- left join datamart.market_state_by_time a
-  left join {{ ref('market_state_by_time') }} a
-    on (t.block_time = a.block_time and a.market = 'ethereum_v3' and a.reserve_symbol = 'USDC')
-union all
-select 
-  t.block_time
-  , last_value('aave_' || right(a.market, 2) ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as market
-  , last_value(a.reserve_symbol ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as symbol
-  , last_value(a.atoken_supply ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as deposits_native
-  , last_value(a.usd_price ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as price_usd
-  , last_value(a.deposits_usd ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as deposits_usd
-  , last_value(a.stable_debt_usd + a.variable_debt_usd ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as borrows_usd
-  , last_value(a.deposits_usd - (a.stable_debt_usd + a.variable_debt_usd) ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as tvl_usd
-  , last_value(a.deposit_apy ignore nulls) over (order by t.block_time range between unbounded preceding and current row) as deposit_apy
-from times t 
-  -- left join datamart.market_state_by_time a
-  left join {{ ref('market_state_by_time') }} a
-    on (t.block_time = a.block_time and a.market = 'ethereum_v3' and a.reserve_symbol = 'DAI')
-union all
-select 
-  t.block_time
-  , last_value(a.compound_version ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as market
-  , last_value(a.underlying_symbol ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as symbol
-  , last_value(a.deposits ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as deposits_native
-  , last_value(p.usd_price ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as price_usd
-  , last_value(a.deposits * p.usd_price ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as deposits_usd
-  , last_value(a.borrows * p.usd_price ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as borrows_usd
-  , last_value((a.deposits + a.borrows) * p.usd_price ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as tvl_usd
-  , last_value(a.supply_apy ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as deposit_apy
-from times t 
-  -- left join protocol_data_lake.compound_v2_by_hour a
-  left join {{ source('protocol_data_lake','compound_v2_by_hour') }} a
-    on (t.block_time = a.block_hour)
-  left join prices p on (date_trunc(a.block_hour, day) = p.block_day and a.underlying_address = p.reserve and a.chain = p.chain)
-union all 
-select 
-  t.block_time
-  , last_value(a.compound_version ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as market
-  , last_value(a.underlying_symbol ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as symbol
-  , last_value(a.deposits ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as deposits_native
-  , last_value(p.usd_price ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as price_usd
-  , last_value(a.deposits * p.usd_price ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as deposits_usd
-  , last_value(a.borrows * p.usd_price ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as borrows_usd
-  , last_value((a.deposits + a.borrows) * p.usd_price ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as tvl_usd
-  , last_value(a.supply_apy ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as deposit_apy
-from times t 
-  -- left join protocol_data_lake.compound_v3_by_hour a
-  left join {{ source('protocol_data_lake','compound_v3_by_hour') }} a
-    on (t.block_time = a.block_hour)
-  left join prices p on (date_trunc(a.block_hour, day) = p.block_day and a.underlying_address = p.reserve and a.chain = p.chain)
-union all
-select 
-  t.block_time
-  , last_value(a.compound_version ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as market
-  , last_value(a.underlying_symbol ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as symbol
-  , last_value(a.deposits ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as deposits_native
-  , last_value(p.usd_price ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as price_usd
-  , last_value(a.deposits * p.usd_price ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as deposits_usd
-  , last_value(a.borrows * p.usd_price ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as borrows_usd
-  , last_value((a.deposits + a.borrows) * p.usd_price ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as tvl_usd
-  , last_value(a.supply_apy ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as deposit_apy
-from times t 
-  -- left join protocol_data_lake.compound_v2_by_day a
-  left join {{ source('protocol_data_lake','compound_v2_by_day') }} a
-    on (t.block_time = a.block_day)
-  left join prices p on (date_trunc(a.block_day, day) = p.block_day and a.underlying_address = p.reserve and a.chain = p.chain)
-union all 
-select 
-  t.block_time
-  , last_value(a.compound_version ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as market
-  , last_value(a.underlying_symbol ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as symbol
-  , last_value(a.deposits ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as deposits_native
-  , last_value(p.usd_price ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as price_usd
-  , last_value(a.deposits * p.usd_price ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as deposits_usd
-  , last_value(a.borrows * p.usd_price ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as borrows_usd
-  , last_value((a.deposits + a.borrows) * p.usd_price ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as tvl_usd
-  , last_value(a.supply_apy ignore nulls) over (partition by symbol order by t.block_time range between unbounded preceding and current row) as deposit_apy
-from times t 
-  -- left join protocol_data_lake.compound_v3_by_day a
-  left join {{ source('protocol_data_lake','compound_v3_by_day') }} a
-    on (t.block_time = a.block_day)
-  left join prices p on (date_trunc(a.block_day, day) = p.block_day and a.underlying_address = p.reserve and a.chain = p.chain)
-)
-, time_calc as (
-select 
-  block_time
-  -- first elements in the DB are daily, hence the hack to default to 24hours
-  , coalesce(date_diff(block_time, (lag(block_time) over (partition by market, symbol order by block_time)), hour), 24) / 8760 as years_diff
-  , market 
-  , symbol 
-  , deposits_native
-  , price_usd
-  , lead(price_usd) over (partition by market, symbol order by block_time) as end_price_usd
-  , deposits_usd 
-  , borrows_usd 
-  , tvl_usd 
-  , deposit_apy 
-from all_markets
-where deposits_usd > 0
-)
-
-select 
-  block_time
-  , years_diff
+select
+  date_trunc(block_time, day) as block_day
   , market
   , symbol
-  , deposits_native
-  , price_usd
+  , avg(deposits_native) as deposits_native
+  , avg(deposit_apy) as deposit_apy
+from compound
+group by date_trunc(block_time, day), market, symbol
+)
+
+, pre_calc as (
+select 
+  d.block_day
+  , d.market
+  , d.symbol 
+  , d.deposits_native
+  , d.deposit_apy
+  , p.usd_price as price_usd
+  , coalesce(lead(usd_price) over (partition by d.market, d.symbol order by d.block_day), usd_price) as end_price_usd
+  , d.deposits_native * p.usd_price as deposits_usd
+from combined_daily d
+left join prices p on (d.block_day = p.block_day and d.symbol = p.symbol)
+order by block_day, market, symbol
+)
+
+select 
+  block_day
+  , market 
+  , symbol
+  , deposits_native 
+  , deposit_apy 
+  , price_usd 
   , end_price_usd
-  , deposits_usd
-  , deposit_apy
-  , deposits_native * deposit_apy * years_diff as earnings_native
-  , deposits_native * deposit_apy * years_diff * price_usd as earnings_usd
-  , deposits_native * (1 + deposit_apy * years_diff) * (end_price_usd - price_usd) as price_change_usd 
-from time_calc
-where true 
-  and years_diff != 0
-order by block_time, market, symbol
+  , deposits_native * price_usd as deposits_usd
+  , deposits_native * deposit_apy / 365 as earnings_native
+  , deposits_native * deposit_apy / 365 * price_usd as earnings_usd
+  , deposits_native * (1 + deposit_apy / 365) * (end_price_usd - price_usd) as price_change_usd 
+from pre_calc
+order by block_day, market, symbol 
