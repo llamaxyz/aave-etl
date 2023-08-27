@@ -57,7 +57,7 @@ select
   , avg(atoken_supply) as deposits_native
   , avg(deposit_apy) as deposit_apy
 -- from datamart.market_state_by_time 
-from {{ ref('market_state_by_time' }}
+from {{ ref('market_state_by_time') }}
 where market in ('ethereum_v2', 'ethereum_v3') and reserve_symbol in ('USDT','USDC','DAI')
 group by date_trunc(block_time, day), market, reserve_symbol
 union all 
