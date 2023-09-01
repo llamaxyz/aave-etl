@@ -88,7 +88,8 @@ from balances b
     b.reserve = p.reserve
   )
   left join eth_prices e on (b.block_day = e.block_day)
-  left join warehouse.balance_group_lookup l on (
+  -- left join warehouse.balance_group_lookup l on (
+  left join {{ source('warehouse','balance_group_lookup') }} l on (
     b.market = l.market and 
     b.symbol = l.atoken_symbol
   )
