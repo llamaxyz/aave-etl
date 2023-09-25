@@ -576,7 +576,11 @@ CONFIG_TOKENS = {
                 "wstETH": {
                     "address": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
                     "decimals": 18,
-                }
+                },
+                "AURA": {
+                    "address": "0xc0c293ce456ff0ed870add98a0828dd4d2903dbf",
+                    "decimals": 18,
+                },
             }
         },
     },
@@ -911,6 +915,14 @@ COINGECKO_TOKENS = {
         "chain": "ethereum",
         "decimals": 18,
         "start_date": "2022-01-01",
+    },
+    "AURA": {
+        "cg_id": "aura-finance",
+        "symbol": "AURA",
+        "address": "0xc0c293ce456ff0ed870add98a0828dd4d2903dbf",
+        "chain": "ethereum",
+        "decimals": 18,
+        "start_date": "2023-06-01",
     },
 }
 
