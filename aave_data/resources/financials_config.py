@@ -581,6 +581,10 @@ CONFIG_TOKENS = {
                     "address": "0xc0c293ce456ff0ed870add98a0828dd4d2903dbf",
                     "decimals": 18,
                 },
+                "GHO": {
+                    "address": "0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f",
+                    "decimals": 18,
+                },
             }
         },
     },
